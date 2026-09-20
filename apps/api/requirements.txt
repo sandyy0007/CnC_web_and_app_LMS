@@ -9,7 +9,7 @@ PyMuPDF==1.25.1
 # ---- Database (MongoDB) ----
 motor==3.6.0
 pymongo==4.9.2
-
+pypdf==5.1.0
 # ---- Cache / queue / sessions ----
 redis==5.2.1
 asyncpg==0.30.0
