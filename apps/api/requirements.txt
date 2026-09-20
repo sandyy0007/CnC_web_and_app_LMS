@@ -12,7 +12,7 @@ pymongo==4.9.2
 
 # ---- Cache / queue / sessions ----
 redis==5.2.1
-
+asyncpg==0.30.0
 # ---- Security ----
 passlib==1.7.4
 bcrypt==4.2.1
