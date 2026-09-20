@@ -1,0 +1,178 @@
+﻿Roll No.,Participant,Batch,Attendance %,EEDI readiness,Trend,Focus pillar,Risk reason,Risk level
+CSE21B033,Sneha Reddy,Batch A,47.1,57.35,3.5,Leadership,attendance 47.1%; readiness 57.35,High
+CSE21B030,Yash Menon,Batch A,47.1,57.52,3.5,Leadership,attendance 47.1%; readiness 57.52,High
+CSE21B021,Varun Menon,Batch A,58.8,55.86,3.5,Leadership,attendance 58.8%; readiness 55.86,High
+ECE21B010,Harsh Rao,Batch A,62.5,53.12,3.28,Confidence,attendance 62.5%; readiness 53.12,High
+ECE21B038,Rahul Chatterjee,Batch A,62.5,59.24,3.5,Problem Solving,attendance 62.5%; readiness 59.24,High
+ECE21B044,Farhan Varma,Batch A,62.5,50.23,2.56,Confidence,attendance 62.5%; readiness 50.23,High
+ECE21B091,Uday Rao,Batch B,62.5,59.27,3.5,Leadership,attendance 62.5%; readiness 59.27,High
+MECH21B065,Anika Rao,Batch B,62.5,55.96,3.5,Problem Solving,attendance 62.5%; readiness 55.96,High
+AIDS21B068,Harsh Jain,Batch A,62.5,55.12,3.5,Problem Solving,attendance 62.5%; readiness 55.12,High
+IT21B029,Rajat Jain,Batch B,62.5,59.81,3.5,Leadership,attendance 62.5%; readiness 59.81,High
+IT21B057,Neeraj Varma,Batch B,62.5,58.35,3.5,Problem Solving,attendance 62.5%; readiness 58.35,High
+CIVIL21B019,Nisha Desai,Batch B,62.5,58.93,3.5,Leadership,attendance 62.5%; readiness 58.93,High
+EEE21B021,Neeraj Singh,Batch B,62.5,58.75,3.5,Problem Solving,attendance 62.5%; readiness 58.75,High
+EEE21B046,Varun Saxena,Batch A,62.5,58.91,3.5,Problem Solving,attendance 62.5%; readiness 58.91,High
+EEE21B064,Swara Saxena,Batch A,62.5,57.11,3.5,Leadership,attendance 62.5%; readiness 57.11,High
+CSE21B024,Anika Pandey,Batch A,70.6,48.52,2.13,Problem Solving,attendance 70.6%; readiness 48.52,High
+CSE21B015,Advait Pandey,Batch A,41.2,81.82,3.5,Leadership,attendance 41.2%,Medium
+CSE21B028,Rajat Jain,Batch B,41.2,70.65,3.5,Problem Solving,attendance 41.2%,Medium
+CSE21B022,Aniket Rao,Batch B,47.1,69.64,3.5,Leadership,attendance 47.1%,Medium
+CSE21B287,Nikhil Bose,Batch A,47.1,65.41,3.5,Leadership,attendance 47.1%,Medium
+CSE21B039,Swara Menon,Batch A,47.1,73.4,3.5,Leadership,attendance 47.1%,Medium
+CSE21B042,Deepika Pandey,Batch A,47.1,62.89,3.5,Problem Solving,attendance 47.1%,Medium
+CSE21B043,Isha Nair,Batch B,47.1,84.85,3.5,Career Readiness,attendance 47.1%,Medium
+CSE21B046,Siddharth Jain,Batch B,47.1,85.13,3.5,Leadership,attendance 47.1%,Medium
+CSE21B050,Aryan Desai,Batch C,47.1,96.15,3.5,Problem Solving,attendance 47.1%,Medium
+CSE21B064,Priyanka Das,Batch C,52.9,63.36,3.5,Leadership,attendance 52.9%,Medium
+CSE21B101,Alex Johnson,Batch B,52.9,78.0,3.5,Problem Solving,attendance 52.9%,Medium
+CSE21B011,Riya Varma,Batch C,52.9,87.58,3.5,Career Readiness,attendance 52.9%,Medium
+CSE21B214,Tanvi Menon,Batch A,52.9,65.94,3.5,Leadership,attendance 52.9%,Medium
+CSE21B016,Chirag Nair,Batch B,52.9,73.55,3.5,Problem Solving,attendance 52.9%,Medium
+CSE21B017,Harsh Gupta,Batch C,52.9,76.29,3.5,Confidence,attendance 52.9%,Medium
+CSE21B032,Aditi Desai,Batch C,52.9,83.57,3.5,Problem Solving,attendance 52.9%,Medium
+CSE21B037,Sahil Jain,Batch B,52.9,73.69,3.5,Leadership,attendance 52.9%,Medium
+CSE21B041,Ananya Desai,Batch C,52.9,78.46,3.5,Problem Solving,attendance 52.9%,Medium
+CSE21B044,Naveen Gupta,Batch C,52.9,81.27,3.5,Leadership,attendance 52.9%,Medium
+CSE21B012,Ananya Iyer,Batch A,58.8,76.3,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B027,Rohit Bansal,Batch B,58.8,61.08,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B023,Devika Chatterjee,Batch C,58.8,83.9,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B031,Mitali Rao,Batch B,58.8,71.29,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B669,Bhavya Pandey,Batch A,58.8,74.05,3.5,Leadership,attendance 58.8%,Medium
+CSE21B035,Lakshya Gupta,Batch C,58.8,79.86,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B512,Rahul Bose,Batch A,58.8,62.55,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B047,Vikas Varma,Batch C,58.8,85.69,3.5,Problem Solving,attendance 58.8%,Medium
+CSE21B048,Rachit Menon,Batch A,58.8,68.23,3.5,Leadership,attendance 58.8%,Medium
+ECE21B005,Tanvi Pillai,Batch B,62.5,77.78,3.5,Leadership,attendance 62.5%,Medium
+ECE21B011,Manish Chatterjee,Batch B,62.5,71.06,3.5,Confidence,attendance 62.5%,Medium
+ECE21B014,Varun Pillai,Batch A,62.5,74.21,3.5,Problem Solving,attendance 62.5%,Medium
+ECE21B019,Jatin Rao,Batch B,62.5,78.26,3.5,Problem Solving,attendance 62.5%,Medium
+ECE21B029,Pooja Chatterjee,Batch B,62.5,92.71,3.5,Leadership,attendance 62.5%,Medium
+ECE21B032,Swara Pillai,Batch A,62.5,81.41,3.5,Leadership,attendance 62.5%,Medium
+ECE21B047,Rohan Chatterjee,Batch B,62.5,65.67,3.5,Problem Solving,attendance 62.5%,Medium
+ECE21B054,Meher Menon,Batch A,62.5,87.45,3.5,Leadership,attendance 62.5%,Medium
+ECE21B055,Priya Rao,Batch B,62.5,74.75,3.5,Problem Solving,attendance 62.5%,Medium
+ECE21B061,Esha Jain,Batch B,62.5,75.17,3.5,Leadership,attendance 62.5%,Medium
+ECE21B064,Riya Rao,Batch A,62.5,71.33,3.5,Problem Solving,attendance 62.5%,Medium
+ECE21B069,Chirag Bose,Batch B,62.5,61.25,3.5,Confidence,attendance 62.5%,Medium
+ECE21B070,Harsh Jain,Batch A,62.5,73.26,3.5,Confidence,attendance 62.5%,Medium
+ECE21B072,Pranav Menon,Batch A,62.5,69.64,3.5,Leadership,attendance 62.5%,Medium
+ECE21B076,Devika Iyer,Batch A,62.5,80.67,3.5,Problem Solving,attendance 62.5%,Medium
+ECE21B077,Anika Gupta,Batch B,62.5,72.02,3.5,Leadership,attendance 62.5%,Medium
+MECH21B000,Pranav Trivedi,Batch A,62.5,68.24,3.5,Confidence,attendance 62.5%,Medium
+MECH21B004,Devika Malhotra,Batch A,62.5,66.63,3.5,Problem Solving,attendance 62.5%,Medium
+MECH21B005,Anika Iyer,Batch B,62.5,79.59,3.5,Problem Solving,attendance 62.5%,Medium
+MECH21B022,Ananya Naidu,Batch A,62.5,78.13,3.5,Leadership,attendance 62.5%,Medium
+MECH21B031,Aryan Naidu,Batch B,62.5,78.82,3.5,Leadership,attendance 62.5%,Medium
+MECH21B045,Vidya Trivedi,Batch B,62.5,78.63,3.5,Leadership,attendance 62.5%,Medium
+MECH21B048,Arjun Chatterjee,Batch A,62.5,74.45,3.5,Career Readiness,attendance 62.5%,Medium
+MECH21B050,Kavya Iyer,Batch A,62.5,70.16,3.5,Confidence,attendance 62.5%,Medium
+MECH21B055,Pavan Mehta,Batch B,62.5,69.47,3.5,Problem Solving,attendance 62.5%,Medium
+MECH21B059,Manish Iyer,Batch B,62.5,60.41,3.5,Problem Solving,attendance 62.5%,Medium
+MECH21B061,Sanya Kumawat,Batch B,62.5,79.43,3.5,Problem Solving,attendance 62.5%,Medium
+MECH21B067,Jatin Naidu,Batch B,62.5,75.67,3.5,Problem Solving,attendance 62.5%,Medium
+MECH21B071,Yash Hegde,Batch B,62.5,64.9,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B015,Anika Varma,Batch B,62.5,80.17,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B017,Jatin Rao,Batch B,62.5,85.25,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B021,Yash Pillai,Batch B,62.5,67.0,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B026,Lakshya Rao,Batch A,62.5,87.53,3.5,Problem Solving,attendance 62.5%,Medium
+AIDS21B035,Naveen Rao,Batch B,62.5,75.97,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B048,Shruti Pillai,Batch A,62.5,84.66,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B051,Ishaan Varma,Batch B,62.5,76.13,3.5,Leadership,attendance 62.5%,Medium
+AIDS21B062,Riya Rao,Batch A,62.5,64.23,3.5,Confidence,attendance 62.5%,Medium
+AIDS21B063,Tanvi Chatterjee,Batch B,62.5,74.19,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B006,Kritika Chatterjee,Batch A,62.5,80.08,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B012,Riya Varma,Batch A,62.5,72.75,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B020,Pranav Jain,Batch A,62.5,76.05,3.5,Leadership,attendance 62.5%,Medium
+IT21B023,Aniket Rao,Batch B,62.5,86.53,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B040,Swara Menon,Batch A,62.5,67.57,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B042,Ananya Desai,Batch A,62.5,72.07,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B045,Naveen Gupta,Batch B,62.5,61.86,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B046,Rahul Bose,Batch A,62.5,76.81,3.5,Problem Solving,attendance 62.5%,Medium
+IT21B074,Zara Jain,Batch A,62.5,81.68,3.5,Communication,attendance 62.5%,Medium
+IT21B075,Pavan Varma,Batch B,62.5,72.26,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B002,Omkar Pandey,Batch A,62.5,69.68,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B010,Meher Desai,Batch A,62.5,74.62,3.5,Confidence,attendance 62.5%,Medium
+CIVIL21B011,Priya Pandey,Batch B,62.5,81.99,3.5,Problem Solving,attendance 62.5%,Medium
+CIVIL21B012,Shreya Nair,Batch A,62.5,86.84,3.5,Problem Solving,attendance 62.5%,Medium
+CIVIL21B015,Tejas Jain,Batch B,62.5,76.31,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B018,Kavya Joshi,Batch A,62.5,63.37,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B020,Riya Pandey,Batch A,62.5,72.15,3.5,Confidence,attendance 62.5%,Medium
+CIVIL21B026,Harsh Das,Batch A,62.5,65.96,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B040,Mitali Gupta,Batch A,62.5,66.15,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B041,Aditi Kapoor,Batch B,62.5,77.68,3.5,Problem Solving,attendance 62.5%,Medium
+CIVIL21B044,Lakshya Das,Batch A,62.5,92.38,3.5,Problem Solving,attendance 62.5%,Medium
+CIVIL21B045,Pooja Joshi,Batch B,62.5,62.96,3.5,Leadership,attendance 62.5%,Medium
+CIVIL21B047,Uday Pandey,Batch B,62.5,74.51,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B000,Lakshya Ghosh,Batch A,62.5,74.39,3.5,Leadership,attendance 62.5%,Medium
+EEE21B005,Kunal Khanna,Batch B,62.5,75.77,3.5,Leadership,attendance 62.5%,Medium
+EEE21B009,Naveen Ghosh,Batch B,62.5,75.37,3.5,Leadership,attendance 62.5%,Medium
+EEE21B010,Rahul Saxena,Batch A,62.5,92.07,3.5,Confidence,attendance 62.5%,Medium
+EEE21B014,Aarav Malhotra,Batch A,62.5,79.01,3.5,Leadership,attendance 62.5%,Medium
+EEE21B018,Omkar Ghosh,Batch A,62.5,76.05,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B033,Esha Verma,Batch B,62.5,80.3,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B034,Kavya Bansal,Batch A,62.5,78.66,3.5,Confidence,attendance 62.5%,Medium
+EEE21B035,Nisha Kulkarni,Batch B,62.5,74.04,3.5,Leadership,attendance 62.5%,Medium
+EEE21B036,Riya Ghosh,Batch A,62.5,84.22,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B042,Harsh Verma,Batch A,62.5,78.73,3.5,Leadership,attendance 62.5%,Medium
+EEE21B043,Manish Bansal,Batch B,62.5,80.53,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B045,Sanya Ghosh,Batch B,62.5,69.69,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B048,Devika Singh,Batch A,62.5,79.27,3.5,Leadership,attendance 62.5%,Medium
+EEE21B054,Simran Ghosh,Batch A,62.5,82.1,3.5,Problem Solving,attendance 62.5%,Medium
+EEE21B060,Lakshya Verma,Batch A,62.5,82.12,3.5,Leadership,attendance 62.5%,Medium
+EEE21B063,Uday Ghosh,Batch B,62.5,63.96,3.5,Career Readiness,attendance 62.5%,Medium
+CSE21B071,Meera Pillai,Batch C,64.7,68.56,3.5,Leadership,attendance 64.7%,Medium
+CSE21B013,Zara Rao,Batch B,64.7,70.94,3.5,Problem Solving,attendance 64.7%,Medium
+CSE21B014,Pavan Chatterjee,Batch C,64.7,91.09,3.5,Leadership,attendance 64.7%,Medium
+CSE21B296,Pranav Jain,Batch B,64.7,80.73,3.5,Leadership,attendance 64.7%,Medium
+CSE21B026,Jatin Gupta,Batch C,64.7,70.68,3.5,Problem Solving,attendance 64.7%,Medium
+CSE21B034,Gaurav Nair,Batch B,64.7,84.89,3.5,Problem Solving,attendance 64.7%,Medium
+CSE21B036,Pooja Bose,Batch A,64.7,65.82,3.5,Leadership,attendance 64.7%,Medium
+CSE21B038,Uday Varma,Batch C,64.7,94.49,3.5,Problem Solving,attendance 64.7%,Medium
+CSE21B040,Kunal Rao,Batch B,64.7,82.74,3.5,Problem Solving,attendance 64.7%,Medium
+CSE21B019,Arjun Verma,Batch A,70.6,76.37,3.5,Problem Solving,attendance 70.6%,Medium
+CSE21B020,Sanya Varma,Batch C,70.6,75.36,3.5,Problem Solving,attendance 70.6%,Medium
+CSE21B025,Dhruv Nair,Batch B,70.6,69.92,3.5,Problem Solving,attendance 70.6%,Medium
+CSE21B029,Simran Varma,Batch C,70.6,74.04,3.5,Leadership,attendance 70.6%,Medium
+ECE21B003,Nisha Naidu,Batch B,75.0,55.69,3.5,Leadership,readiness 55.69,Medium
+ECE21B088,Lakshya Jain,Batch A,75.0,55.18,3.5,Leadership,readiness 55.18,Medium
+MECH21B007,Jatin Kumawat,Batch B,75.0,59.41,3.5,Confidence,readiness 59.41,Medium
+AIDS21B002,Riya Iyer,Batch A,75.0,58.47,3.5,Leadership,readiness 58.47,Medium
+AIDS21B014,Devika Hegde,Batch A,75.0,57.73,3.5,Leadership,readiness 57.73,Medium
+AIDS21B034,Isha Menon,Batch A,75.0,56.94,3.5,Problem Solving,readiness 56.94,Medium
+AIDS21B043,Kiran Menon,Batch B,75.0,59.8,3.5,Leadership,readiness 59.8,Medium
+AIDS21B050,Darshan Jain,Batch A,75.0,57.88,3.5,Leadership,readiness 57.88,Medium
+IT21B031,Yash Menon,Batch B,75.0,56.76,3.5,Leadership,readiness 56.76,Medium
+CIVIL21B021,Tanvi Nair,Batch B,75.0,52.01,3.0,Problem Solving,readiness 52.01,Medium
+EEE21B040,Advait Banerjee,Batch A,75.0,57.87,3.5,Leadership,readiness 57.87,Medium
+CSE21B225,Rahul Kapoor,Batch A,76.5,59.6,3.5,Problem Solving,readiness 59.6,Medium
+CSE21B237,Shruti Das,Batch A,76.5,59.21,3.5,Problem Solving,readiness 59.21,Medium
+CSE21B258,Manish Saxena,Batch A,76.5,44.58,1.15,Leadership,readiness 44.58,Medium
+CSE21B319,Pranav Kulkarni,Batch B,76.5,58.6,3.5,Problem Solving,readiness 58.6,Medium
+CSE21B381,Varun Bansal,Batch A,76.5,49.33,2.33,Confidence,readiness 49.33,Medium
+CSE21B390,Yash Bansal,Batch A,76.5,58.22,3.5,Problem Solving,readiness 58.22,Medium
+CSE21B414,Rohan Banerjee,Batch A,76.5,42.06,0.51,Communication,readiness 42.06,Medium
+CSE21B141,Varun Pandey,Batch A,82.4,56.6,3.5,Problem Solving,readiness 56.6,Medium
+CSE21B243,Shreya Kapoor,Batch A,82.4,59.19,3.5,Problem Solving,readiness 59.19,Medium
+CSE21B264,Anika Bansal,Batch A,82.4,49.23,2.31,Problem Solving,readiness 49.23,Medium
+ECE21B041,Rachit Pillai,Batch B,87.5,59.64,3.5,Problem Solving,readiness 59.64,Medium
+MECH21B060,Pranav Pillai,Batch A,87.5,45.62,1.4,Leadership,readiness 45.62,Medium
+AIDS21B066,Advait Gupta,Batch A,87.5,59.47,3.5,Leadership,readiness 59.47,Medium
+CIVIL21B028,Pranav Desai,Batch A,87.5,53.42,3.35,Problem Solving,readiness 53.42,Medium
+CIVIL21B059,Aryan Kapoor,Batch B,87.5,55.46,3.5,Leadership,readiness 55.46,Medium
+EEE21B044,Pranav Kulkarni,Batch A,87.5,56.76,3.5,Leadership,readiness 56.76,Medium
+EEE21B059,Gaurav Malhotra,Batch B,87.5,56.85,3.5,Leadership,readiness 56.85,Medium
+CSE21B147,Nikhil Das,Batch A,88.2,54.94,3.5,Confidence,readiness 54.94,Medium
+CSE21B195,Advait Saxena,Batch A,88.2,51.89,2.97,Problem Solving,readiness 51.89,Medium
+CSE21B246,Tejas Das,Batch A,88.2,47.11,1.78,Problem Solving,readiness 47.11,Medium
+CSE21B267,Nikhil Saxena,Batch A,88.2,55.8,3.5,Problem Solving,readiness 55.8,Medium
+CSE21B408,Rachit Bansal,Batch A,88.2,40.45,0.11,Leadership,readiness 40.45,Medium
+CSE21B417,Shruti Bansal,Batch A,88.2,57.71,3.5,Leadership,readiness 57.71,Medium
+CSE21B057,Shruti Menon,Batch A,94.1,59.57,3.5,Problem Solving,readiness 59.57,Medium
+CSE21B192,Tanvi Das,Batch A,94.1,53.7,3.43,Leadership,readiness 53.7,Medium
+CSE21B222,Deepika Saxena,Batch A,94.1,43.81,0.95,Leadership,readiness 43.81,Medium
+CSE21B228,Rachit Das,Batch A,94.1,44.59,1.15,Leadership,readiness 44.59,Medium
+CSE21B306,Tejas Kapoor,Batch A,94.1,46.89,1.72,Problem Solving,readiness 46.89,Medium
+CSE21B420,Ishaan Trivedi,Batch A,94.1,42.7,0.68,Confidence,readiness 42.7,Medium
+CIVIL21B017,Esha Das,Batch B,100.0,57.45,3.5,Problem Solving,readiness 57.45,Medium
+EEE21B065,Kunal Reddy,Batch B,100.0,57.5,3.5,Problem Solving,readiness 57.5,Medium

@@ -1,0 +1,38 @@
+# ---- Web framework ----
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.5
+pydantic-settings==2.7.1
+email-validator==2.2.0
+
+# ---- Database (MongoDB) ----
+motor==3.6.0
+pymongo==4.9.2
+
+# ---- Cache / queue / sessions ----
+redis==5.2.1
+
+# ---- Security ----
+passlib==1.7.4
+bcrypt==4.2.1
+argon2-cffi==23.1.0
+pyjwt==2.10.1
+
+# ---- Object storage (S3) ----
+boto3==1.35.92
+
+# ---- Reports ----
+openpyxl==3.1.5
+reportlab==4.2.5
+
+# ---- HTTP client (AI providers, webhooks) ----
+httpx==0.28.1
+
+# ---- Dev / test ----
+pytest==8.3.4
+pytest-asyncio==0.25.2
+mongomock-motor==0.0.34
+fakeredis==2.26.2
+ruff==0.8.6
+mypy==1.14.1

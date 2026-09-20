@@ -1,0 +1,251 @@
+/* Winners Creek Cinematic Intro Styles */
+
+@keyframes introKenBurns {
+  0% {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.06) translate3d(-0.6%, -0.4%, 0);
+  }
+  100% {
+    transform: scale(1.10) translate3d(0.4%, -0.8%, 0);
+  }
+}
+
+@keyframes introAuraCycle {
+  0% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: hue-rotate(25deg);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+}
+
+@keyframes introSweepExit {
+  0% {
+    opacity: 1;
+    filter: brightness(1) blur(0px);
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0.95;
+    filter: brightness(1.2) blur(2px);
+    transform: scale(1.01);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(1.35) blur(12px);
+    transform: scale(1.04);
+    visibility: hidden;
+  }
+}
+
+/* 0.0s - 0.6s: WELCOME (0.6s duration) */
+@keyframes wordWelcomeIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) rotateX(-90deg) translate3d(0, 30px, -40px);
+    filter: blur(10px);
+  }
+  25% {
+    opacity: 1;
+    transform: perspective(1000px) rotateX(0deg) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+  75% {
+    opacity: 1;
+    transform: perspective(1000px) rotateX(0deg) scale(1.02);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1000px) rotateX(45deg) translate3d(0, -25px, 30px);
+    filter: blur(8px);
+  }
+}
+
+/* 0.6s - 1.0s: TO (0.4s duration) */
+@keyframes wordToIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) rotateY(90deg) translate3d(0, 0, -30px);
+    filter: blur(10px);
+  }
+  25% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+  75% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) scale(1.03);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1000px) rotateY(-60deg) translate3d(0, 0, 20px);
+    filter: blur(6px);
+  }
+}
+
+/* 1.0s - 1.7s: WINNERS (0.7s duration) */
+@keyframes wordWinnersIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) rotateZ(-10deg) scale(0.88) translate3d(0, 40px, 0);
+    filter: blur(12px);
+  }
+  22% {
+    opacity: 1;
+    transform: perspective(1000px) rotateZ(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+  78% {
+    opacity: 1;
+    transform: perspective(1000px) rotateZ(0deg) scale(1.03) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1000px) rotateZ(6deg) scale(1.06) translate3d(0, -15px, 0);
+    filter: blur(8px);
+  }
+}
+
+/* 1.7s - 2.4s: CREEK (0.7s duration) */
+@keyframes wordCreekIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) rotateY(-90deg) translate3d(0, 0, -40px);
+    filter: blur(12px);
+  }
+  22% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+  78% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) scale(1.03) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1000px) scale(1.08) translate3d(0, -15px, 0);
+    filter: blur(8px);
+  }
+}
+
+/* 2.4s+: FINAL REVEAL & 5-SECOND STEADY HOLD */
+@keyframes finalRevealIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1200px) scale(0.92) translate3d(0, 16px, 0);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1200px) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes brandMarkPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+    box-shadow: 0 0 0 0 rgba(129, 140, 248, 0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03);
+    box-shadow: 0 0 45px 12px rgba(99, 102, 241, 0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 35px 8px rgba(99, 102, 241, 0.4);
+  }
+}
+
+@keyframes floatParticle {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-120px) translateX(25px);
+    opacity: 0;
+  }
+}
+
+.intro-perspective {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.intro-bg-anim {
+  animation: introKenBurns 9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.intro-aura-anim {
+  background-size: 200% 200%;
+  animation: introAuraCycle 8s ease infinite;
+}
+
+.intro-exit {
+  animation: introSweepExit 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.intro-word-welcome {
+  animation: wordWelcomeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-word-to {
+  animation: wordToIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-word-winners {
+  animation: wordWinnersIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-word-creek {
+  animation: wordCreekIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-final-reveal {
+  animation: finalRevealIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-brand-mark {
+  animation: brandMarkPulse 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-bg-anim,
+  .intro-aura-anim,
+  .intro-word-welcome,
+  .intro-word-to,
+  .intro-word-winners,
+  .intro-word-creek,
+  .intro-final-reveal,
+  .intro-brand-mark,
+  .intro-exit {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    transition: opacity 0.3s ease-in-out !important;
+  }
+}

@@ -1,0 +1,923 @@
+﻿Name,Email,Institution ID,Role,Department,Status,Verified,Last active,Created
+Rishabh Kumawat,rishabh.kumawat@abcengg.edu,—,ADMIN,—,Active,Yes,19 Sep 2026 09:33,19 Sep 2026 09:32
+EEDI Platform Owner,superadmin@eedilms.app,—,SUPER_ADMIN,—,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Placement Cell,placement@abcengg.edu,—,PLACEMENT_CELL,—,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Priya Kulkarni,priya.kulkarni@abcengg.edu,—,HOD,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Dr. S. Venkatesh,s.venkatesh@abcengg.edu,—,HOD,Electronics & Communication,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Dr. A. Deshpande,a.deshpande@abcengg.edu,—,HOD,Mechanical Engineering,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Priya Kumawat,priya.kumawat@abcengg.edu,—,HOD,AI / Data Science,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Dr. M. Fernandes,m.fernandes@abcengg.edu,—,HOD,Information Technology,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Dr. R. Chauhan,r.chauhan@abcengg.edu,—,HOD,Civil Engineering,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Dr. T. Krishnan,t.krishnan@abcengg.edu,—,HOD,Electrical Engineering,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Dr. R. Bose,r.bose@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Prof. A. Kapoor,a.kapoor@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Dr. S. Nair,s.nair@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Prof. M. Iyer,m.iyer@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Dr. K. Sharma,k.sharma@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Prof. Alan Walker,alan.walker@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Prof. Rohan Mehta,rohan.mehta@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Dr. Neha Sharma,neha.sharma@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,18 Sep 2026 17:32,19 Sep 2026 09:32
+Dr. P. Menon,p.menon@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,18 Sep 2026 17:32,19 Sep 2026 09:32
+Prof. V. Rao,v.rao@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,19 Sep 2026 09:32,19 Sep 2026 09:32
+Dr. S. Banerjee,s.banerjee@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Prof. L. DSouza,l.dsouza@abcengg.edu,—,TRAINER,Computer Science,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Dr. Khanna,ece.trainer1@abcengg.edu,—,TRAINER,Electronics & Communication,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Dr. Malhotra,ece.trainer2@abcengg.edu,—,TRAINER,Electronics & Communication,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Dr. Varma,mech.trainer1@abcengg.edu,—,TRAINER,Mechanical Engineering,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Dr. Sharma,mech.trainer2@abcengg.edu,—,TRAINER,Mechanical Engineering,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Dr. Reddy,aids.trainer1@abcengg.edu,—,TRAINER,AI / Data Science,Active,Yes,18 Sep 2026 03:32,19 Sep 2026 09:32
+Dr. Mehta,aids.trainer2@abcengg.edu,—,TRAINER,AI / Data Science,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Dr. Saxena,it.trainer1@abcengg.edu,—,TRAINER,Information Technology,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Dr. Trivedi,it.trainer2@abcengg.edu,—,TRAINER,Information Technology,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Dr. Singh,civil.trainer1@abcengg.edu,—,TRAINER,Civil Engineering,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Dr. Patel,civil.trainer2@abcengg.edu,—,TRAINER,Civil Engineering,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Dr. Khanna,eee.trainer1@abcengg.edu,—,TRAINER,Electrical Engineering,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Dr. Malhotra,eee.trainer2@abcengg.edu,—,TRAINER,Electrical Engineering,Active,Yes,19 Sep 2026 05:32,19 Sep 2026 09:32
+Rahul Sharma,rahul.sharma.cse21b045@abcengg.edu,CSE21B045,STUDENT,Computer Science,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Ananya Iyer,ananya.iyer.cse21b012@abcengg.edu,CSE21B012,STUDENT,Computer Science,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Vikram Nair,vikram.nair.cse21b078@abcengg.edu,CSE21B078,STUDENT,Computer Science,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Sneha Reddy,sneha.reddy.cse21b033@abcengg.edu,CSE21B033,STUDENT,Computer Science,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Karan Mehta,karan.mehta.cse21b091@abcengg.edu,CSE21B091,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Divya Menon,divya.menon.cse21b056@abcengg.edu,CSE21B056,STUDENT,Computer Science,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Arjun Verma,arjun.verma.cse21b019@abcengg.edu,CSE21B019,STUDENT,Computer Science,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Priyanka Das,priyanka.das.cse21b064@abcengg.edu,CSE21B064,STUDENT,Computer Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Rohit Bansal,rohit.bansal.cse21b027@abcengg.edu,CSE21B027,STUDENT,Computer Science,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Meera Pillai,meera.pillai.cse21b071@abcengg.edu,CSE21B071,STUDENT,Computer Science,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Alex Johnson,alex.johnson@eedi.com,CSE21B101,STUDENT,Computer Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Riya Varma,riya.varma.cse21b011@abcengg.edu,CSE21B011,STUDENT,Computer Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Tanvi Menon,tanvi.menon.cse21b214@abcengg.edu,CSE21B214,STUDENT,Computer Science,Active,Yes,15 Sep 2026 09:32,19 Sep 2026 09:32
+Zara Rao,zara.rao.cse21b013@abcengg.edu,CSE21B013,STUDENT,Computer Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Pavan Chatterjee,pavan.chatterjee.cse21b014@abcengg.edu,CSE21B014,STUDENT,Computer Science,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Advait Pandey,advait.pandey.cse21b015@abcengg.edu,CSE21B015,STUDENT,Computer Science,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Chirag Nair,chirag.nair.cse21b016@abcengg.edu,CSE21B016,STUDENT,Computer Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Harsh Gupta,harsh.gupta.cse21b017@abcengg.edu,CSE21B017,STUDENT,Computer Science,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Manish Bose,manish.bose.cse21b018@abcengg.edu,CSE21B018,STUDENT,Computer Science,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Pranav Jain,pranav.jain.cse21b296@abcengg.edu,CSE21B296,STUDENT,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Sanya Varma,sanya.varma.cse21b020@abcengg.edu,CSE21B020,STUDENT,Computer Science,Active,Yes,16 Sep 2026 03:32,19 Sep 2026 09:32
+Varun Menon,varun.menon.cse21b021@abcengg.edu,CSE21B021,STUDENT,Computer Science,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Aniket Rao,aniket.rao.cse21b022@abcengg.edu,CSE21B022,STUDENT,Computer Science,Active,Yes,19 Sep 2026 07:32,19 Sep 2026 09:32
+Devika Chatterjee,devika.chatterjee.cse21b023@abcengg.edu,CSE21B023,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Anika Pandey,anika.pandey.cse21b024@abcengg.edu,CSE21B024,STUDENT,Computer Science,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Dhruv Nair,dhruv.nair.cse21b025@abcengg.edu,CSE21B025,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Jatin Gupta,jatin.gupta.cse21b026@abcengg.edu,CSE21B026,STUDENT,Computer Science,Active,Yes,18 Sep 2026 16:32,19 Sep 2026 09:32
+Nikhil Bose,nikhil.bose.cse21b287@abcengg.edu,CSE21B287,STUDENT,Computer Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Rajat Jain,rajat.jain.cse21b028@abcengg.edu,CSE21B028,STUDENT,Computer Science,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Simran Varma,simran.varma.cse21b029@abcengg.edu,CSE21B029,STUDENT,Computer Science,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Yash Menon,yash.menon.cse21b030@abcengg.edu,CSE21B030,STUDENT,Computer Science,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Mitali Rao,mitali.rao.cse21b031@abcengg.edu,CSE21B031,STUDENT,Computer Science,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Aditi Desai,aditi.desai.cse21b032@abcengg.edu,CSE21B032,STUDENT,Computer Science,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Bhavya Pandey,bhavya.pandey.cse21b669@abcengg.edu,CSE21B669,STUDENT,Computer Science,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Gaurav Nair,gaurav.nair.cse21b034@abcengg.edu,CSE21B034,STUDENT,Computer Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Lakshya Gupta,lakshya.gupta.cse21b035@abcengg.edu,CSE21B035,STUDENT,Computer Science,Active,Yes,15 Sep 2026 13:32,19 Sep 2026 09:32
+Pooja Bose,pooja.bose.cse21b036@abcengg.edu,CSE21B036,STUDENT,Computer Science,Active,Yes,15 Sep 2026 15:32,19 Sep 2026 09:32
+Sahil Jain,sahil.jain.cse21b037@abcengg.edu,CSE21B037,STUDENT,Computer Science,Active,Yes,14 Sep 2026 19:32,19 Sep 2026 09:32
+Uday Varma,uday.varma.cse21b038@abcengg.edu,CSE21B038,STUDENT,Computer Science,Active,Yes,18 Sep 2026 00:32,19 Sep 2026 09:32
+Swara Menon,swara.menon.cse21b039@abcengg.edu,CSE21B039,STUDENT,Computer Science,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Kunal Rao,kunal.rao.cse21b040@abcengg.edu,CSE21B040,STUDENT,Computer Science,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Ananya Desai,ananya.desai.cse21b041@abcengg.edu,CSE21B041,STUDENT,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Deepika Pandey,deepika.pandey.cse21b042@abcengg.edu,CSE21B042,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Isha Nair,isha.nair.cse21b043@abcengg.edu,CSE21B043,STUDENT,Computer Science,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Naveen Gupta,naveen.gupta.cse21b044@abcengg.edu,CSE21B044,STUDENT,Computer Science,Active,Yes,18 Sep 2026 07:32,19 Sep 2026 09:32
+Rahul Bose,rahul.bose.cse21b512@abcengg.edu,CSE21B512,STUDENT,Computer Science,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Siddharth Jain,siddharth.jain.cse21b046@abcengg.edu,CSE21B046,STUDENT,Computer Science,Active,Yes,17 Sep 2026 03:32,19 Sep 2026 09:32
+Vikas Varma,vikas.varma.cse21b047@abcengg.edu,CSE21B047,STUDENT,Computer Science,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Rachit Menon,rachit.menon.cse21b048@abcengg.edu,CSE21B048,STUDENT,Computer Science,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Aarav Joshi,aarav.joshi.cse21b049@abcengg.edu,CSE21B049,STUDENT,Computer Science,Active,Yes,18 Sep 2026 00:32,19 Sep 2026 09:32
+Aryan Desai,aryan.desai.cse21b050@abcengg.edu,CSE21B050,STUDENT,Computer Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Farhan Pandey,farhan.pandey.cse21b051@abcengg.edu,CSE21B051,STUDENT,Computer Science,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Kiran Nair,kiran.nair.cse21b052@abcengg.edu,CSE21B052,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Omkar Gupta,omkar.gupta.cse21b053@abcengg.edu,CSE21B053,STUDENT,Computer Science,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Rohan Bose,rohan.bose.cse21b054@abcengg.edu,CSE21B054,STUDENT,Computer Science,Active,Yes,16 Sep 2026 14:32,19 Sep 2026 09:32
+Tarun Jain,tarun.jain.cse21b055@abcengg.edu,CSE21B055,STUDENT,Computer Science,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Neeraj Varma,neeraj.varma.cse21b497@abcengg.edu,CSE21B497,STUDENT,Computer Science,Active,Yes,19 Sep 2026 03:32,19 Sep 2026 09:32
+Shruti Menon,shruti.menon.cse21b057@abcengg.edu,CSE21B057,STUDENT,Computer Science,Active,Yes,14 Sep 2026 20:32,19 Sep 2026 09:32
+Akash Joshi,akash.joshi.cse21b058@abcengg.edu,CSE21B058,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Darshan Desai,darshan.desai.cse21b059@abcengg.edu,CSE21B059,STUDENT,Computer Science,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Ishaan Pandey,ishaan.pandey.cse21b060@abcengg.edu,CSE21B060,STUDENT,Computer Science,Active,Yes,16 Sep 2026 09:32,19 Sep 2026 09:32
+Meher Nair,meher.nair.cse21b061@abcengg.edu,CSE21B061,STUDENT,Computer Science,Active,Yes,17 Sep 2026 01:32,19 Sep 2026 09:32
+Priya Gupta,priya.gupta.cse21b062@abcengg.edu,CSE21B062,STUDENT,Computer Science,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Shreya Bose,shreya.bose.cse21b063@abcengg.edu,CSE21B063,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Vidya Jain,vidya.jain.cse21b957@abcengg.edu,CSE21B957,STUDENT,Computer Science,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Kritika Varma,kritika.varma.cse21b065@abcengg.edu,CSE21B065,STUDENT,Computer Science,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Tejas Menon,tejas.menon.cse21b066@abcengg.edu,CSE21B066,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Arjun Joshi,arjun.joshi.cse21b067@abcengg.edu,CSE21B067,STUDENT,Computer Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Esha Desai,esha.desai.cse21b068@abcengg.edu,CSE21B068,STUDENT,Computer Science,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Kavya Pandey,kavya.pandey.cse21b069@abcengg.edu,CSE21B069,STUDENT,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Nisha Nair,nisha.nair.cse21b070@abcengg.edu,CSE21B070,STUDENT,Computer Science,Active,Yes,14 Sep 2026 12:32,19 Sep 2026 09:32
+Riya Gupta,riya.gupta.cse21b567@abcengg.edu,CSE21B567,STUDENT,Computer Science,Active,Yes,16 Sep 2026 14:32,19 Sep 2026 09:32
+Tanvi Bose,tanvi.bose.cse21b072@abcengg.edu,CSE21B072,STUDENT,Computer Science,Active,Yes,15 Sep 2026 08:32,19 Sep 2026 09:32
+Zara Jain,zara.jain.cse21b073@abcengg.edu,CSE21B073,STUDENT,Computer Science,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Pavan Varma,pavan.varma.cse21b074@abcengg.edu,CSE21B074,STUDENT,Computer Science,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Advait Das,advait.das.cse21b075@abcengg.edu,CSE21B075,STUDENT,Computer Science,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Chirag Joshi,chirag.joshi.cse21b076@abcengg.edu,CSE21B076,STUDENT,Computer Science,Active,Yes,16 Sep 2026 09:32,19 Sep 2026 09:32
+Harsh Desai,harsh.desai.cse21b077@abcengg.edu,CSE21B077,STUDENT,Computer Science,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Manish Pandey,manish.pandey.cse21b627@abcengg.edu,CSE21B627,STUDENT,Computer Science,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Pranav Nair,pranav.nair.cse21b079@abcengg.edu,CSE21B079,STUDENT,Computer Science,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Sanya Gupta,sanya.gupta.cse21b080@abcengg.edu,CSE21B080,STUDENT,Computer Science,Active,Yes,19 Sep 2026 07:32,19 Sep 2026 09:32
+Varun Bose,varun.bose.cse21b081@abcengg.edu,CSE21B081,STUDENT,Computer Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Aniket Jain,aniket.jain.cse21b082@abcengg.edu,CSE21B082,STUDENT,Computer Science,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Devika Varma,devika.varma.cse21b083@abcengg.edu,CSE21B083,STUDENT,Computer Science,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Anika Das,anika.das.cse21b084@abcengg.edu,CSE21B084,STUDENT,Computer Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Dhruv Joshi,dhruv.joshi.cse21b085@abcengg.edu,CSE21B085,STUDENT,Computer Science,Active,Yes,14 Sep 2026 12:32,19 Sep 2026 09:32
+Jatin Desai,jatin.desai.cse21b086@abcengg.edu,CSE21B086,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Nikhil Pandey,nikhil.pandey.cse21b087@abcengg.edu,CSE21B087,STUDENT,Computer Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Rajat Nair,rajat.nair.cse21b088@abcengg.edu,CSE21B088,STUDENT,Computer Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Simran Gupta,simran.gupta.cse21b089@abcengg.edu,CSE21B089,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Yash Bose,yash.bose.cse21b090@abcengg.edu,CSE21B090,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Mitali Jain,mitali.jain.cse21b402@abcengg.edu,CSE21B402,STUDENT,Computer Science,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Aditi Sharma,aditi.sharma.cse21b092@abcengg.edu,CSE21B092,STUDENT,Computer Science,Active,Yes,15 Sep 2026 00:32,19 Sep 2026 09:32
+Bhavya Das,bhavya.das.cse21b093@abcengg.edu,CSE21B093,STUDENT,Computer Science,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Gaurav Joshi,gaurav.joshi.cse21b094@abcengg.edu,CSE21B094,STUDENT,Computer Science,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Lakshya Desai,lakshya.desai.cse21b095@abcengg.edu,CSE21B095,STUDENT,Computer Science,Active,Yes,18 Sep 2026 19:32,19 Sep 2026 09:32
+Pooja Pandey,pooja.pandey.cse21b096@abcengg.edu,CSE21B096,STUDENT,Computer Science,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Sahil Nair,sahil.nair.cse21b097@abcengg.edu,CSE21B097,STUDENT,Computer Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Uday Gupta,uday.gupta.cse21b098@abcengg.edu,CSE21B098,STUDENT,Computer Science,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Swara Bose,swara.bose.cse21b099@abcengg.edu,CSE21B099,STUDENT,Computer Science,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Kunal Jain,kunal.jain.cse21b100@abcengg.edu,CSE21B100,STUDENT,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Ananya Sharma,ananya.sharma.cse21b348@abcengg.edu,CSE21B348,STUDENT,Computer Science,Active,Yes,14 Sep 2026 20:32,19 Sep 2026 09:32
+Deepika Das,deepika.das.cse21b102@abcengg.edu,CSE21B102,STUDENT,Computer Science,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Isha Joshi,isha.joshi.cse21b103@abcengg.edu,CSE21B103,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Naveen Desai,naveen.desai.cse21b104@abcengg.edu,CSE21B104,STUDENT,Computer Science,Active,Yes,14 Sep 2026 23:32,19 Sep 2026 09:32
+Rahul Pandey,rahul.pandey.cse21b105@abcengg.edu,CSE21B105,STUDENT,Computer Science,Active,Yes,16 Sep 2026 10:32,19 Sep 2026 09:32
+Siddharth Nair,siddharth.nair.cse21b106@abcengg.edu,CSE21B106,STUDENT,Computer Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Vikas Gupta,vikas.gupta.cse21b107@abcengg.edu,CSE21B107,STUDENT,Computer Science,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Rachit Bose,rachit.bose.cse21b108@abcengg.edu,CSE21B108,STUDENT,Computer Science,Active,Yes,15 Sep 2026 08:32,19 Sep 2026 09:32
+Aarav Khanna,aarav.khanna.cse21b109@abcengg.edu,CSE21B109,STUDENT,Computer Science,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Aryan Sharma,aryan.sharma.cse21b110@abcengg.edu,CSE21B110,STUDENT,Computer Science,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Farhan Das,farhan.das.cse21b111@abcengg.edu,CSE21B111,STUDENT,Computer Science,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Kiran Joshi,kiran.joshi.cse21b112@abcengg.edu,CSE21B112,STUDENT,Computer Science,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Omkar Desai,omkar.desai.cse21b113@abcengg.edu,CSE21B113,STUDENT,Computer Science,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Rohan Pandey,rohan.pandey.cse21b114@abcengg.edu,CSE21B114,STUDENT,Computer Science,Active,Yes,15 Sep 2026 13:32,19 Sep 2026 09:32
+Tarun Nair,tarun.nair.cse21b115@abcengg.edu,CSE21B115,STUDENT,Computer Science,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Neeraj Gupta,neeraj.gupta.cse21b116@abcengg.edu,CSE21B116,STUDENT,Computer Science,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Shruti Bose,shruti.bose.cse21b117@abcengg.edu,CSE21B117,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Akash Khanna,akash.khanna.cse21b118@abcengg.edu,CSE21B118,STUDENT,Computer Science,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Darshan Sharma,darshan.sharma.cse21b119@abcengg.edu,CSE21B119,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Ishaan Das,ishaan.das.cse21b120@abcengg.edu,CSE21B120,STUDENT,Computer Science,Active,Yes,18 Sep 2026 16:32,19 Sep 2026 09:32
+Meher Joshi,meher.joshi.cse21b121@abcengg.edu,CSE21B121,STUDENT,Computer Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Priya Desai,priya.desai.cse21b122@abcengg.edu,CSE21B122,STUDENT,Computer Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Shreya Pandey,shreya.pandey.cse21b123@abcengg.edu,CSE21B123,STUDENT,Computer Science,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Vidya Nair,vidya.nair.cse21b124@abcengg.edu,CSE21B124,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Kritika Gupta,kritika.gupta.cse21b125@abcengg.edu,CSE21B125,STUDENT,Computer Science,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Tejas Bose,tejas.bose.cse21b126@abcengg.edu,CSE21B126,STUDENT,Computer Science,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Arjun Khanna,arjun.khanna.cse21b127@abcengg.edu,CSE21B127,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Esha Sharma,esha.sharma.cse21b128@abcengg.edu,CSE21B128,STUDENT,Computer Science,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Kavya Das,kavya.das.cse21b129@abcengg.edu,CSE21B129,STUDENT,Computer Science,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Nisha Joshi,nisha.joshi.cse21b130@abcengg.edu,CSE21B130,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Riya Desai,riya.desai.cse21b131@abcengg.edu,CSE21B131,STUDENT,Computer Science,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Tanvi Pandey,tanvi.pandey.cse21b132@abcengg.edu,CSE21B132,STUDENT,Computer Science,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Zara Nair,zara.nair.cse21b133@abcengg.edu,CSE21B133,STUDENT,Computer Science,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Pavan Gupta,pavan.gupta.cse21b134@abcengg.edu,CSE21B134,STUDENT,Computer Science,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Advait Kapoor,advait.kapoor.cse21b135@abcengg.edu,CSE21B135,STUDENT,Computer Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Chirag Khanna,chirag.khanna.cse21b136@abcengg.edu,CSE21B136,STUDENT,Computer Science,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Harsh Sharma,harsh.sharma.cse21b137@abcengg.edu,CSE21B137,STUDENT,Computer Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Manish Das,manish.das.cse21b138@abcengg.edu,CSE21B138,STUDENT,Computer Science,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Pranav Joshi,pranav.joshi.cse21b139@abcengg.edu,CSE21B139,STUDENT,Computer Science,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Sanya Desai,sanya.desai.cse21b140@abcengg.edu,CSE21B140,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Varun Pandey,varun.pandey.cse21b141@abcengg.edu,CSE21B141,STUDENT,Computer Science,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Aniket Nair,aniket.nair.cse21b142@abcengg.edu,CSE21B142,STUDENT,Computer Science,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Devika Gupta,devika.gupta.cse21b143@abcengg.edu,CSE21B143,STUDENT,Computer Science,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Anika Kapoor,anika.kapoor.cse21b144@abcengg.edu,CSE21B144,STUDENT,Computer Science,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Dhruv Khanna,dhruv.khanna.cse21b145@abcengg.edu,CSE21B145,STUDENT,Computer Science,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Jatin Sharma,jatin.sharma.cse21b146@abcengg.edu,CSE21B146,STUDENT,Computer Science,Active,Yes,15 Sep 2026 00:32,19 Sep 2026 09:32
+Nikhil Das,nikhil.das.cse21b147@abcengg.edu,CSE21B147,STUDENT,Computer Science,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Rajat Joshi,rajat.joshi.cse21b148@abcengg.edu,CSE21B148,STUDENT,Computer Science,Active,Yes,18 Sep 2026 17:32,19 Sep 2026 09:32
+Simran Desai,simran.desai.cse21b149@abcengg.edu,CSE21B149,STUDENT,Computer Science,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Yash Pandey,yash.pandey.cse21b150@abcengg.edu,CSE21B150,STUDENT,Computer Science,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Mitali Nair,mitali.nair.cse21b151@abcengg.edu,CSE21B151,STUDENT,Computer Science,Active,Yes,16 Sep 2026 10:32,19 Sep 2026 09:32
+Aditi Singh,aditi.singh.cse21b152@abcengg.edu,CSE21B152,STUDENT,Computer Science,Active,Yes,15 Sep 2026 03:32,19 Sep 2026 09:32
+Bhavya Kapoor,bhavya.kapoor.cse21b153@abcengg.edu,CSE21B153,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Gaurav Khanna,gaurav.khanna.cse21b154@abcengg.edu,CSE21B154,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Lakshya Sharma,lakshya.sharma.cse21b155@abcengg.edu,CSE21B155,STUDENT,Computer Science,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Pooja Das,pooja.das.cse21b156@abcengg.edu,CSE21B156,STUDENT,Computer Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Sahil Joshi,sahil.joshi.cse21b157@abcengg.edu,CSE21B157,STUDENT,Computer Science,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Uday Desai,uday.desai.cse21b158@abcengg.edu,CSE21B158,STUDENT,Computer Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Swara Pandey,swara.pandey.cse21b159@abcengg.edu,CSE21B159,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Kunal Nair,kunal.nair.cse21b160@abcengg.edu,CSE21B160,STUDENT,Computer Science,Active,Yes,15 Sep 2026 16:32,19 Sep 2026 09:32
+Ananya Singh,ananya.singh.cse21b161@abcengg.edu,CSE21B161,STUDENT,Computer Science,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Deepika Kapoor,deepika.kapoor.cse21b162@abcengg.edu,CSE21B162,STUDENT,Computer Science,Active,Yes,18 Sep 2026 08:32,19 Sep 2026 09:32
+Isha Khanna,isha.khanna.cse21b163@abcengg.edu,CSE21B163,STUDENT,Computer Science,Active,Yes,19 Sep 2026 05:32,19 Sep 2026 09:32
+Naveen Sharma,naveen.sharma.cse21b164@abcengg.edu,CSE21B164,STUDENT,Computer Science,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Rahul Das,rahul.das.cse21b165@abcengg.edu,CSE21B165,STUDENT,Computer Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Siddharth Joshi,siddharth.joshi.cse21b166@abcengg.edu,CSE21B166,STUDENT,Computer Science,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Vikas Desai,vikas.desai.cse21b167@abcengg.edu,CSE21B167,STUDENT,Computer Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Rachit Pandey,rachit.pandey.cse21b168@abcengg.edu,CSE21B168,STUDENT,Computer Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Aarav Reddy,aarav.reddy.cse21b169@abcengg.edu,CSE21B169,STUDENT,Computer Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Aryan Singh,aryan.singh.cse21b170@abcengg.edu,CSE21B170,STUDENT,Computer Science,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Farhan Kapoor,farhan.kapoor.cse21b171@abcengg.edu,CSE21B171,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Kiran Khanna,kiran.khanna.cse21b172@abcengg.edu,CSE21B172,STUDENT,Computer Science,Active,Yes,16 Sep 2026 02:32,19 Sep 2026 09:32
+Omkar Sharma,omkar.sharma.cse21b173@abcengg.edu,CSE21B173,STUDENT,Computer Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Rohan Das,rohan.das.cse21b174@abcengg.edu,CSE21B174,STUDENT,Computer Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Tarun Joshi,tarun.joshi.cse21b175@abcengg.edu,CSE21B175,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Neeraj Desai,neeraj.desai.cse21b176@abcengg.edu,CSE21B176,STUDENT,Computer Science,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Shruti Pandey,shruti.pandey.cse21b177@abcengg.edu,CSE21B177,STUDENT,Computer Science,Active,Yes,15 Sep 2026 17:32,19 Sep 2026 09:32
+Akash Reddy,akash.reddy.cse21b178@abcengg.edu,CSE21B178,STUDENT,Computer Science,Active,Yes,16 Sep 2026 17:32,19 Sep 2026 09:32
+Darshan Singh,darshan.singh.cse21b179@abcengg.edu,CSE21B179,STUDENT,Computer Science,Active,Yes,16 Sep 2026 04:32,19 Sep 2026 09:32
+Ishaan Kapoor,ishaan.kapoor.cse21b180@abcengg.edu,CSE21B180,STUDENT,Computer Science,Active,Yes,19 Sep 2026 03:32,19 Sep 2026 09:32
+Meher Khanna,meher.khanna.cse21b181@abcengg.edu,CSE21B181,STUDENT,Computer Science,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Priya Sharma,priya.sharma.cse21b182@abcengg.edu,CSE21B182,STUDENT,Computer Science,Active,Yes,15 Sep 2026 10:32,19 Sep 2026 09:32
+Shreya Das,shreya.das.cse21b183@abcengg.edu,CSE21B183,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Vidya Joshi,vidya.joshi.cse21b184@abcengg.edu,CSE21B184,STUDENT,Computer Science,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Kritika Desai,kritika.desai.cse21b185@abcengg.edu,CSE21B185,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Tejas Pandey,tejas.pandey.cse21b186@abcengg.edu,CSE21B186,STUDENT,Computer Science,Active,Yes,16 Sep 2026 14:32,19 Sep 2026 09:32
+Arjun Reddy,arjun.reddy.cse21b187@abcengg.edu,CSE21B187,STUDENT,Computer Science,Active,Yes,18 Sep 2026 00:32,19 Sep 2026 09:32
+Esha Singh,esha.singh.cse21b188@abcengg.edu,CSE21B188,STUDENT,Computer Science,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Kavya Kapoor,kavya.kapoor.cse21b189@abcengg.edu,CSE21B189,STUDENT,Computer Science,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Nisha Khanna,nisha.khanna.cse21b190@abcengg.edu,CSE21B190,STUDENT,Computer Science,Active,Yes,19 Sep 2026 03:32,19 Sep 2026 09:32
+Riya Sharma,riya.sharma.cse21b191@abcengg.edu,CSE21B191,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Tanvi Das,tanvi.das.cse21b192@abcengg.edu,CSE21B192,STUDENT,Computer Science,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Zara Joshi,zara.joshi.cse21b193@abcengg.edu,CSE21B193,STUDENT,Computer Science,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Pavan Desai,pavan.desai.cse21b194@abcengg.edu,CSE21B194,STUDENT,Computer Science,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Advait Saxena,advait.saxena.cse21b195@abcengg.edu,CSE21B195,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Chirag Reddy,chirag.reddy.cse21b196@abcengg.edu,CSE21B196,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Harsh Singh,harsh.singh.cse21b197@abcengg.edu,CSE21B197,STUDENT,Computer Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Manish Kapoor,manish.kapoor.cse21b198@abcengg.edu,CSE21B198,STUDENT,Computer Science,Active,Yes,17 Sep 2026 17:32,19 Sep 2026 09:32
+Pranav Khanna,pranav.khanna.cse21b199@abcengg.edu,CSE21B199,STUDENT,Computer Science,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Sanya Sharma,sanya.sharma.cse21b200@abcengg.edu,CSE21B200,STUDENT,Computer Science,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Varun Das,varun.das.cse21b201@abcengg.edu,CSE21B201,STUDENT,Computer Science,Active,Yes,19 Sep 2026 03:32,19 Sep 2026 09:32
+Aniket Joshi,aniket.joshi.cse21b202@abcengg.edu,CSE21B202,STUDENT,Computer Science,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Devika Desai,devika.desai.cse21b203@abcengg.edu,CSE21B203,STUDENT,Computer Science,Active,Yes,16 Sep 2026 03:32,19 Sep 2026 09:32
+Anika Saxena,anika.saxena.cse21b204@abcengg.edu,CSE21B204,STUDENT,Computer Science,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Dhruv Reddy,dhruv.reddy.cse21b205@abcengg.edu,CSE21B205,STUDENT,Computer Science,Active,Yes,14 Sep 2026 12:32,19 Sep 2026 09:32
+Jatin Singh,jatin.singh.cse21b206@abcengg.edu,CSE21B206,STUDENT,Computer Science,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Nikhil Kapoor,nikhil.kapoor.cse21b207@abcengg.edu,CSE21B207,STUDENT,Computer Science,Active,Yes,15 Sep 2026 08:32,19 Sep 2026 09:32
+Rajat Khanna,rajat.khanna.cse21b208@abcengg.edu,CSE21B208,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Simran Sharma,simran.sharma.cse21b209@abcengg.edu,CSE21B209,STUDENT,Computer Science,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Yash Das,yash.das.cse21b210@abcengg.edu,CSE21B210,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Mitali Joshi,mitali.joshi.cse21b211@abcengg.edu,CSE21B211,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Aditi Ghosh,aditi.ghosh.cse21b212@abcengg.edu,CSE21B212,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Bhavya Saxena,bhavya.saxena.cse21b213@abcengg.edu,CSE21B213,STUDENT,Computer Science,Active,Yes,15 Sep 2026 01:32,19 Sep 2026 09:32
+Gaurav Reddy,gaurav.reddy.cse21b366@abcengg.edu,CSE21B366,STUDENT,Computer Science,Active,Yes,17 Sep 2026 03:32,19 Sep 2026 09:32
+Lakshya Singh,lakshya.singh.cse21b215@abcengg.edu,CSE21B215,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Pooja Kapoor,pooja.kapoor.cse21b216@abcengg.edu,CSE21B216,STUDENT,Computer Science,Active,Yes,14 Sep 2026 23:32,19 Sep 2026 09:32
+Sahil Khanna,sahil.khanna.cse21b217@abcengg.edu,CSE21B217,STUDENT,Computer Science,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Uday Sharma,uday.sharma.cse21b218@abcengg.edu,CSE21B218,STUDENT,Computer Science,Active,Yes,14 Sep 2026 11:32,19 Sep 2026 09:32
+Swara Das,swara.das.cse21b219@abcengg.edu,CSE21B219,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Kunal Joshi,kunal.joshi.cse21b220@abcengg.edu,CSE21B220,STUDENT,Computer Science,Active,Yes,14 Sep 2026 23:32,19 Sep 2026 09:32
+Ananya Ghosh,ananya.ghosh.cse21b221@abcengg.edu,CSE21B221,STUDENT,Computer Science,Active,Yes,18 Sep 2026 03:32,19 Sep 2026 09:32
+Deepika Saxena,deepika.saxena.cse21b222@abcengg.edu,CSE21B222,STUDENT,Computer Science,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Isha Reddy,isha.reddy.cse21b223@abcengg.edu,CSE21B223,STUDENT,Computer Science,Active,Yes,17 Sep 2026 21:32,19 Sep 2026 09:32
+Naveen Singh,naveen.singh.cse21b224@abcengg.edu,CSE21B224,STUDENT,Computer Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Rahul Kapoor,rahul.kapoor.cse21b225@abcengg.edu,CSE21B225,STUDENT,Computer Science,Active,Yes,18 Sep 2026 08:32,19 Sep 2026 09:32
+Siddharth Khanna,siddharth.khanna.cse21b226@abcengg.edu,CSE21B226,STUDENT,Computer Science,Active,Yes,17 Sep 2026 17:32,19 Sep 2026 09:32
+Vikas Sharma,vikas.sharma.cse21b227@abcengg.edu,CSE21B227,STUDENT,Computer Science,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Rachit Das,rachit.das.cse21b228@abcengg.edu,CSE21B228,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Aarav Kulkarni,aarav.kulkarni.cse21b229@abcengg.edu,CSE21B229,STUDENT,Computer Science,Active,Yes,18 Sep 2026 07:32,19 Sep 2026 09:32
+Aryan Ghosh,aryan.ghosh.cse21b230@abcengg.edu,CSE21B230,STUDENT,Computer Science,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Farhan Saxena,farhan.saxena.cse21b231@abcengg.edu,CSE21B231,STUDENT,Computer Science,Active,Yes,18 Sep 2026 16:32,19 Sep 2026 09:32
+Kiran Reddy,kiran.reddy.cse21b232@abcengg.edu,CSE21B232,STUDENT,Computer Science,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Omkar Singh,omkar.singh.cse21b233@abcengg.edu,CSE21B233,STUDENT,Computer Science,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Rohan Kapoor,rohan.kapoor.cse21b234@abcengg.edu,CSE21B234,STUDENT,Computer Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Tarun Khanna,tarun.khanna.cse21b235@abcengg.edu,CSE21B235,STUDENT,Computer Science,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Neeraj Sharma,neeraj.sharma.cse21b236@abcengg.edu,CSE21B236,STUDENT,Computer Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Shruti Das,shruti.das.cse21b237@abcengg.edu,CSE21B237,STUDENT,Computer Science,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Akash Kulkarni,akash.kulkarni.cse21b238@abcengg.edu,CSE21B238,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Darshan Ghosh,darshan.ghosh.cse21b239@abcengg.edu,CSE21B239,STUDENT,Computer Science,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Ishaan Saxena,ishaan.saxena.cse21b240@abcengg.edu,CSE21B240,STUDENT,Computer Science,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Meher Reddy,meher.reddy.cse21b241@abcengg.edu,CSE21B241,STUDENT,Computer Science,Active,Yes,16 Sep 2026 16:32,19 Sep 2026 09:32
+Priya Singh,priya.singh.cse21b242@abcengg.edu,CSE21B242,STUDENT,Computer Science,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Shreya Kapoor,shreya.kapoor.cse21b243@abcengg.edu,CSE21B243,STUDENT,Computer Science,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Vidya Khanna,vidya.khanna.cse21b244@abcengg.edu,CSE21B244,STUDENT,Computer Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Kritika Sharma,kritika.sharma.cse21b245@abcengg.edu,CSE21B245,STUDENT,Computer Science,Active,Yes,18 Sep 2026 08:32,19 Sep 2026 09:32
+Tejas Das,tejas.das.cse21b246@abcengg.edu,CSE21B246,STUDENT,Computer Science,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Arjun Kulkarni,arjun.kulkarni.cse21b247@abcengg.edu,CSE21B247,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Esha Ghosh,esha.ghosh.cse21b248@abcengg.edu,CSE21B248,STUDENT,Computer Science,Active,Yes,15 Sep 2026 01:32,19 Sep 2026 09:32
+Kavya Saxena,kavya.saxena.cse21b249@abcengg.edu,CSE21B249,STUDENT,Computer Science,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Nisha Reddy,nisha.reddy.cse21b250@abcengg.edu,CSE21B250,STUDENT,Computer Science,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Riya Singh,riya.singh.cse21b251@abcengg.edu,CSE21B251,STUDENT,Computer Science,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Tanvi Kapoor,tanvi.kapoor.cse21b252@abcengg.edu,CSE21B252,STUDENT,Computer Science,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Zara Khanna,zara.khanna.cse21b253@abcengg.edu,CSE21B253,STUDENT,Computer Science,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Pavan Sharma,pavan.sharma.cse21b254@abcengg.edu,CSE21B254,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Advait Bansal,advait.bansal.cse21b255@abcengg.edu,CSE21B255,STUDENT,Computer Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Chirag Kulkarni,chirag.kulkarni.cse21b256@abcengg.edu,CSE21B256,STUDENT,Computer Science,Active,Yes,14 Sep 2026 19:32,19 Sep 2026 09:32
+Harsh Ghosh,harsh.ghosh.cse21b257@abcengg.edu,CSE21B257,STUDENT,Computer Science,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Manish Saxena,manish.saxena.cse21b258@abcengg.edu,CSE21B258,STUDENT,Computer Science,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Pranav Reddy,pranav.reddy.cse21b259@abcengg.edu,CSE21B259,STUDENT,Computer Science,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Sanya Singh,sanya.singh.cse21b260@abcengg.edu,CSE21B260,STUDENT,Computer Science,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Varun Kapoor,varun.kapoor.cse21b261@abcengg.edu,CSE21B261,STUDENT,Computer Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Aniket Khanna,aniket.khanna.cse21b262@abcengg.edu,CSE21B262,STUDENT,Computer Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Devika Sharma,devika.sharma.cse21b263@abcengg.edu,CSE21B263,STUDENT,Computer Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Anika Bansal,anika.bansal.cse21b264@abcengg.edu,CSE21B264,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Dhruv Kulkarni,dhruv.kulkarni.cse21b265@abcengg.edu,CSE21B265,STUDENT,Computer Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Jatin Ghosh,jatin.ghosh.cse21b266@abcengg.edu,CSE21B266,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Nikhil Saxena,nikhil.saxena.cse21b267@abcengg.edu,CSE21B267,STUDENT,Computer Science,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Rajat Reddy,rajat.reddy.cse21b268@abcengg.edu,CSE21B268,STUDENT,Computer Science,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Simran Singh,simran.singh.cse21b269@abcengg.edu,CSE21B269,STUDENT,Computer Science,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Yash Kapoor,yash.kapoor.cse21b270@abcengg.edu,CSE21B270,STUDENT,Computer Science,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Mitali Khanna,mitali.khanna.cse21b271@abcengg.edu,CSE21B271,STUDENT,Computer Science,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Aditi Verma,aditi.verma.cse21b272@abcengg.edu,CSE21B272,STUDENT,Computer Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Bhavya Bansal,bhavya.bansal.cse21b273@abcengg.edu,CSE21B273,STUDENT,Computer Science,Active,Yes,15 Sep 2026 01:32,19 Sep 2026 09:32
+Gaurav Kulkarni,gaurav.kulkarni.cse21b274@abcengg.edu,CSE21B274,STUDENT,Computer Science,Active,Yes,18 Sep 2026 09:32,19 Sep 2026 09:32
+Lakshya Ghosh,lakshya.ghosh.cse21b275@abcengg.edu,CSE21B275,STUDENT,Computer Science,Active,Yes,19 Sep 2026 05:32,19 Sep 2026 09:32
+Pooja Saxena,pooja.saxena.cse21b276@abcengg.edu,CSE21B276,STUDENT,Computer Science,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Sahil Reddy,sahil.reddy.cse21b277@abcengg.edu,CSE21B277,STUDENT,Computer Science,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Uday Singh,uday.singh.cse21b278@abcengg.edu,CSE21B278,STUDENT,Computer Science,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Swara Kapoor,swara.kapoor.cse21b279@abcengg.edu,CSE21B279,STUDENT,Computer Science,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Kunal Khanna,kunal.khanna.cse21b280@abcengg.edu,CSE21B280,STUDENT,Computer Science,Active,Yes,16 Sep 2026 03:32,19 Sep 2026 09:32
+Ananya Verma,ananya.verma.cse21b281@abcengg.edu,CSE21B281,STUDENT,Computer Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Deepika Bansal,deepika.bansal.cse21b282@abcengg.edu,CSE21B282,STUDENT,Computer Science,Active,Yes,15 Sep 2026 01:32,19 Sep 2026 09:32
+Isha Kulkarni,isha.kulkarni.cse21b283@abcengg.edu,CSE21B283,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Naveen Ghosh,naveen.ghosh.cse21b284@abcengg.edu,CSE21B284,STUDENT,Computer Science,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Rahul Saxena,rahul.saxena.cse21b285@abcengg.edu,CSE21B285,STUDENT,Computer Science,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Siddharth Reddy,siddharth.reddy.cse21b286@abcengg.edu,CSE21B286,STUDENT,Computer Science,Active,Yes,15 Sep 2026 15:32,19 Sep 2026 09:32
+Vikas Singh,vikas.singh.cse21b707@abcengg.edu,CSE21B707,STUDENT,Computer Science,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Rachit Kapoor,rachit.kapoor.cse21b288@abcengg.edu,CSE21B288,STUDENT,Computer Science,Active,Yes,16 Sep 2026 16:32,19 Sep 2026 09:32
+Aarav Malhotra,aarav.malhotra.cse21b289@abcengg.edu,CSE21B289,STUDENT,Computer Science,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Aryan Verma,aryan.verma.cse21b290@abcengg.edu,CSE21B290,STUDENT,Computer Science,Active,Yes,17 Sep 2026 02:32,19 Sep 2026 09:32
+Farhan Bansal,farhan.bansal.cse21b291@abcengg.edu,CSE21B291,STUDENT,Computer Science,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Kiran Kulkarni,kiran.kulkarni.cse21b292@abcengg.edu,CSE21B292,STUDENT,Computer Science,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Omkar Ghosh,omkar.ghosh.cse21b293@abcengg.edu,CSE21B293,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Rohan Saxena,rohan.saxena.cse21b294@abcengg.edu,CSE21B294,STUDENT,Computer Science,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Tarun Reddy,tarun.reddy.cse21b295@abcengg.edu,CSE21B295,STUDENT,Computer Science,Active,Yes,17 Sep 2026 03:32,19 Sep 2026 09:32
+Neeraj Singh,neeraj.singh.cse21b380@abcengg.edu,CSE21B380,STUDENT,Computer Science,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Shruti Kapoor,shruti.kapoor.cse21b297@abcengg.edu,CSE21B297,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Akash Malhotra,akash.malhotra.cse21b298@abcengg.edu,CSE21B298,STUDENT,Computer Science,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Darshan Verma,darshan.verma.cse21b299@abcengg.edu,CSE21B299,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Ishaan Bansal,ishaan.bansal.cse21b300@abcengg.edu,CSE21B300,STUDENT,Computer Science,Active,Yes,18 Sep 2026 00:32,19 Sep 2026 09:32
+Meher Kulkarni,meher.kulkarni.cse21b301@abcengg.edu,CSE21B301,STUDENT,Computer Science,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Priya Ghosh,priya.ghosh.cse21b302@abcengg.edu,CSE21B302,STUDENT,Computer Science,Active,Yes,16 Sep 2026 04:32,19 Sep 2026 09:32
+Shreya Saxena,shreya.saxena.cse21b303@abcengg.edu,CSE21B303,STUDENT,Computer Science,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Vidya Reddy,vidya.reddy.cse21b304@abcengg.edu,CSE21B304,STUDENT,Computer Science,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Kritika Singh,kritika.singh.cse21b305@abcengg.edu,CSE21B305,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Tejas Kapoor,tejas.kapoor.cse21b306@abcengg.edu,CSE21B306,STUDENT,Computer Science,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Arjun Malhotra,arjun.malhotra.cse21b307@abcengg.edu,CSE21B307,STUDENT,Computer Science,Active,Yes,17 Sep 2026 01:32,19 Sep 2026 09:32
+Esha Verma,esha.verma.cse21b308@abcengg.edu,CSE21B308,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Kavya Bansal,kavya.bansal.cse21b309@abcengg.edu,CSE21B309,STUDENT,Computer Science,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Nisha Kulkarni,nisha.kulkarni.cse21b310@abcengg.edu,CSE21B310,STUDENT,Computer Science,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Riya Ghosh,riya.ghosh.cse21b311@abcengg.edu,CSE21B311,STUDENT,Computer Science,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Tanvi Saxena,tanvi.saxena.cse21b312@abcengg.edu,CSE21B312,STUDENT,Computer Science,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Zara Reddy,zara.reddy.cse21b313@abcengg.edu,CSE21B313,STUDENT,Computer Science,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Pavan Singh,pavan.singh.cse21b314@abcengg.edu,CSE21B314,STUDENT,Computer Science,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Advait Banerjee,advait.banerjee.cse21b315@abcengg.edu,CSE21B315,STUDENT,Computer Science,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Chirag Malhotra,chirag.malhotra.cse21b316@abcengg.edu,CSE21B316,STUDENT,Computer Science,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Harsh Verma,harsh.verma.cse21b317@abcengg.edu,CSE21B317,STUDENT,Computer Science,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Manish Bansal,manish.bansal.cse21b318@abcengg.edu,CSE21B318,STUDENT,Computer Science,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Pranav Kulkarni,pranav.kulkarni.cse21b319@abcengg.edu,CSE21B319,STUDENT,Computer Science,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Sanya Ghosh,sanya.ghosh.cse21b320@abcengg.edu,CSE21B320,STUDENT,Computer Science,Active,Yes,15 Sep 2026 01:32,19 Sep 2026 09:32
+Varun Saxena,varun.saxena.cse21b321@abcengg.edu,CSE21B321,STUDENT,Computer Science,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Aniket Reddy,aniket.reddy.cse21b322@abcengg.edu,CSE21B322,STUDENT,Computer Science,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Devika Singh,devika.singh.cse21b323@abcengg.edu,CSE21B323,STUDENT,Computer Science,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Anika Banerjee,anika.banerjee.cse21b324@abcengg.edu,CSE21B324,STUDENT,Computer Science,Active,Yes,14 Sep 2026 19:32,19 Sep 2026 09:32
+Dhruv Malhotra,dhruv.malhotra.cse21b325@abcengg.edu,CSE21B325,STUDENT,Computer Science,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Jatin Verma,jatin.verma.cse21b326@abcengg.edu,CSE21B326,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Nikhil Bansal,nikhil.bansal.cse21b327@abcengg.edu,CSE21B327,STUDENT,Computer Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Rajat Kulkarni,rajat.kulkarni.cse21b328@abcengg.edu,CSE21B328,STUDENT,Computer Science,Active,Yes,16 Sep 2026 01:32,19 Sep 2026 09:32
+Simran Ghosh,simran.ghosh.cse21b329@abcengg.edu,CSE21B329,STUDENT,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Yash Saxena,yash.saxena.cse21b330@abcengg.edu,CSE21B330,STUDENT,Computer Science,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Mitali Reddy,mitali.reddy.cse21b331@abcengg.edu,CSE21B331,STUDENT,Computer Science,Active,Yes,16 Sep 2026 02:32,19 Sep 2026 09:32
+Aditi Patel,aditi.patel.cse21b332@abcengg.edu,CSE21B332,STUDENT,Computer Science,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Bhavya Banerjee,bhavya.banerjee.cse21b333@abcengg.edu,CSE21B333,STUDENT,Computer Science,Active,Yes,16 Sep 2026 08:32,19 Sep 2026 09:32
+Gaurav Malhotra,gaurav.malhotra.cse21b334@abcengg.edu,CSE21B334,STUDENT,Computer Science,Active,Yes,18 Sep 2026 16:32,19 Sep 2026 09:32
+Lakshya Verma,lakshya.verma.cse21b335@abcengg.edu,CSE21B335,STUDENT,Computer Science,Active,Yes,15 Sep 2026 08:32,19 Sep 2026 09:32
+Pooja Bansal,pooja.bansal.cse21b336@abcengg.edu,CSE21B336,STUDENT,Computer Science,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Sahil Kulkarni,sahil.kulkarni.cse21b337@abcengg.edu,CSE21B337,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Uday Ghosh,uday.ghosh.cse21b338@abcengg.edu,CSE21B338,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Swara Saxena,swara.saxena.cse21b339@abcengg.edu,CSE21B339,STUDENT,Computer Science,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Kunal Reddy,kunal.reddy.cse21b340@abcengg.edu,CSE21B340,STUDENT,Computer Science,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Ananya Patel,ananya.patel.cse21b341@abcengg.edu,CSE21B341,STUDENT,Computer Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Deepika Banerjee,deepika.banerjee.cse21b342@abcengg.edu,CSE21B342,STUDENT,Computer Science,Active,Yes,17 Sep 2026 02:32,19 Sep 2026 09:32
+Isha Malhotra,isha.malhotra.cse21b343@abcengg.edu,CSE21B343,STUDENT,Computer Science,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Naveen Verma,naveen.verma.cse21b344@abcengg.edu,CSE21B344,STUDENT,Computer Science,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Rahul Bansal,rahul.bansal.cse21b345@abcengg.edu,CSE21B345,STUDENT,Computer Science,Active,Yes,16 Sep 2026 04:32,19 Sep 2026 09:32
+Siddharth Kulkarni,siddharth.kulkarni.cse21b346@abcengg.edu,CSE21B346,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Vikas Ghosh,vikas.ghosh.cse21b347@abcengg.edu,CSE21B347,STUDENT,Computer Science,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Rachit Saxena,rachit.saxena.cse21b700@abcengg.edu,CSE21B700,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Aarav Mehta,aarav.mehta.cse21b349@abcengg.edu,CSE21B349,STUDENT,Computer Science,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Aryan Patel,aryan.patel.cse21b350@abcengg.edu,CSE21B350,STUDENT,Computer Science,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Farhan Banerjee,farhan.banerjee.cse21b351@abcengg.edu,CSE21B351,STUDENT,Computer Science,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Kiran Malhotra,kiran.malhotra.cse21b352@abcengg.edu,CSE21B352,STUDENT,Computer Science,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Omkar Verma,omkar.verma.cse21b353@abcengg.edu,CSE21B353,STUDENT,Computer Science,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Rohan Bansal,rohan.bansal.cse21b354@abcengg.edu,CSE21B354,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Tarun Kulkarni,tarun.kulkarni.cse21b355@abcengg.edu,CSE21B355,STUDENT,Computer Science,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Neeraj Ghosh,neeraj.ghosh.cse21b356@abcengg.edu,CSE21B356,STUDENT,Computer Science,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Shruti Saxena,shruti.saxena.cse21b357@abcengg.edu,CSE21B357,STUDENT,Computer Science,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Akash Mehta,akash.mehta.cse21b358@abcengg.edu,CSE21B358,STUDENT,Computer Science,Active,Yes,17 Sep 2026 20:32,19 Sep 2026 09:32
+Darshan Patel,darshan.patel.cse21b359@abcengg.edu,CSE21B359,STUDENT,Computer Science,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Ishaan Banerjee,ishaan.banerjee.cse21b360@abcengg.edu,CSE21B360,STUDENT,Computer Science,Active,Yes,16 Sep 2026 02:32,19 Sep 2026 09:32
+Meher Malhotra,meher.malhotra.cse21b361@abcengg.edu,CSE21B361,STUDENT,Computer Science,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Priya Verma,priya.verma.cse21b362@abcengg.edu,CSE21B362,STUDENT,Computer Science,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Shreya Bansal,shreya.bansal.cse21b363@abcengg.edu,CSE21B363,STUDENT,Computer Science,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Vidya Kulkarni,vidya.kulkarni.cse21b364@abcengg.edu,CSE21B364,STUDENT,Computer Science,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Kritika Ghosh,kritika.ghosh.cse21b365@abcengg.edu,CSE21B365,STUDENT,Computer Science,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Tejas Saxena,tejas.saxena.cse21b886@abcengg.edu,CSE21B886,STUDENT,Computer Science,Active,Yes,18 Sep 2026 03:32,19 Sep 2026 09:32
+Arjun Mehta,arjun.mehta.cse21b367@abcengg.edu,CSE21B367,STUDENT,Computer Science,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Esha Patel,esha.patel.cse21b368@abcengg.edu,CSE21B368,STUDENT,Computer Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Kavya Banerjee,kavya.banerjee.cse21b369@abcengg.edu,CSE21B369,STUDENT,Computer Science,Active,Yes,17 Sep 2026 20:32,19 Sep 2026 09:32
+Nisha Malhotra,nisha.malhotra.cse21b370@abcengg.edu,CSE21B370,STUDENT,Computer Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Riya Verma,riya.verma.cse21b371@abcengg.edu,CSE21B371,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Tanvi Bansal,tanvi.bansal.cse21b372@abcengg.edu,CSE21B372,STUDENT,Computer Science,Active,Yes,15 Sep 2026 00:32,19 Sep 2026 09:32
+Zara Kulkarni,zara.kulkarni.cse21b373@abcengg.edu,CSE21B373,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Pavan Ghosh,pavan.ghosh.cse21b374@abcengg.edu,CSE21B374,STUDENT,Computer Science,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Advait Trivedi,advait.trivedi.cse21b375@abcengg.edu,CSE21B375,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Chirag Mehta,chirag.mehta.cse21b376@abcengg.edu,CSE21B376,STUDENT,Computer Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Harsh Patel,harsh.patel.cse21b377@abcengg.edu,CSE21B377,STUDENT,Computer Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Manish Banerjee,manish.banerjee.cse21b378@abcengg.edu,CSE21B378,STUDENT,Computer Science,Active,Yes,16 Sep 2026 14:32,19 Sep 2026 09:32
+Pranav Malhotra,pranav.malhotra.cse21b379@abcengg.edu,CSE21B379,STUDENT,Computer Science,Active,Yes,17 Sep 2026 03:32,19 Sep 2026 09:32
+Sanya Verma,sanya.verma.cse21b444@abcengg.edu,CSE21B444,STUDENT,Computer Science,Active,Yes,17 Sep 2026 17:32,19 Sep 2026 09:32
+Varun Bansal,varun.bansal.cse21b381@abcengg.edu,CSE21B381,STUDENT,Computer Science,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Aniket Kulkarni,aniket.kulkarni.cse21b382@abcengg.edu,CSE21B382,STUDENT,Computer Science,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Devika Ghosh,devika.ghosh.cse21b383@abcengg.edu,CSE21B383,STUDENT,Computer Science,Active,Yes,16 Sep 2026 02:32,19 Sep 2026 09:32
+Anika Trivedi,anika.trivedi.cse21b384@abcengg.edu,CSE21B384,STUDENT,Computer Science,Active,Yes,15 Sep 2026 03:32,19 Sep 2026 09:32
+Dhruv Mehta,dhruv.mehta.cse21b385@abcengg.edu,CSE21B385,STUDENT,Computer Science,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Jatin Patel,jatin.patel.cse21b386@abcengg.edu,CSE21B386,STUDENT,Computer Science,Active,Yes,14 Sep 2026 20:32,19 Sep 2026 09:32
+Nikhil Banerjee,nikhil.banerjee.cse21b387@abcengg.edu,CSE21B387,STUDENT,Computer Science,Active,Yes,16 Sep 2026 01:32,19 Sep 2026 09:32
+Rajat Malhotra,rajat.malhotra.cse21b388@abcengg.edu,CSE21B388,STUDENT,Computer Science,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Simran Verma,simran.verma.cse21b389@abcengg.edu,CSE21B389,STUDENT,Computer Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Yash Bansal,yash.bansal.cse21b390@abcengg.edu,CSE21B390,STUDENT,Computer Science,Active,Yes,16 Sep 2026 10:32,19 Sep 2026 09:32
+Mitali Kulkarni,mitali.kulkarni.cse21b391@abcengg.edu,CSE21B391,STUDENT,Computer Science,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Aditi Hegde,aditi.hegde.cse21b392@abcengg.edu,CSE21B392,STUDENT,Computer Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Bhavya Trivedi,bhavya.trivedi.cse21b393@abcengg.edu,CSE21B393,STUDENT,Computer Science,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Gaurav Mehta,gaurav.mehta.cse21b394@abcengg.edu,CSE21B394,STUDENT,Computer Science,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Lakshya Patel,lakshya.patel.cse21b395@abcengg.edu,CSE21B395,STUDENT,Computer Science,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Pooja Banerjee,pooja.banerjee.cse21b396@abcengg.edu,CSE21B396,STUDENT,Computer Science,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Sahil Malhotra,sahil.malhotra.cse21b397@abcengg.edu,CSE21B397,STUDENT,Computer Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Uday Verma,uday.verma.cse21b398@abcengg.edu,CSE21B398,STUDENT,Computer Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Swara Bansal,swara.bansal.cse21b399@abcengg.edu,CSE21B399,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Kunal Kulkarni,kunal.kulkarni.cse21b400@abcengg.edu,CSE21B400,STUDENT,Computer Science,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Ananya Hegde,ananya.hegde.cse21b401@abcengg.edu,CSE21B401,STUDENT,Computer Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Deepika Trivedi,deepika.trivedi.cse21b782@abcengg.edu,CSE21B782,STUDENT,Computer Science,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Isha Mehta,isha.mehta.cse21b403@abcengg.edu,CSE21B403,STUDENT,Computer Science,Active,Yes,19 Sep 2026 05:32,19 Sep 2026 09:32
+Naveen Patel,naveen.patel.cse21b404@abcengg.edu,CSE21B404,STUDENT,Computer Science,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Rahul Banerjee,rahul.banerjee.cse21b405@abcengg.edu,CSE21B405,STUDENT,Computer Science,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Siddharth Malhotra,siddharth.malhotra.cse21b406@abcengg.edu,CSE21B406,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Vikas Verma,vikas.verma.cse21b407@abcengg.edu,CSE21B407,STUDENT,Computer Science,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Rachit Bansal,rachit.bansal.cse21b408@abcengg.edu,CSE21B408,STUDENT,Computer Science,Active,Yes,18 Sep 2026 09:32,19 Sep 2026 09:32
+Aarav Kumawat,aarav.kumawat.cse21b409@abcengg.edu,CSE21B409,STUDENT,Computer Science,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Aryan Hegde,aryan.hegde.cse21b410@abcengg.edu,CSE21B410,STUDENT,Computer Science,Active,Yes,16 Sep 2026 08:32,19 Sep 2026 09:32
+Farhan Trivedi,farhan.trivedi.cse21b411@abcengg.edu,CSE21B411,STUDENT,Computer Science,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Kiran Mehta,kiran.mehta.cse21b412@abcengg.edu,CSE21B412,STUDENT,Computer Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Omkar Patel,omkar.patel.cse21b413@abcengg.edu,CSE21B413,STUDENT,Computer Science,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Rohan Banerjee,rohan.banerjee.cse21b414@abcengg.edu,CSE21B414,STUDENT,Computer Science,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Tarun Malhotra,tarun.malhotra.cse21b415@abcengg.edu,CSE21B415,STUDENT,Computer Science,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Neeraj Verma,neeraj.verma.cse21b416@abcengg.edu,CSE21B416,STUDENT,Computer Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Shruti Bansal,shruti.bansal.cse21b417@abcengg.edu,CSE21B417,STUDENT,Computer Science,Active,Yes,17 Sep 2026 21:32,19 Sep 2026 09:32
+Akash Kumawat,akash.kumawat.cse21b418@abcengg.edu,CSE21B418,STUDENT,Computer Science,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Darshan Hegde,darshan.hegde.cse21b419@abcengg.edu,CSE21B419,STUDENT,Computer Science,Active,Yes,14 Sep 2026 11:32,19 Sep 2026 09:32
+Ishaan Trivedi,ishaan.trivedi.cse21b420@abcengg.edu,CSE21B420,STUDENT,Computer Science,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Meher Mehta,meher.mehta.cse21b421@abcengg.edu,CSE21B421,STUDENT,Computer Science,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Priya Patel,priya.patel.cse21b422@abcengg.edu,CSE21B422,STUDENT,Computer Science,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Shreya Banerjee,shreya.banerjee.cse21b423@abcengg.edu,CSE21B423,STUDENT,Computer Science,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Vidya Malhotra,vidya.malhotra.cse21b424@abcengg.edu,CSE21B424,STUDENT,Computer Science,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Kritika Verma,kritika.verma.cse21b425@abcengg.edu,CSE21B425,STUDENT,Computer Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Tejas Bansal,tejas.bansal.cse21b426@abcengg.edu,CSE21B426,STUDENT,Computer Science,Active,Yes,15 Sep 2026 17:32,19 Sep 2026 09:32
+Arjun Kumawat,arjun.kumawat.cse21b427@abcengg.edu,CSE21B427,STUDENT,Computer Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Arjun Menon,arjun.menon.ece21b000@abcengg.edu,ECE21B000,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Esha Rao,esha.rao.ece21b001@abcengg.edu,ECE21B001,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Kavya Chatterjee,kavya.chatterjee.ece21b002@abcengg.edu,ECE21B002,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 16:32,19 Sep 2026 09:32
+Nisha Naidu,nisha.naidu.ece21b003@abcengg.edu,ECE21B003,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Riya Iyer,riya.iyer.ece21b004@abcengg.edu,ECE21B004,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 03:32,19 Sep 2026 09:32
+Tanvi Pillai,tanvi.pillai.ece21b005@abcengg.edu,ECE21B005,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Zara Kumawat,zara.kumawat.ece21b006@abcengg.edu,ECE21B006,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Pavan Hegde,pavan.hegde.ece21b007@abcengg.edu,ECE21B007,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Advait Varma,advait.varma.ece21b008@abcengg.edu,ECE21B008,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Chirag Menon,chirag.menon.ece21b009@abcengg.edu,ECE21B009,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Harsh Rao,harsh.rao.ece21b010@abcengg.edu,ECE21B010,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 16:32,19 Sep 2026 09:32
+Manish Chatterjee,manish.chatterjee.ece21b011@abcengg.edu,ECE21B011,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Pranav Naidu,pranav.naidu.ece21b012@abcengg.edu,ECE21B012,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Sanya Iyer,sanya.iyer.ece21b013@abcengg.edu,ECE21B013,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Varun Pillai,varun.pillai.ece21b014@abcengg.edu,ECE21B014,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Aniket Kumawat,aniket.kumawat.ece21b015@abcengg.edu,ECE21B015,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Devika Hegde,devika.hegde.ece21b016@abcengg.edu,ECE21B016,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Anika Varma,anika.varma.ece21b017@abcengg.edu,ECE21B017,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 09:32,19 Sep 2026 09:32
+Dhruv Menon,dhruv.menon.ece21b018@abcengg.edu,ECE21B018,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Jatin Rao,jatin.rao.ece21b019@abcengg.edu,ECE21B019,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Nikhil Chatterjee,nikhil.chatterjee.ece21b020@abcengg.edu,ECE21B020,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Rajat Naidu,rajat.naidu.ece21b021@abcengg.edu,ECE21B021,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Simran Iyer,simran.iyer.ece21b022@abcengg.edu,ECE21B022,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Yash Pillai,yash.pillai.ece21b023@abcengg.edu,ECE21B023,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Mitali Kumawat,mitali.kumawat.ece21b024@abcengg.edu,ECE21B024,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Aditi Jain,aditi.jain.ece21b025@abcengg.edu,ECE21B025,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Bhavya Varma,bhavya.varma.ece21b026@abcengg.edu,ECE21B026,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 03:32,19 Sep 2026 09:32
+Gaurav Menon,gaurav.menon.ece21b027@abcengg.edu,ECE21B027,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Lakshya Rao,lakshya.rao.ece21b028@abcengg.edu,ECE21B028,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Pooja Chatterjee,pooja.chatterjee.ece21b029@abcengg.edu,ECE21B029,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Sahil Naidu,sahil.naidu.ece21b030@abcengg.edu,ECE21B030,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 02:32,19 Sep 2026 09:32
+Uday Iyer,uday.iyer.ece21b031@abcengg.edu,ECE21B031,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Swara Pillai,swara.pillai.ece21b032@abcengg.edu,ECE21B032,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Kunal Kumawat,kunal.kumawat.ece21b033@abcengg.edu,ECE21B033,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Ananya Jain,ananya.jain.ece21b034@abcengg.edu,ECE21B034,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Deepika Varma,deepika.varma.ece21b035@abcengg.edu,ECE21B035,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Isha Menon,isha.menon.ece21b036@abcengg.edu,ECE21B036,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 19:32,19 Sep 2026 09:32
+Naveen Rao,naveen.rao.ece21b037@abcengg.edu,ECE21B037,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Rahul Chatterjee,rahul.chatterjee.ece21b038@abcengg.edu,ECE21B038,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Siddharth Naidu,siddharth.naidu.ece21b039@abcengg.edu,ECE21B039,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 07:32,19 Sep 2026 09:32
+Vikas Iyer,vikas.iyer.ece21b040@abcengg.edu,ECE21B040,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Rachit Pillai,rachit.pillai.ece21b041@abcengg.edu,ECE21B041,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Aarav Bose,aarav.bose.ece21b042@abcengg.edu,ECE21B042,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Aryan Jain,aryan.jain.ece21b043@abcengg.edu,ECE21B043,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Farhan Varma,farhan.varma.ece21b044@abcengg.edu,ECE21B044,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 17:32,19 Sep 2026 09:32
+Kiran Menon,kiran.menon.ece21b045@abcengg.edu,ECE21B045,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 17:32,19 Sep 2026 09:32
+Omkar Rao,omkar.rao.ece21b046@abcengg.edu,ECE21B046,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Rohan Chatterjee,rohan.chatterjee.ece21b047@abcengg.edu,ECE21B047,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Tarun Naidu,tarun.naidu.ece21b048@abcengg.edu,ECE21B048,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 17:32,19 Sep 2026 09:32
+Neeraj Iyer,neeraj.iyer.ece21b049@abcengg.edu,ECE21B049,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 00:32,19 Sep 2026 09:32
+Shruti Pillai,shruti.pillai.ece21b050@abcengg.edu,ECE21B050,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 18:32,19 Sep 2026 09:32
+Akash Bose,akash.bose.ece21b051@abcengg.edu,ECE21B051,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Darshan Jain,darshan.jain.ece21b052@abcengg.edu,ECE21B052,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Ishaan Varma,ishaan.varma.ece21b053@abcengg.edu,ECE21B053,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Meher Menon,meher.menon.ece21b054@abcengg.edu,ECE21B054,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 08:32,19 Sep 2026 09:32
+Priya Rao,priya.rao.ece21b055@abcengg.edu,ECE21B055,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Shreya Chatterjee,shreya.chatterjee.ece21b056@abcengg.edu,ECE21B056,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Vidya Naidu,vidya.naidu.ece21b057@abcengg.edu,ECE21B057,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Kritika Iyer,kritika.iyer.ece21b058@abcengg.edu,ECE21B058,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Tejas Pillai,tejas.pillai.ece21b059@abcengg.edu,ECE21B059,STUDENT,Electronics & Communication,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Arjun Bose,arjun.bose.ece21b060@abcengg.edu,ECE21B060,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Esha Jain,esha.jain.ece21b061@abcengg.edu,ECE21B061,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Kavya Varma,kavya.varma.ece21b062@abcengg.edu,ECE21B062,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Nisha Menon,nisha.menon.ece21b063@abcengg.edu,ECE21B063,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Riya Rao,riya.rao.ece21b064@abcengg.edu,ECE21B064,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 01:32,19 Sep 2026 09:32
+Tanvi Chatterjee,tanvi.chatterjee.ece21b065@abcengg.edu,ECE21B065,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Zara Naidu,zara.naidu.ece21b066@abcengg.edu,ECE21B066,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Pavan Iyer,pavan.iyer.ece21b067@abcengg.edu,ECE21B067,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 00:32,19 Sep 2026 09:32
+Advait Gupta,advait.gupta.ece21b068@abcengg.edu,ECE21B068,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 11:32,19 Sep 2026 09:32
+Chirag Bose,chirag.bose.ece21b069@abcengg.edu,ECE21B069,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Harsh Jain,harsh.jain.ece21b070@abcengg.edu,ECE21B070,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Manish Varma,manish.varma.ece21b071@abcengg.edu,ECE21B071,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 15:32,19 Sep 2026 09:32
+Pranav Menon,pranav.menon.ece21b072@abcengg.edu,ECE21B072,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Sanya Rao,sanya.rao.ece21b073@abcengg.edu,ECE21B073,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Varun Chatterjee,varun.chatterjee.ece21b074@abcengg.edu,ECE21B074,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Aniket Naidu,aniket.naidu.ece21b075@abcengg.edu,ECE21B075,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Devika Iyer,devika.iyer.ece21b076@abcengg.edu,ECE21B076,STUDENT,Electronics & Communication,Active,Yes,14 Sep 2026 11:32,19 Sep 2026 09:32
+Anika Gupta,anika.gupta.ece21b077@abcengg.edu,ECE21B077,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 08:32,19 Sep 2026 09:32
+Dhruv Bose,dhruv.bose.ece21b078@abcengg.edu,ECE21B078,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 09:32,19 Sep 2026 09:32
+Jatin Jain,jatin.jain.ece21b079@abcengg.edu,ECE21B079,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Nikhil Varma,nikhil.varma.ece21b080@abcengg.edu,ECE21B080,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 02:32,19 Sep 2026 09:32
+Rajat Menon,rajat.menon.ece21b081@abcengg.edu,ECE21B081,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Simran Rao,simran.rao.ece21b082@abcengg.edu,ECE21B082,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Yash Chatterjee,yash.chatterjee.ece21b083@abcengg.edu,ECE21B083,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Mitali Naidu,mitali.naidu.ece21b084@abcengg.edu,ECE21B084,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Aditi Nair,aditi.nair.ece21b085@abcengg.edu,ECE21B085,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Bhavya Gupta,bhavya.gupta.ece21b086@abcengg.edu,ECE21B086,STUDENT,Electronics & Communication,Active,Yes,18 Sep 2026 09:32,19 Sep 2026 09:32
+Gaurav Bose,gaurav.bose.ece21b087@abcengg.edu,ECE21B087,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 03:32,19 Sep 2026 09:32
+Lakshya Jain,lakshya.jain.ece21b088@abcengg.edu,ECE21B088,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Pooja Varma,pooja.varma.ece21b089@abcengg.edu,ECE21B089,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Sahil Menon,sahil.menon.ece21b090@abcengg.edu,ECE21B090,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 03:32,19 Sep 2026 09:32
+Uday Rao,uday.rao.ece21b091@abcengg.edu,ECE21B091,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Swara Chatterjee,swara.chatterjee.ece21b092@abcengg.edu,ECE21B092,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 17:32,19 Sep 2026 09:32
+Kunal Naidu,kunal.naidu.ece21b093@abcengg.edu,ECE21B093,STUDENT,Electronics & Communication,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Ananya Nair,ananya.nair.ece21b094@abcengg.edu,ECE21B094,STUDENT,Electronics & Communication,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Deepika Gupta,deepika.gupta.ece21b095@abcengg.edu,ECE21B095,STUDENT,Electronics & Communication,Active,Yes,17 Sep 2026 02:32,19 Sep 2026 09:32
+Pranav Trivedi,pranav.trivedi.mech21b000@abcengg.edu,MECH21B000,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Sanya Mehta,sanya.mehta.mech21b001@abcengg.edu,MECH21B001,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Varun Patel,varun.patel.mech21b002@abcengg.edu,MECH21B002,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Aniket Banerjee,aniket.banerjee.mech21b003@abcengg.edu,MECH21B003,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 13:32,19 Sep 2026 09:32
+Devika Malhotra,devika.malhotra.mech21b004@abcengg.edu,MECH21B004,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Anika Iyer,anika.iyer.mech21b005@abcengg.edu,MECH21B005,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Dhruv Pillai,dhruv.pillai.mech21b006@abcengg.edu,MECH21B006,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Jatin Kumawat,jatin.kumawat.mech21b007@abcengg.edu,MECH21B007,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 21:32,19 Sep 2026 09:32
+Nikhil Hegde,nikhil.hegde.mech21b008@abcengg.edu,MECH21B008,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Rajat Trivedi,rajat.trivedi.mech21b009@abcengg.edu,MECH21B009,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Simran Mehta,simran.mehta.mech21b010@abcengg.edu,MECH21B010,STUDENT,Mechanical Engineering,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Yash Patel,yash.patel.mech21b011@abcengg.edu,MECH21B011,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Mitali Banerjee,mitali.banerjee.mech21b012@abcengg.edu,MECH21B012,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Aditi Naidu,aditi.naidu.mech21b013@abcengg.edu,MECH21B013,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Bhavya Iyer,bhavya.iyer.mech21b014@abcengg.edu,MECH21B014,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Gaurav Pillai,gaurav.pillai.mech21b015@abcengg.edu,MECH21B015,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Lakshya Kumawat,lakshya.kumawat.mech21b016@abcengg.edu,MECH21B016,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Pooja Hegde,pooja.hegde.mech21b017@abcengg.edu,MECH21B017,STUDENT,Mechanical Engineering,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Sahil Trivedi,sahil.trivedi.mech21b018@abcengg.edu,MECH21B018,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Uday Mehta,uday.mehta.mech21b019@abcengg.edu,MECH21B019,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Swara Patel,swara.patel.mech21b020@abcengg.edu,MECH21B020,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Kunal Banerjee,kunal.banerjee.mech21b021@abcengg.edu,MECH21B021,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 08:32,19 Sep 2026 09:32
+Ananya Naidu,ananya.naidu.mech21b022@abcengg.edu,MECH21B022,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Deepika Iyer,deepika.iyer.mech21b023@abcengg.edu,MECH21B023,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Isha Pillai,isha.pillai.mech21b024@abcengg.edu,MECH21B024,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Naveen Kumawat,naveen.kumawat.mech21b025@abcengg.edu,MECH21B025,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 16:32,19 Sep 2026 09:32
+Rahul Hegde,rahul.hegde.mech21b026@abcengg.edu,MECH21B026,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Siddharth Trivedi,siddharth.trivedi.mech21b027@abcengg.edu,MECH21B027,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Vikas Mehta,vikas.mehta.mech21b028@abcengg.edu,MECH21B028,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 14:32,19 Sep 2026 09:32
+Rachit Patel,rachit.patel.mech21b029@abcengg.edu,MECH21B029,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Aarav Chatterjee,aarav.chatterjee.mech21b030@abcengg.edu,MECH21B030,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 21:32,19 Sep 2026 09:32
+Aryan Naidu,aryan.naidu.mech21b031@abcengg.edu,MECH21B031,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Farhan Iyer,farhan.iyer.mech21b032@abcengg.edu,MECH21B032,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 09:32,19 Sep 2026 09:32
+Kiran Pillai,kiran.pillai.mech21b033@abcengg.edu,MECH21B033,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Omkar Kumawat,omkar.kumawat.mech21b034@abcengg.edu,MECH21B034,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Rohan Hegde,rohan.hegde.mech21b035@abcengg.edu,MECH21B035,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Tarun Trivedi,tarun.trivedi.mech21b036@abcengg.edu,MECH21B036,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 09:32,19 Sep 2026 09:32
+Neeraj Mehta,neeraj.mehta.mech21b037@abcengg.edu,MECH21B037,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 01:32,19 Sep 2026 09:32
+Shruti Patel,shruti.patel.mech21b038@abcengg.edu,MECH21B038,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 15:32,19 Sep 2026 09:32
+Akash Chatterjee,akash.chatterjee.mech21b039@abcengg.edu,MECH21B039,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Darshan Naidu,darshan.naidu.mech21b040@abcengg.edu,MECH21B040,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 08:32,19 Sep 2026 09:32
+Ishaan Iyer,ishaan.iyer.mech21b041@abcengg.edu,MECH21B041,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Meher Pillai,meher.pillai.mech21b042@abcengg.edu,MECH21B042,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Priya Kumawat,priya.kumawat.mech21b043@abcengg.edu,MECH21B043,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Shreya Hegde,shreya.hegde.mech21b044@abcengg.edu,MECH21B044,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Vidya Trivedi,vidya.trivedi.mech21b045@abcengg.edu,MECH21B045,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 09:32,19 Sep 2026 09:32
+Kritika Mehta,kritika.mehta.mech21b046@abcengg.edu,MECH21B046,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Tejas Patel,tejas.patel.mech21b047@abcengg.edu,MECH21B047,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 00:32,19 Sep 2026 09:32
+Arjun Chatterjee,arjun.chatterjee.mech21b048@abcengg.edu,MECH21B048,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 20:32,19 Sep 2026 09:32
+Esha Naidu,esha.naidu.mech21b049@abcengg.edu,MECH21B049,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Kavya Iyer,kavya.iyer.mech21b050@abcengg.edu,MECH21B050,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 15:32,19 Sep 2026 09:32
+Nisha Pillai,nisha.pillai.mech21b051@abcengg.edu,MECH21B051,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Riya Kumawat,riya.kumawat.mech21b052@abcengg.edu,MECH21B052,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Tanvi Hegde,tanvi.hegde.mech21b053@abcengg.edu,MECH21B053,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Zara Trivedi,zara.trivedi.mech21b054@abcengg.edu,MECH21B054,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Pavan Mehta,pavan.mehta.mech21b055@abcengg.edu,MECH21B055,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Advait Rao,advait.rao.mech21b056@abcengg.edu,MECH21B056,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 18:32,19 Sep 2026 09:32
+Chirag Chatterjee,chirag.chatterjee.mech21b057@abcengg.edu,MECH21B057,STUDENT,Mechanical Engineering,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Harsh Naidu,harsh.naidu.mech21b058@abcengg.edu,MECH21B058,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Manish Iyer,manish.iyer.mech21b059@abcengg.edu,MECH21B059,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 08:32,19 Sep 2026 09:32
+Pranav Pillai,pranav.pillai.mech21b060@abcengg.edu,MECH21B060,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 13:32,19 Sep 2026 09:32
+Sanya Kumawat,sanya.kumawat.mech21b061@abcengg.edu,MECH21B061,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Varun Hegde,varun.hegde.mech21b062@abcengg.edu,MECH21B062,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Aniket Trivedi,aniket.trivedi.mech21b063@abcengg.edu,MECH21B063,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Devika Mehta,devika.mehta.mech21b064@abcengg.edu,MECH21B064,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Anika Rao,anika.rao.mech21b065@abcengg.edu,MECH21B065,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Dhruv Chatterjee,dhruv.chatterjee.mech21b066@abcengg.edu,MECH21B066,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Jatin Naidu,jatin.naidu.mech21b067@abcengg.edu,MECH21B067,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Nikhil Iyer,nikhil.iyer.mech21b068@abcengg.edu,MECH21B068,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 10:32,19 Sep 2026 09:32
+Rajat Pillai,rajat.pillai.mech21b069@abcengg.edu,MECH21B069,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Simran Kumawat,simran.kumawat.mech21b070@abcengg.edu,MECH21B070,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Yash Hegde,yash.hegde.mech21b071@abcengg.edu,MECH21B071,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Mitali Trivedi,mitali.trivedi.mech21b072@abcengg.edu,MECH21B072,STUDENT,Mechanical Engineering,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Aditi Menon,aditi.menon.mech21b073@abcengg.edu,MECH21B073,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Bhavya Rao,bhavya.rao.mech21b074@abcengg.edu,MECH21B074,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Gaurav Chatterjee,gaurav.chatterjee.mech21b075@abcengg.edu,MECH21B075,STUDENT,Mechanical Engineering,Active,Yes,17 Sep 2026 01:32,19 Sep 2026 09:32
+Lakshya Naidu,lakshya.naidu.mech21b076@abcengg.edu,MECH21B076,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 08:32,19 Sep 2026 09:32
+Pooja Iyer,pooja.iyer.mech21b077@abcengg.edu,MECH21B077,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Sahil Pillai,sahil.pillai.mech21b078@abcengg.edu,MECH21B078,STUDENT,Mechanical Engineering,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Uday Kumawat,uday.kumawat.mech21b079@abcengg.edu,MECH21B079,STUDENT,Mechanical Engineering,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Swara Hegde,swara.hegde.mech21b080@abcengg.edu,MECH21B080,STUDENT,Mechanical Engineering,Active,Yes,19 Sep 2026 07:32,19 Sep 2026 09:32
+Kunal Trivedi,kunal.trivedi.mech21b081@abcengg.edu,MECH21B081,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Ananya Menon,ananya.menon.mech21b082@abcengg.edu,MECH21B082,STUDENT,Mechanical Engineering,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Deepika Rao,deepika.rao.mech21b083@abcengg.edu,MECH21B083,STUDENT,Mechanical Engineering,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Kavya Chatterjee,kavya.chatterjee.aids21b000@abcengg.edu,AIDS21B000,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 08:32,19 Sep 2026 09:32
+Nisha Naidu,nisha.naidu.aids21b001@abcengg.edu,AIDS21B001,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 19:32,19 Sep 2026 09:32
+Riya Iyer,riya.iyer.aids21b002@abcengg.edu,AIDS21B002,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Tanvi Pillai,tanvi.pillai.aids21b003@abcengg.edu,AIDS21B003,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Zara Kumawat,zara.kumawat.aids21b004@abcengg.edu,AIDS21B004,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Pavan Hegde,pavan.hegde.aids21b005@abcengg.edu,AIDS21B005,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Advait Varma,advait.varma.aids21b006@abcengg.edu,AIDS21B006,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Chirag Menon,chirag.menon.aids21b007@abcengg.edu,AIDS21B007,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Harsh Rao,harsh.rao.aids21b008@abcengg.edu,AIDS21B008,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 05:32,19 Sep 2026 09:32
+Manish Chatterjee,manish.chatterjee.aids21b009@abcengg.edu,AIDS21B009,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 16:32,19 Sep 2026 09:32
+Pranav Naidu,pranav.naidu.aids21b010@abcengg.edu,AIDS21B010,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Sanya Iyer,sanya.iyer.aids21b011@abcengg.edu,AIDS21B011,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Varun Pillai,varun.pillai.aids21b012@abcengg.edu,AIDS21B012,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 08:32,19 Sep 2026 09:32
+Aniket Kumawat,aniket.kumawat.aids21b013@abcengg.edu,AIDS21B013,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Devika Hegde,devika.hegde.aids21b014@abcengg.edu,AIDS21B014,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Anika Varma,anika.varma.aids21b015@abcengg.edu,AIDS21B015,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Dhruv Menon,dhruv.menon.aids21b016@abcengg.edu,AIDS21B016,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Jatin Rao,jatin.rao.aids21b017@abcengg.edu,AIDS21B017,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Nikhil Chatterjee,nikhil.chatterjee.aids21b018@abcengg.edu,AIDS21B018,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 07:32,19 Sep 2026 09:32
+Rajat Naidu,rajat.naidu.aids21b019@abcengg.edu,AIDS21B019,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 09:32,19 Sep 2026 09:32
+Simran Iyer,simran.iyer.aids21b020@abcengg.edu,AIDS21B020,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Yash Pillai,yash.pillai.aids21b021@abcengg.edu,AIDS21B021,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Mitali Kumawat,mitali.kumawat.aids21b022@abcengg.edu,AIDS21B022,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Aditi Jain,aditi.jain.aids21b023@abcengg.edu,AIDS21B023,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Bhavya Varma,bhavya.varma.aids21b024@abcengg.edu,AIDS21B024,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 20:32,19 Sep 2026 09:32
+Gaurav Menon,gaurav.menon.aids21b025@abcengg.edu,AIDS21B025,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Lakshya Rao,lakshya.rao.aids21b026@abcengg.edu,AIDS21B026,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 02:32,19 Sep 2026 09:32
+Pooja Chatterjee,pooja.chatterjee.aids21b027@abcengg.edu,AIDS21B027,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Sahil Naidu,sahil.naidu.aids21b028@abcengg.edu,AIDS21B028,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Uday Iyer,uday.iyer.aids21b029@abcengg.edu,AIDS21B029,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Swara Pillai,swara.pillai.aids21b030@abcengg.edu,AIDS21B030,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Kunal Kumawat,kunal.kumawat.aids21b031@abcengg.edu,AIDS21B031,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 03:32,19 Sep 2026 09:32
+Ananya Jain,ananya.jain.aids21b032@abcengg.edu,AIDS21B032,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Deepika Varma,deepika.varma.aids21b033@abcengg.edu,AIDS21B033,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 00:32,19 Sep 2026 09:32
+Isha Menon,isha.menon.aids21b034@abcengg.edu,AIDS21B034,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Naveen Rao,naveen.rao.aids21b035@abcengg.edu,AIDS21B035,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Rahul Chatterjee,rahul.chatterjee.aids21b036@abcengg.edu,AIDS21B036,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Siddharth Naidu,siddharth.naidu.aids21b037@abcengg.edu,AIDS21B037,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Vikas Iyer,vikas.iyer.aids21b038@abcengg.edu,AIDS21B038,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Rachit Pillai,rachit.pillai.aids21b039@abcengg.edu,AIDS21B039,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Aarav Bose,aarav.bose.aids21b040@abcengg.edu,AIDS21B040,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Aryan Jain,aryan.jain.aids21b041@abcengg.edu,AIDS21B041,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Farhan Varma,farhan.varma.aids21b042@abcengg.edu,AIDS21B042,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Kiran Menon,kiran.menon.aids21b043@abcengg.edu,AIDS21B043,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Omkar Rao,omkar.rao.aids21b044@abcengg.edu,AIDS21B044,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Rohan Chatterjee,rohan.chatterjee.aids21b045@abcengg.edu,AIDS21B045,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Tarun Naidu,tarun.naidu.aids21b046@abcengg.edu,AIDS21B046,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 20:32,19 Sep 2026 09:32
+Neeraj Iyer,neeraj.iyer.aids21b047@abcengg.edu,AIDS21B047,STUDENT,AI / Data Science,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Shruti Pillai,shruti.pillai.aids21b048@abcengg.edu,AIDS21B048,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Akash Bose,akash.bose.aids21b049@abcengg.edu,AIDS21B049,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 20:32,19 Sep 2026 09:32
+Darshan Jain,darshan.jain.aids21b050@abcengg.edu,AIDS21B050,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Ishaan Varma,ishaan.varma.aids21b051@abcengg.edu,AIDS21B051,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Meher Menon,meher.menon.aids21b052@abcengg.edu,AIDS21B052,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Priya Rao,priya.rao.aids21b053@abcengg.edu,AIDS21B053,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Shreya Chatterjee,shreya.chatterjee.aids21b054@abcengg.edu,AIDS21B054,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 08:32,19 Sep 2026 09:32
+Vidya Naidu,vidya.naidu.aids21b055@abcengg.edu,AIDS21B055,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 08:32,19 Sep 2026 09:32
+Kritika Iyer,kritika.iyer.aids21b056@abcengg.edu,AIDS21B056,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Tejas Pillai,tejas.pillai.aids21b057@abcengg.edu,AIDS21B057,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 03:32,19 Sep 2026 09:32
+Arjun Bose,arjun.bose.aids21b058@abcengg.edu,AIDS21B058,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Esha Jain,esha.jain.aids21b059@abcengg.edu,AIDS21B059,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 22:32,19 Sep 2026 09:32
+Kavya Varma,kavya.varma.aids21b060@abcengg.edu,AIDS21B060,STUDENT,AI / Data Science,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Nisha Menon,nisha.menon.aids21b061@abcengg.edu,AIDS21B061,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 05:32,19 Sep 2026 09:32
+Riya Rao,riya.rao.aids21b062@abcengg.edu,AIDS21B062,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Tanvi Chatterjee,tanvi.chatterjee.aids21b063@abcengg.edu,AIDS21B063,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Zara Naidu,zara.naidu.aids21b064@abcengg.edu,AIDS21B064,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Pavan Iyer,pavan.iyer.aids21b065@abcengg.edu,AIDS21B065,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Advait Gupta,advait.gupta.aids21b066@abcengg.edu,AIDS21B066,STUDENT,AI / Data Science,Active,Yes,16 Sep 2026 03:32,19 Sep 2026 09:32
+Chirag Bose,chirag.bose.aids21b067@abcengg.edu,AIDS21B067,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Harsh Jain,harsh.jain.aids21b068@abcengg.edu,AIDS21B068,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Manish Varma,manish.varma.aids21b069@abcengg.edu,AIDS21B069,STUDENT,AI / Data Science,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Pranav Menon,pranav.menon.aids21b070@abcengg.edu,AIDS21B070,STUDENT,AI / Data Science,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Sanya Rao,sanya.rao.aids21b071@abcengg.edu,AIDS21B071,STUDENT,AI / Data Science,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Darshan Gupta,darshan.gupta.it21b000@abcengg.edu,IT21B000,STUDENT,Information Technology,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Ishaan Bose,ishaan.bose.it21b001@abcengg.edu,IT21B001,STUDENT,Information Technology,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Meher Jain,meher.jain.it21b002@abcengg.edu,IT21B002,STUDENT,Information Technology,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Priya Varma,priya.varma.it21b003@abcengg.edu,IT21B003,STUDENT,Information Technology,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Shreya Menon,shreya.menon.it21b004@abcengg.edu,IT21B004,STUDENT,Information Technology,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Vidya Rao,vidya.rao.it21b005@abcengg.edu,IT21B005,STUDENT,Information Technology,Active,Yes,18 Sep 2026 11:32,19 Sep 2026 09:32
+Kritika Chatterjee,kritika.chatterjee.it21b006@abcengg.edu,IT21B006,STUDENT,Information Technology,Active,Yes,19 Sep 2026 05:32,19 Sep 2026 09:32
+Tejas Naidu,tejas.naidu.it21b007@abcengg.edu,IT21B007,STUDENT,Information Technology,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Arjun Nair,arjun.nair.it21b008@abcengg.edu,IT21B008,STUDENT,Information Technology,Active,Yes,18 Sep 2026 04:32,19 Sep 2026 09:32
+Esha Gupta,esha.gupta.it21b009@abcengg.edu,IT21B009,STUDENT,Information Technology,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Kavya Bose,kavya.bose.it21b010@abcengg.edu,IT21B010,STUDENT,Information Technology,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Nisha Jain,nisha.jain.it21b011@abcengg.edu,IT21B011,STUDENT,Information Technology,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Riya Varma,riya.varma.it21b012@abcengg.edu,IT21B012,STUDENT,Information Technology,Active,Yes,18 Sep 2026 09:32,19 Sep 2026 09:32
+Tanvi Menon,tanvi.menon.it21b013@abcengg.edu,IT21B013,STUDENT,Information Technology,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Zara Rao,zara.rao.it21b014@abcengg.edu,IT21B014,STUDENT,Information Technology,Active,Yes,14 Sep 2026 23:32,19 Sep 2026 09:32
+Pavan Chatterjee,pavan.chatterjee.it21b015@abcengg.edu,IT21B015,STUDENT,Information Technology,Active,Yes,19 Sep 2026 02:32,19 Sep 2026 09:32
+Advait Pandey,advait.pandey.it21b016@abcengg.edu,IT21B016,STUDENT,Information Technology,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Chirag Nair,chirag.nair.it21b017@abcengg.edu,IT21B017,STUDENT,Information Technology,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Harsh Gupta,harsh.gupta.it21b018@abcengg.edu,IT21B018,STUDENT,Information Technology,Active,Yes,15 Sep 2026 17:32,19 Sep 2026 09:32
+Manish Bose,manish.bose.it21b019@abcengg.edu,IT21B019,STUDENT,Information Technology,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Pranav Jain,pranav.jain.it21b020@abcengg.edu,IT21B020,STUDENT,Information Technology,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Sanya Varma,sanya.varma.it21b021@abcengg.edu,IT21B021,STUDENT,Information Technology,Active,Yes,17 Sep 2026 14:32,19 Sep 2026 09:32
+Varun Menon,varun.menon.it21b022@abcengg.edu,IT21B022,STUDENT,Information Technology,Active,Yes,16 Sep 2026 18:32,19 Sep 2026 09:32
+Aniket Rao,aniket.rao.it21b023@abcengg.edu,IT21B023,STUDENT,Information Technology,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Devika Chatterjee,devika.chatterjee.it21b024@abcengg.edu,IT21B024,STUDENT,Information Technology,Active,Yes,17 Sep 2026 12:32,19 Sep 2026 09:32
+Anika Pandey,anika.pandey.it21b025@abcengg.edu,IT21B025,STUDENT,Information Technology,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Dhruv Nair,dhruv.nair.it21b026@abcengg.edu,IT21B026,STUDENT,Information Technology,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Jatin Gupta,jatin.gupta.it21b027@abcengg.edu,IT21B027,STUDENT,Information Technology,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Nikhil Bose,nikhil.bose.it21b028@abcengg.edu,IT21B028,STUDENT,Information Technology,Active,Yes,18 Sep 2026 17:32,19 Sep 2026 09:32
+Rajat Jain,rajat.jain.it21b029@abcengg.edu,IT21B029,STUDENT,Information Technology,Active,Yes,18 Sep 2026 16:32,19 Sep 2026 09:32
+Simran Varma,simran.varma.it21b030@abcengg.edu,IT21B030,STUDENT,Information Technology,Active,Yes,15 Sep 2026 15:32,19 Sep 2026 09:32
+Yash Menon,yash.menon.it21b031@abcengg.edu,IT21B031,STUDENT,Information Technology,Active,Yes,18 Sep 2026 03:32,19 Sep 2026 09:32
+Mitali Rao,mitali.rao.it21b032@abcengg.edu,IT21B032,STUDENT,Information Technology,Active,Yes,15 Sep 2026 16:32,19 Sep 2026 09:32
+Aditi Desai,aditi.desai.it21b033@abcengg.edu,IT21B033,STUDENT,Information Technology,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Bhavya Pandey,bhavya.pandey.it21b034@abcengg.edu,IT21B034,STUDENT,Information Technology,Active,Yes,19 Sep 2026 08:32,19 Sep 2026 09:32
+Gaurav Nair,gaurav.nair.it21b035@abcengg.edu,IT21B035,STUDENT,Information Technology,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Lakshya Gupta,lakshya.gupta.it21b036@abcengg.edu,IT21B036,STUDENT,Information Technology,Active,Yes,17 Sep 2026 10:32,19 Sep 2026 09:32
+Pooja Bose,pooja.bose.it21b037@abcengg.edu,IT21B037,STUDENT,Information Technology,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Sahil Jain,sahil.jain.it21b038@abcengg.edu,IT21B038,STUDENT,Information Technology,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Uday Varma,uday.varma.it21b039@abcengg.edu,IT21B039,STUDENT,Information Technology,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Swara Menon,swara.menon.it21b040@abcengg.edu,IT21B040,STUDENT,Information Technology,Active,Yes,16 Sep 2026 00:32,19 Sep 2026 09:32
+Kunal Rao,kunal.rao.it21b041@abcengg.edu,IT21B041,STUDENT,Information Technology,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Ananya Desai,ananya.desai.it21b042@abcengg.edu,IT21B042,STUDENT,Information Technology,Active,Yes,14 Sep 2026 19:32,19 Sep 2026 09:32
+Deepika Pandey,deepika.pandey.it21b043@abcengg.edu,IT21B043,STUDENT,Information Technology,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Isha Nair,isha.nair.it21b044@abcengg.edu,IT21B044,STUDENT,Information Technology,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Naveen Gupta,naveen.gupta.it21b045@abcengg.edu,IT21B045,STUDENT,Information Technology,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Rahul Bose,rahul.bose.it21b046@abcengg.edu,IT21B046,STUDENT,Information Technology,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Siddharth Jain,siddharth.jain.it21b047@abcengg.edu,IT21B047,STUDENT,Information Technology,Active,Yes,14 Sep 2026 12:32,19 Sep 2026 09:32
+Vikas Varma,vikas.varma.it21b048@abcengg.edu,IT21B048,STUDENT,Information Technology,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Rachit Menon,rachit.menon.it21b049@abcengg.edu,IT21B049,STUDENT,Information Technology,Active,Yes,16 Sep 2026 01:32,19 Sep 2026 09:32
+Aarav Joshi,aarav.joshi.it21b050@abcengg.edu,IT21B050,STUDENT,Information Technology,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Aryan Desai,aryan.desai.it21b051@abcengg.edu,IT21B051,STUDENT,Information Technology,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Farhan Pandey,farhan.pandey.it21b052@abcengg.edu,IT21B052,STUDENT,Information Technology,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Kiran Nair,kiran.nair.it21b053@abcengg.edu,IT21B053,STUDENT,Information Technology,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Omkar Gupta,omkar.gupta.it21b054@abcengg.edu,IT21B054,STUDENT,Information Technology,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Rohan Bose,rohan.bose.it21b055@abcengg.edu,IT21B055,STUDENT,Information Technology,Active,Yes,16 Sep 2026 01:32,19 Sep 2026 09:32
+Tarun Jain,tarun.jain.it21b056@abcengg.edu,IT21B056,STUDENT,Information Technology,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Neeraj Varma,neeraj.varma.it21b057@abcengg.edu,IT21B057,STUDENT,Information Technology,Active,Yes,15 Sep 2026 11:32,19 Sep 2026 09:32
+Shruti Menon,shruti.menon.it21b058@abcengg.edu,IT21B058,STUDENT,Information Technology,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Akash Joshi,akash.joshi.it21b059@abcengg.edu,IT21B059,STUDENT,Information Technology,Active,Yes,15 Sep 2026 15:32,19 Sep 2026 09:32
+Darshan Desai,darshan.desai.it21b060@abcengg.edu,IT21B060,STUDENT,Information Technology,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Ishaan Pandey,ishaan.pandey.it21b061@abcengg.edu,IT21B061,STUDENT,Information Technology,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Meher Nair,meher.nair.it21b062@abcengg.edu,IT21B062,STUDENT,Information Technology,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Priya Gupta,priya.gupta.it21b063@abcengg.edu,IT21B063,STUDENT,Information Technology,Active,Yes,15 Sep 2026 00:32,19 Sep 2026 09:32
+Shreya Bose,shreya.bose.it21b064@abcengg.edu,IT21B064,STUDENT,Information Technology,Active,Yes,18 Sep 2026 03:32,19 Sep 2026 09:32
+Vidya Jain,vidya.jain.it21b065@abcengg.edu,IT21B065,STUDENT,Information Technology,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Kritika Varma,kritika.varma.it21b066@abcengg.edu,IT21B066,STUDENT,Information Technology,Active,Yes,16 Sep 2026 22:32,19 Sep 2026 09:32
+Tejas Menon,tejas.menon.it21b067@abcengg.edu,IT21B067,STUDENT,Information Technology,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Arjun Joshi,arjun.joshi.it21b068@abcengg.edu,IT21B068,STUDENT,Information Technology,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Esha Desai,esha.desai.it21b069@abcengg.edu,IT21B069,STUDENT,Information Technology,Active,Yes,15 Sep 2026 10:32,19 Sep 2026 09:32
+Kavya Pandey,kavya.pandey.it21b070@abcengg.edu,IT21B070,STUDENT,Information Technology,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Nisha Nair,nisha.nair.it21b071@abcengg.edu,IT21B071,STUDENT,Information Technology,Active,Yes,17 Sep 2026 11:32,19 Sep 2026 09:32
+Riya Gupta,riya.gupta.it21b072@abcengg.edu,IT21B072,STUDENT,Information Technology,Active,Yes,16 Sep 2026 10:32,19 Sep 2026 09:32
+Tanvi Bose,tanvi.bose.it21b073@abcengg.edu,IT21B073,STUDENT,Information Technology,Active,Yes,14 Sep 2026 19:32,19 Sep 2026 09:32
+Zara Jain,zara.jain.it21b074@abcengg.edu,IT21B074,STUDENT,Information Technology,Active,Yes,15 Sep 2026 16:32,19 Sep 2026 09:32
+Pavan Varma,pavan.varma.it21b075@abcengg.edu,IT21B075,STUDENT,Information Technology,Active,Yes,18 Sep 2026 01:32,19 Sep 2026 09:32
+Advait Das,advait.das.it21b076@abcengg.edu,IT21B076,STUDENT,Information Technology,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Chirag Joshi,chirag.joshi.it21b077@abcengg.edu,IT21B077,STUDENT,Information Technology,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Farhan Joshi,farhan.joshi.civil21b000@abcengg.edu,CIVIL21B000,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 09:32,19 Sep 2026 09:32
+Kiran Desai,kiran.desai.civil21b001@abcengg.edu,CIVIL21B001,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 14:32,19 Sep 2026 09:32
+Omkar Pandey,omkar.pandey.civil21b002@abcengg.edu,CIVIL21B002,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 17:32,19 Sep 2026 09:32
+Rohan Nair,rohan.nair.civil21b003@abcengg.edu,CIVIL21B003,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 20:32,19 Sep 2026 09:32
+Tarun Gupta,tarun.gupta.civil21b004@abcengg.edu,CIVIL21B004,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 23:32,19 Sep 2026 09:32
+Neeraj Bose,neeraj.bose.civil21b005@abcengg.edu,CIVIL21B005,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Shruti Jain,shruti.jain.civil21b006@abcengg.edu,CIVIL21B006,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Akash Sharma,akash.sharma.civil21b007@abcengg.edu,CIVIL21B007,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 17:32,19 Sep 2026 09:32
+Darshan Das,darshan.das.civil21b008@abcengg.edu,CIVIL21B008,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 18:32,19 Sep 2026 09:32
+Ishaan Joshi,ishaan.joshi.civil21b009@abcengg.edu,CIVIL21B009,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Meher Desai,meher.desai.civil21b010@abcengg.edu,CIVIL21B010,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Priya Pandey,priya.pandey.civil21b011@abcengg.edu,CIVIL21B011,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Shreya Nair,shreya.nair.civil21b012@abcengg.edu,CIVIL21B012,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Vidya Gupta,vidya.gupta.civil21b013@abcengg.edu,CIVIL21B013,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 15:32,19 Sep 2026 09:32
+Kritika Bose,kritika.bose.civil21b014@abcengg.edu,CIVIL21B014,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 08:32,19 Sep 2026 09:32
+Tejas Jain,tejas.jain.civil21b015@abcengg.edu,CIVIL21B015,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 22:32,19 Sep 2026 09:32
+Arjun Sharma,arjun.sharma.civil21b016@abcengg.edu,CIVIL21B016,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Esha Das,esha.das.civil21b017@abcengg.edu,CIVIL21B017,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Kavya Joshi,kavya.joshi.civil21b018@abcengg.edu,CIVIL21B018,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 20:32,19 Sep 2026 09:32
+Nisha Desai,nisha.desai.civil21b019@abcengg.edu,CIVIL21B019,STUDENT,Civil Engineering,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Riya Pandey,riya.pandey.civil21b020@abcengg.edu,CIVIL21B020,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Tanvi Nair,tanvi.nair.civil21b021@abcengg.edu,CIVIL21B021,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Zara Gupta,zara.gupta.civil21b022@abcengg.edu,CIVIL21B022,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Pavan Bose,pavan.bose.civil21b023@abcengg.edu,CIVIL21B023,STUDENT,Civil Engineering,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Advait Khanna,advait.khanna.civil21b024@abcengg.edu,CIVIL21B024,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 04:32,19 Sep 2026 09:32
+Chirag Sharma,chirag.sharma.civil21b025@abcengg.edu,CIVIL21B025,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Harsh Das,harsh.das.civil21b026@abcengg.edu,CIVIL21B026,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Manish Joshi,manish.joshi.civil21b027@abcengg.edu,CIVIL21B027,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 12:32,19 Sep 2026 09:32
+Pranav Desai,pranav.desai.civil21b028@abcengg.edu,CIVIL21B028,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Sanya Pandey,sanya.pandey.civil21b029@abcengg.edu,CIVIL21B029,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Varun Nair,varun.nair.civil21b030@abcengg.edu,CIVIL21B030,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 09:32,19 Sep 2026 09:32
+Aniket Gupta,aniket.gupta.civil21b031@abcengg.edu,CIVIL21B031,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Devika Bose,devika.bose.civil21b032@abcengg.edu,CIVIL21B032,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 06:32,19 Sep 2026 09:32
+Anika Khanna,anika.khanna.civil21b033@abcengg.edu,CIVIL21B033,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 01:32,19 Sep 2026 09:32
+Dhruv Sharma,dhruv.sharma.civil21b034@abcengg.edu,CIVIL21B034,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Jatin Das,jatin.das.civil21b035@abcengg.edu,CIVIL21B035,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 05:32,19 Sep 2026 09:32
+Nikhil Joshi,nikhil.joshi.civil21b036@abcengg.edu,CIVIL21B036,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 15:32,19 Sep 2026 09:32
+Rajat Desai,rajat.desai.civil21b037@abcengg.edu,CIVIL21B037,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Simran Pandey,simran.pandey.civil21b038@abcengg.edu,CIVIL21B038,STUDENT,Civil Engineering,Active,Yes,19 Sep 2026 03:32,19 Sep 2026 09:32
+Yash Nair,yash.nair.civil21b039@abcengg.edu,CIVIL21B039,STUDENT,Civil Engineering,Active,Yes,19 Sep 2026 00:32,19 Sep 2026 09:32
+Mitali Gupta,mitali.gupta.civil21b040@abcengg.edu,CIVIL21B040,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 09:32,19 Sep 2026 09:32
+Aditi Kapoor,aditi.kapoor.civil21b041@abcengg.edu,CIVIL21B041,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 07:32,19 Sep 2026 09:32
+Bhavya Khanna,bhavya.khanna.civil21b042@abcengg.edu,CIVIL21B042,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 21:32,19 Sep 2026 09:32
+Gaurav Sharma,gaurav.sharma.civil21b043@abcengg.edu,CIVIL21B043,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Lakshya Das,lakshya.das.civil21b044@abcengg.edu,CIVIL21B044,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Pooja Joshi,pooja.joshi.civil21b045@abcengg.edu,CIVIL21B045,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 13:32,19 Sep 2026 09:32
+Sahil Desai,sahil.desai.civil21b046@abcengg.edu,CIVIL21B046,STUDENT,Civil Engineering,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Uday Pandey,uday.pandey.civil21b047@abcengg.edu,CIVIL21B047,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Swara Nair,swara.nair.civil21b048@abcengg.edu,CIVIL21B048,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 16:32,19 Sep 2026 09:32
+Kunal Gupta,kunal.gupta.civil21b049@abcengg.edu,CIVIL21B049,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 17:32,19 Sep 2026 09:32
+Ananya Kapoor,ananya.kapoor.civil21b050@abcengg.edu,CIVIL21B050,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 10:32,19 Sep 2026 09:32
+Deepika Khanna,deepika.khanna.civil21b051@abcengg.edu,CIVIL21B051,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Isha Sharma,isha.sharma.civil21b052@abcengg.edu,CIVIL21B052,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 01:32,19 Sep 2026 09:32
+Naveen Das,naveen.das.civil21b053@abcengg.edu,CIVIL21B053,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Rahul Joshi,rahul.joshi.civil21b054@abcengg.edu,CIVIL21B054,STUDENT,Civil Engineering,Active,Yes,16 Sep 2026 19:32,19 Sep 2026 09:32
+Siddharth Desai,siddharth.desai.civil21b055@abcengg.edu,CIVIL21B055,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Vikas Pandey,vikas.pandey.civil21b056@abcengg.edu,CIVIL21B056,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Rachit Nair,rachit.nair.civil21b057@abcengg.edu,CIVIL21B057,STUDENT,Civil Engineering,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Aarav Singh,aarav.singh.civil21b058@abcengg.edu,CIVIL21B058,STUDENT,Civil Engineering,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Aryan Kapoor,aryan.kapoor.civil21b059@abcengg.edu,CIVIL21B059,STUDENT,Civil Engineering,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Lakshya Ghosh,lakshya.ghosh.eee21b000@abcengg.edu,EEE21B000,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 15:32,19 Sep 2026 09:32
+Pooja Saxena,pooja.saxena.eee21b001@abcengg.edu,EEE21B001,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 22:32,19 Sep 2026 09:32
+Sahil Reddy,sahil.reddy.eee21b002@abcengg.edu,EEE21B002,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 16:32,19 Sep 2026 09:32
+Uday Singh,uday.singh.eee21b003@abcengg.edu,EEE21B003,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 04:32,19 Sep 2026 09:32
+Swara Kapoor,swara.kapoor.eee21b004@abcengg.edu,EEE21B004,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Kunal Khanna,kunal.khanna.eee21b005@abcengg.edu,EEE21B005,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 07:32,19 Sep 2026 09:32
+Ananya Verma,ananya.verma.eee21b006@abcengg.edu,EEE21B006,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 23:32,19 Sep 2026 09:32
+Deepika Bansal,deepika.bansal.eee21b007@abcengg.edu,EEE21B007,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Isha Kulkarni,isha.kulkarni.eee21b008@abcengg.edu,EEE21B008,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 23:32,19 Sep 2026 09:32
+Naveen Ghosh,naveen.ghosh.eee21b009@abcengg.edu,EEE21B009,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 14:32,19 Sep 2026 09:32
+Rahul Saxena,rahul.saxena.eee21b010@abcengg.edu,EEE21B010,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 07:32,19 Sep 2026 09:32
+Siddharth Reddy,siddharth.reddy.eee21b011@abcengg.edu,EEE21B011,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Vikas Singh,vikas.singh.eee21b012@abcengg.edu,EEE21B012,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Rachit Kapoor,rachit.kapoor.eee21b013@abcengg.edu,EEE21B013,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 11:32,19 Sep 2026 09:32
+Aarav Malhotra,aarav.malhotra.eee21b014@abcengg.edu,EEE21B014,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 22:32,19 Sep 2026 09:32
+Aryan Verma,aryan.verma.eee21b015@abcengg.edu,EEE21B015,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 20:32,19 Sep 2026 09:32
+Farhan Bansal,farhan.bansal.eee21b016@abcengg.edu,EEE21B016,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Kiran Kulkarni,kiran.kulkarni.eee21b017@abcengg.edu,EEE21B017,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 00:32,19 Sep 2026 09:32
+Omkar Ghosh,omkar.ghosh.eee21b018@abcengg.edu,EEE21B018,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 02:32,19 Sep 2026 09:32
+Rohan Saxena,rohan.saxena.eee21b019@abcengg.edu,EEE21B019,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 12:32,19 Sep 2026 09:32
+Tarun Reddy,tarun.reddy.eee21b020@abcengg.edu,EEE21B020,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 15:32,19 Sep 2026 09:32
+Neeraj Singh,neeraj.singh.eee21b021@abcengg.edu,EEE21B021,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 13:32,19 Sep 2026 09:32
+Shruti Kapoor,shruti.kapoor.eee21b022@abcengg.edu,EEE21B022,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 16:32,19 Sep 2026 09:32
+Akash Malhotra,akash.malhotra.eee21b023@abcengg.edu,EEE21B023,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 21:32,19 Sep 2026 09:32
+Darshan Verma,darshan.verma.eee21b024@abcengg.edu,EEE21B024,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 07:32,19 Sep 2026 09:32
+Ishaan Bansal,ishaan.bansal.eee21b025@abcengg.edu,EEE21B025,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 06:32,19 Sep 2026 09:32
+Meher Kulkarni,meher.kulkarni.eee21b026@abcengg.edu,EEE21B026,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Priya Ghosh,priya.ghosh.eee21b027@abcengg.edu,EEE21B027,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 07:32,19 Sep 2026 09:32
+Shreya Saxena,shreya.saxena.eee21b028@abcengg.edu,EEE21B028,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 12:32,19 Sep 2026 09:32
+Vidya Reddy,vidya.reddy.eee21b029@abcengg.edu,EEE21B029,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 05:32,19 Sep 2026 09:32
+Kritika Singh,kritika.singh.eee21b030@abcengg.edu,EEE21B030,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 20:32,19 Sep 2026 09:32
+Tejas Kapoor,tejas.kapoor.eee21b031@abcengg.edu,EEE21B031,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 04:32,19 Sep 2026 09:32
+Arjun Malhotra,arjun.malhotra.eee21b032@abcengg.edu,EEE21B032,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Esha Verma,esha.verma.eee21b033@abcengg.edu,EEE21B033,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 02:32,19 Sep 2026 09:32
+Kavya Bansal,kavya.bansal.eee21b034@abcengg.edu,EEE21B034,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 09:32,19 Sep 2026 09:32
+Nisha Kulkarni,nisha.kulkarni.eee21b035@abcengg.edu,EEE21B035,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 04:32,19 Sep 2026 09:32
+Riya Ghosh,riya.ghosh.eee21b036@abcengg.edu,EEE21B036,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Tanvi Saxena,tanvi.saxena.eee21b037@abcengg.edu,EEE21B037,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 23:32,19 Sep 2026 09:32
+Zara Reddy,zara.reddy.eee21b038@abcengg.edu,EEE21B038,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 09:32,19 Sep 2026 09:32
+Pavan Singh,pavan.singh.eee21b039@abcengg.edu,EEE21B039,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 19:32,19 Sep 2026 09:32
+Advait Banerjee,advait.banerjee.eee21b040@abcengg.edu,EEE21B040,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 21:32,19 Sep 2026 09:32
+Chirag Malhotra,chirag.malhotra.eee21b041@abcengg.edu,EEE21B041,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 05:32,19 Sep 2026 09:32
+Harsh Verma,harsh.verma.eee21b042@abcengg.edu,EEE21B042,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 11:32,19 Sep 2026 09:32
+Manish Bansal,manish.bansal.eee21b043@abcengg.edu,EEE21B043,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 14:32,19 Sep 2026 09:32
+Pranav Kulkarni,pranav.kulkarni.eee21b044@abcengg.edu,EEE21B044,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 08:32,19 Sep 2026 09:32
+Sanya Ghosh,sanya.ghosh.eee21b045@abcengg.edu,EEE21B045,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 13:32,19 Sep 2026 09:32
+Varun Saxena,varun.saxena.eee21b046@abcengg.edu,EEE21B046,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Aniket Reddy,aniket.reddy.eee21b047@abcengg.edu,EEE21B047,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Devika Singh,devika.singh.eee21b048@abcengg.edu,EEE21B048,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 06:32,19 Sep 2026 09:32
+Anika Banerjee,anika.banerjee.eee21b049@abcengg.edu,EEE21B049,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 21:32,19 Sep 2026 09:32
+Dhruv Malhotra,dhruv.malhotra.eee21b050@abcengg.edu,EEE21B050,STUDENT,Electrical Engineering,Active,Yes,17 Sep 2026 07:32,19 Sep 2026 09:32
+Jatin Verma,jatin.verma.eee21b051@abcengg.edu,EEE21B051,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 03:32,19 Sep 2026 09:32
+Nikhil Bansal,nikhil.bansal.eee21b052@abcengg.edu,EEE21B052,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 19:32,19 Sep 2026 09:32
+Rajat Kulkarni,rajat.kulkarni.eee21b053@abcengg.edu,EEE21B053,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 19:32,19 Sep 2026 09:32
+Simran Ghosh,simran.ghosh.eee21b054@abcengg.edu,EEE21B054,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 04:32,19 Sep 2026 09:32
+Yash Saxena,yash.saxena.eee21b055@abcengg.edu,EEE21B055,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 01:32,19 Sep 2026 09:32
+Mitali Reddy,mitali.reddy.eee21b056@abcengg.edu,EEE21B056,STUDENT,Electrical Engineering,Active,Yes,19 Sep 2026 07:32,19 Sep 2026 09:32
+Aditi Patel,aditi.patel.eee21b057@abcengg.edu,EEE21B057,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 13:32,19 Sep 2026 09:32
+Bhavya Banerjee,bhavya.banerjee.eee21b058@abcengg.edu,EEE21B058,STUDENT,Electrical Engineering,Active,Yes,14 Sep 2026 14:32,19 Sep 2026 09:32
+Gaurav Malhotra,gaurav.malhotra.eee21b059@abcengg.edu,EEE21B059,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 06:32,19 Sep 2026 09:32
+Lakshya Verma,lakshya.verma.eee21b060@abcengg.edu,EEE21B060,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Pooja Bansal,pooja.bansal.eee21b061@abcengg.edu,EEE21B061,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 02:32,19 Sep 2026 09:32
+Sahil Kulkarni,sahil.kulkarni.eee21b062@abcengg.edu,EEE21B062,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 10:32,19 Sep 2026 09:32
+Uday Ghosh,uday.ghosh.eee21b063@abcengg.edu,EEE21B063,STUDENT,Electrical Engineering,Active,Yes,18 Sep 2026 06:32,19 Sep 2026 09:32
+Swara Saxena,swara.saxena.eee21b064@abcengg.edu,EEE21B064,STUDENT,Electrical Engineering,Active,Yes,16 Sep 2026 21:32,19 Sep 2026 09:32
+Kunal Reddy,kunal.reddy.eee21b065@abcengg.edu,EEE21B065,STUDENT,Electrical Engineering,Active,Yes,15 Sep 2026 18:32,19 Sep 2026 09:32
+Dr. Chem HOD,chem.hod@abcengg.edu,—,HOD,Chemical Engineering,Active,Yes,,19 Sep 2026 09:32
+New Trainer,new.trainer@abcengg.edu,—,TRAINER,—,Active,Yes,19 Sep 2026 09:32,19 Sep 2026 09:32
+Soon Gone,soon.gone@abcengg.edu,—,TRAINER,—,Active,Yes,19 Sep 2026 09:32,19 Sep 2026 09:32
+Role Mover,role.mover@abcengg.edu,—,HOD,Electronics & Communication,Active,Yes,19 Sep 2026 09:32,19 Sep 2026 09:32
