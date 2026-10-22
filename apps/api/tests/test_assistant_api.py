@@ -121,3 +121,76 @@ async def test_assistant_authenticated_student_context(client, student):
     data = response.json()["data"]
     assert "answer" in data
     assert data["grounded"] is True
+
+
+async def test_assistant_huggingface_provider_success(client, monkeypatch):
+    """When Hugging Face returns a successful completion, its answer and provider are returned."""
+    import httpx
+    monkeypatch.setattr(settings, "AI_PROVIDER", "huggingface")
+    monkeypatch.setattr(settings, "AI_API_KEY", "hf_test_secret_token_123")
+    monkeypatch.setattr(settings, "AI_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct")
+
+    fake_response = httpx.Response(
+        status_code=200,
+        json={
+            "choices": [
+                {
+                    "message": {
+                        "content": "Winners Creek offers comprehensive employability modules and 34 interactive skill games."
+                    }
+                }
+            ]
+        },
+        request=httpx.Request("POST", "https://router.huggingface.co/v1/chat/completions"),
+    )
+
+    original_post = httpx.AsyncClient.post
+
+    async def mock_post(self, url, *args, **kwargs):
+        if "router.huggingface.co" in str(url):
+            return fake_response
+        return await original_post(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    response = await client.post(
+        f"{API}/home/assistant",
+        json={"question": "What does Winners Creek offer?"}
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["provider"] == "huggingface:Qwen/Qwen2.5-Coder-7B-Instruct"
+    assert "34 interactive skill games" in data["answer"]
+
+
+async def test_assistant_huggingface_model_alias(client, monkeypatch):
+    """Qwen/Qwen2.5-7B-Instruct is aliased to Qwen/Qwen2.5-Coder-7B-Instruct for HF compatibility."""
+    import httpx
+    monkeypatch.setattr(settings, "AI_PROVIDER", "huggingface")
+    monkeypatch.setattr(settings, "AI_API_KEY", "hf_test_secret_token_123")
+    monkeypatch.setattr(settings, "AI_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+
+    called_body = {}
+    original_post = httpx.AsyncClient.post
+
+    async def mock_post(self, url, *args, **kwargs):
+        if "router.huggingface.co" in str(url):
+            nonlocal called_body
+            called_body = kwargs.get("json", {})
+            return httpx.Response(
+                status_code=200,
+                json={"choices": [{"message": {"content": "Aliased model response."}}]},
+                request=httpx.Request("POST", str(url)),
+            )
+        return await original_post(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    response = await client.post(
+        f"{API}/home/assistant",
+        json={"question": "Test model alias"}
+    )
+    assert response.status_code == 200
+    assert called_body.get("model") == "Qwen/Qwen2.5-Coder-7B-Instruct"
+    data = response.json()["data"]
+    assert data["provider"] == "huggingface:Qwen/Qwen2.5-Coder-7B-Instruct"

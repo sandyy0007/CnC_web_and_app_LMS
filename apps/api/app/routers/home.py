@@ -723,9 +723,13 @@ async def assistant(payload: AssistantRequest, request: Request) -> dict[str, An
                     if settings.AI_PROVIDER == "huggingface"
                     else "https://api.openai.com/v1/chat/completions"
                 )
+                model_name = settings.AI_MODEL
+                if settings.AI_PROVIDER == "huggingface" and model_name == "Qwen/Qwen2.5-7B-Instruct":
+                    model_name = "Qwen/Qwen2.5-Coder-7B-Instruct"
+
                 headers["Authorization"] = f"Bearer {settings.AI_API_KEY}"
                 body = {
-                    "model": settings.AI_MODEL,
+                    "model": model_name,
                     "messages": [
                         {"role": "system", "content": sys_prompt},
                         {"role": "user", "content": question},
@@ -734,7 +738,8 @@ async def assistant(payload: AssistantRequest, request: Request) -> dict[str, An
                     "max_tokens": 400,
                 }
 
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            timeout_sec = float(settings.AI_TIMEOUT_SECONDS) if settings.AI_TIMEOUT_SECONDS else 30.0
+            async with httpx.AsyncClient(timeout=timeout_sec) as client:
                 res = await client.post(url, headers=headers, json=body)
                 if res.status_code == 200:
                     data = res.json()
@@ -742,9 +747,12 @@ async def assistant(payload: AssistantRequest, request: Request) -> dict[str, An
                         ai_answer = "".join(b.get("text", "") for b in data.get("content", []))
                     else:
                         ai_answer = data["choices"][0]["message"]["content"]
-                    used_provider = f"{settings.AI_PROVIDER}:{settings.AI_MODEL}"
+                    used_provider = f"{settings.AI_PROVIDER}:{body.get('model', settings.AI_MODEL)}"
                 else:
-                    log.warning("assistant_provider_http_error", extra={"status": res.status_code})
+                    log.warning(
+                        "assistant_provider_http_error",
+                        extra={"status": res.status_code, "body": res.text[:200]},
+                    )
         except Exception as exc:
             log.warning("assistant_provider_call_failed", extra={"error": str(exc)[:150]})
 
