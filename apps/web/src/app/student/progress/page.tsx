@@ -13,10 +13,12 @@ import { AsyncSection } from '@/components/shared/state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardBody, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/card';
+import { TiltCard } from '@/components/ui/TiltCard';
 import { AnimatedCounter } from '@/components/ui/counter';
 import { Table, TableWrap, Td, Th, Tr } from '@/components/ui/table';
 import { useApi } from '@/hooks/useApi';
 import { ApiError, api } from '@/lib/api';
+import { cn } from '@/lib/cn';
 import { formatDate, num } from '@/lib/format';
 import { iconFor } from '@/lib/icons';
 
@@ -40,7 +42,35 @@ export default function ProgressPage() {
 
   return (
     <AsyncSection query={query} skeleton="kpis">
-      {(data) => (
+      {(rawData) => {
+        const data = {
+          readiness: {
+            score: rawData?.readiness?.score ?? null,
+            delta: rawData?.readiness?.delta ?? null,
+            hasData: Boolean(rawData?.readiness?.hasData),
+          },
+          practiceSessions: rawData?.practiceSessions ?? 0,
+          streak: {
+            days: rawData?.streak?.days ?? 0,
+            lastActiveOn: rawData?.streak?.lastActiveOn ?? '—',
+          },
+          batchRank: {
+            rank: rawData?.batchRank?.rank ?? null,
+            outOf: rawData?.batchRank?.outOf ?? null,
+          },
+          trend: Array.isArray(rawData?.trend) ? rawData.trend : [],
+          skillBreakdown: Array.isArray(rawData?.skillBreakdown) ? rawData.skillBreakdown : [],
+          dayOneVsToday: {
+            rows: Array.isArray(rawData?.dayOneVsToday?.rows) ? rawData.dayOneVsToday.rows : [],
+            dayOneAt: rawData?.dayOneVsToday?.dayOneAt ?? null,
+          },
+          strongestSkill: rawData?.strongestSkill ?? null,
+          focusArea: rawData?.focusArea ?? null,
+          nextRecommendedActivity: rawData?.nextRecommendedActivity ?? null,
+          achievements: Array.isArray(rawData?.achievements) ? rawData.achievements : [],
+          semesterTracking: Array.isArray(rawData?.semesterTracking) ? rawData.semesterTracking : [],
+        };
+        return (
         <>
           <PageHeader
             title="My Progress"
@@ -82,12 +112,84 @@ export default function ProgressPage() {
             />
             <StatCard
               label="Batch rank"
-              value={`#${data.batchRank.rank}`}
+              value={data.batchRank.rank ? `#${data.batchRank.rank}` : '—'}
               icon={<Trophy />}
               tone="purple"
-              deltaLabel={`of ${num(data.batchRank.outOf)} participants`}
+              deltaLabel={data.batchRank.outOf ? `of ${num(data.batchRank.outOf)} participants` : 'Cohort pending'}
             />
           </div>
+
+          {data.semesterTracking.length > 0 && (
+            <TiltCard maxAngle={1.5} glare className="mt-5 p-5 border-line bg-card/90 shadow-card">
+              <div className="flex flex-col gap-1 pb-3 border-b border-line-soft sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Semester-Wise EEDI Progression</CardTitle>
+                  <CardSubtitle>
+                    Official academic semester tracking across Arya College employability milestones
+                  </CardSubtitle>
+                </div>
+                <Badge tone="indigo" className="self-start sm:self-auto">
+                  8-Semester Track
+                </Badge>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {data.semesterTracking.map((sem: any) => {
+                  const isCurrent = sem.isCurrent;
+                  const isEvaluated = sem.score !== null && sem.score !== undefined;
+                  const isUpcoming = sem.status === 'UPCOMING';
+
+                  let badgeTone: 'success' | 'info' | 'amber' | 'neutral' = 'neutral';
+                  if (isEvaluated) badgeTone = 'success';
+                  else if (isCurrent) badgeTone = 'info';
+                  else if (isUpcoming) badgeTone = 'neutral';
+
+                  return (
+                    <div
+                      key={sem.semester}
+                      className={cn(
+                        'relative rounded-xl border p-4 transition-all',
+                        isCurrent
+                          ? 'border-indigo-500/40 bg-indigo-500/5 shadow-sm ring-1 ring-indigo-500/20'
+                          : 'border-line/70 bg-card-subtle/50 hover:border-line',
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
+                          Semester {sem.semester}
+                        </span>
+                        {isCurrent && (
+                          <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                            Current
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-2.5">
+                        <div className="text-lg font-bold text-ink-1">
+                          {isEvaluated ? (
+                            <span className="text-success">{Number(sem.score).toFixed(1)} EEDI</span>
+                          ) : (
+                            <span className="text-ink-3 font-medium text-sm">
+                              {isCurrent ? 'In Progress' : isUpcoming ? 'Upcoming' : 'Not Evaluated'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-ink-2 line-clamp-2">{sem.label}</p>
+                      </div>
+
+                      <div className="mt-3 pt-2.5 border-t border-line-soft/60 flex items-center justify-between text-[11px] text-ink-3">
+                        <span>{sem.courseTitle}</span>
+                        <Badge tone={badgeTone} className="text-[10px] py-0 px-1.5">
+                          {sem.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </TiltCard>
+          )}
 
           <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
             <ChartCard
@@ -109,30 +211,26 @@ export default function ProgressPage() {
               />
             </ChartCard>
 
-            <Card className="card-interactive">
-              <CardHeader>
-                <div>
-                  <CardTitle>Skill breakdown</CardTitle>
-                  <CardSubtitle>Seven employability pillars</CardSubtitle>
-                </div>
-              </CardHeader>
-              <CardBody>
+            <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+              <div className="pb-3 border-b border-line-soft">
+                <CardTitle>Skill breakdown</CardTitle>
+                <CardSubtitle>Seven employability pillars</CardSubtitle>
+              </div>
+              <div className="mt-4">
                 <SkillBreakdown pillars={data.skillBreakdown} />
-              </CardBody>
-            </Card>
+              </div>
+            </TiltCard>
           </div>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <Card className="card-interactive">
-              <CardHeader>
-                <div>
-                  <CardTitle>Day one vs today</CardTitle>
-                  <CardSubtitle>
-                    Baseline taken {formatDate(data.dayOneVsToday.dayOneAt)}
-                  </CardSubtitle>
-                </div>
-              </CardHeader>
-              <TableWrap>
+            <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+              <div className="pb-3 border-b border-line-soft">
+                <CardTitle>Day one vs today</CardTitle>
+                <CardSubtitle>
+                  Baseline taken {formatDate(data.dayOneVsToday.dayOneAt)}
+                </CardSubtitle>
+              </div>
+              <TableWrap className="mt-3">
                 <Table>
                   <thead>
                     <Tr>
@@ -170,41 +268,36 @@ export default function ProgressPage() {
                   </tbody>
                 </Table>
               </TableWrap>
-            </Card>
+            </TiltCard>
 
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Card className="card-interactive border-success-bg bg-success-bg/40">
-                  <CardBody>
-                    <p className="text-xs font-bold uppercase tracking-wider text-success">
-                      Strongest skill
-                    </p>
-                    <p className="mt-1.5 text-md font-semibold text-ink-1">{data.strongestSkill?.label}</p>
-                    <p className="tnum text-[22px] font-bold">{data.strongestSkill?.score}</p>
-                    <p className="tnum text-[22px] font-bold">
-                      <AnimatedCounter value={data.strongestSkill?.score} />
-                    </p>
-                    <p className="text-xs text-ink-2">{data.strongestSkill?.band}</p>
-                  </CardBody>
-                </Card>
-                <Card className="card-interactive border-amber/40 bg-amber-50/60">
-                  <CardBody>
-                    <p className="text-xs font-bold uppercase tracking-wider text-amber-dark">
-                      Focus area
-                    </p>
-                    <p className="mt-1.5 text-md font-semibold text-ink-1">{data.focusArea?.label}</p>
-                    <p className="tnum text-[22px] font-bold">{data.focusArea?.score}</p>
-                    <p className="tnum text-[22px] font-bold">
-                      <AnimatedCounter value={data.focusArea?.score} />
-                    </p>
-                    <p className="text-xs text-ink-2">{data.focusArea?.band}</p>
-                  </CardBody>
-                </Card>
+                <TiltCard maxAngle={2.5} glare className="p-5 border-success-bg bg-success-bg/40 shadow-card">
+                  <p className="text-xs font-bold uppercase tracking-wider text-success">
+                    Strongest skill
+                  </p>
+                  <p className="mt-1.5 text-md font-semibold text-ink-1">{data.strongestSkill?.label}</p>
+                  <p className="tnum mt-1 text-[22px] font-bold">
+                    <AnimatedCounter value={data.strongestSkill?.score} />
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-2">{data.strongestSkill?.band}</p>
+                </TiltCard>
+
+                <TiltCard maxAngle={2.5} glare className="p-5 border-amber/40 bg-amber-50/60 shadow-card">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-dark">
+                    Focus area
+                  </p>
+                  <p className="mt-1.5 text-md font-semibold text-ink-1">{data.focusArea?.label}</p>
+                  <p className="tnum mt-1 text-[22px] font-bold">
+                    <AnimatedCounter value={data.focusArea?.score} />
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-2">{data.focusArea?.band}</p>
+                </TiltCard>
               </div>
 
               {data.nextRecommendedActivity && (
-                <Card className="card-interactive">
-                  <CardHeader>
+                <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+                  <div className="flex items-center justify-between pb-3 border-b border-line-soft">
                     <div>
                       <CardTitle>Recommended next</CardTitle>
                       <CardSubtitle>
@@ -213,8 +306,8 @@ export default function ProgressPage() {
                       </CardSubtitle>
                     </div>
                     <Sparkles className="size-4 text-amber" aria-hidden />
-                  </CardHeader>
-                  <CardBody>
+                  </div>
+                  <div className="mt-3.5">
                     <p className="text-md font-semibold text-ink-1">
                       {data.nextRecommendedActivity.exerciseTitle}
                     </p>
@@ -224,12 +317,12 @@ export default function ProgressPage() {
                     <Button asChild variant="primary" size="sm" className="mt-3.5">
                       <Link href="/student/practice">Start practice</Link>
                     </Button>
-                  </CardBody>
-                </Card>
+                  </div>
+                </TiltCard>
               )}
 
-              <Card className="card-interactive">
-                <CardHeader>
+              <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+                <div className="flex items-center justify-between pb-3 border-b border-line-soft">
                   <div>
                     <CardTitle>Achievements</CardTitle>
                     <CardSubtitle>
@@ -239,8 +332,8 @@ export default function ProgressPage() {
                   <Button asChild variant="ghost" size="sm">
                     <Link href="/student/achievements">All</Link>
                   </Button>
-                </CardHeader>
-                <CardBody>
+                </div>
+                <div className="mt-3.5">
                   <ul className="flex flex-wrap gap-2">
                     {(data.achievements ?? []).slice(0, 8).map((badge: any) => {
                       const Icon = iconFor(badge.icon, Award);
@@ -254,12 +347,13 @@ export default function ProgressPage() {
                       );
                     })}
                   </ul>
-                </CardBody>
-              </Card>
+                </div>
+              </TiltCard>
             </div>
           </div>
         </>
-      )}
+        );
+      }}
     </AsyncSection>
   );
 }

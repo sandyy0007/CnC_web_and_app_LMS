@@ -26,7 +26,7 @@ export default function TrainerBatchRosterPage() {
   const columns: Column<any>[] = [
     {
       key: 'name',
-      header: 'Student',
+      header: 'Participant',
       render: (row) => (
         <Link
           href={`/trainer/students/${row.userId}`}
@@ -78,7 +78,7 @@ export default function TrainerBatchRosterPage() {
       <PageHeader
         breadcrumbs={[{ label: 'My Batches', href: '/trainer/batches' }, { label: 'Roster' }]}
         title="Batch roster"
-        description="Attendance and readiness for every student in this batch."
+        description="Attendance and readiness for every participant in this batch."
         actions={
           <Button asChild variant="secondary" size="sm">
             <Link href="/trainer/batches">
@@ -103,7 +103,7 @@ export default function TrainerBatchRosterPage() {
         pagination={query.data?.pagination}
         onPageChange={table.setPage}
         rowKey={(row) => row.id}
-        caption="Students in this batch with attendance and readiness"
+        caption="Participants in this batch with attendance and readiness"
       />
     </>
   );

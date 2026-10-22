@@ -28,7 +28,7 @@ const ROUTES = [
   {
     icon: Mail,
     title: 'Something else',
-    body: 'Your institution’s Winners Creek administrator is the fastest route for account, batch and certificate questions.',
+    body: 'Your institution’s Winners Creek administrator is the fastest route for account and batch questions.',
     action: null,
   },
 ];
@@ -41,7 +41,7 @@ export default function ContactPage() {
       </h1>
       <p className="mt-3 text-base sm:text-lg leading-relaxed text-ink-2">
         Winners Creek is operated by your institution. Support runs through your college’s programme
-        office, which can act on accounts, batches and certificates directly.
+        office, which can act on accounts and batches directly.
       </p>
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2">

@@ -37,20 +37,20 @@ export default function PublicEbooksPage() {
   return (
     <div className="animate-enter pb-20">
       {/* ------------------------------------------------------------------ Hero Header */}
-      <section className="relative text-white py-12 sm:py-16">
+      <section className="relative py-12 sm:py-16">
         <div className="relative mx-auto max-w-[1180px] px-5">
           <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-500 border border-indigo-500/30">
               <BookOpen className="size-4" />
             </span>
-            <Badge tone="indigo" className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium px-3 py-1">
+            <Badge tone="indigo">
               Community Publishing & Digital Library
             </Badge>
           </div>
-          <h1 className="mt-4 font-serif heading-hero text-white max-w-[700px]">
+          <h1 className="mt-4 font-serif heading-hero text-ink-1 max-w-[700px]">
             Explore Winners Creek eBooks
           </h1>
-          <p className="mt-4 max-w-[640px] text-base sm:text-lg leading-relaxed text-white/80">
+          <p className="mt-4 max-w-[640px] text-base sm:text-lg leading-relaxed text-ink-2">
             Read verified handbooks, technical interview roadmaps, and college syllabus guides published
             by our educators and learners. Preview the first 5 pages free anytime.
           </p>

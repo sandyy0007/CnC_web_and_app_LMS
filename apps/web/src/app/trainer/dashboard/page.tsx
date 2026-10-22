@@ -53,13 +53,43 @@ export default function TrainerDashboardPage() {
       className="min-h-full rounded-2xl p-4 sm:p-6"
     >
       <AsyncSection query={query} skeleton="kpis">
-        {(data) => (
+        {(rawData) => {
+          const data = {
+            assignedBatches: Array.isArray(rawData?.assignedBatches) ? rawData.assignedBatches : [],
+            studentCount: rawData?.studentCount ?? 0,
+            attendance: {
+              percentage: rawData?.attendance?.percentage ?? 0,
+              present: rawData?.attendance?.present ?? 0,
+              total: rawData?.attendance?.total ?? 0,
+              hasData: Boolean(rawData?.attendance?.hasData),
+            },
+            assessments: {
+              average: rawData?.assessments?.average ?? 0,
+              count: rawData?.assessments?.count ?? 0,
+              min: rawData?.assessments?.min ?? 0,
+              max: rawData?.assessments?.max ?? 0,
+              hasData: Boolean(rawData?.assessments?.hasData),
+            },
+            pendingEvaluations: rawData?.pendingEvaluations ?? 0,
+            todaysClasses: {
+              total: rawData?.todaysClasses?.total ?? 0,
+              attendanceNotMarked: rawData?.todaysClasses?.attendanceNotMarked ?? 0,
+              sessions: Array.isArray(rawData?.todaysClasses?.sessions) ? rawData.todaysClasses.sessions : [],
+            },
+            attendanceTrend: Array.isArray(rawData?.attendanceTrend) ? rawData.attendanceTrend : [],
+            courseCompletionPercent: rawData?.courseCompletionPercent ?? 0,
+            weakStudentAlerts: rawData?.weakStudentAlerts ?? 0,
+            performanceDistribution: rawData?.performanceDistribution ?? { bands: [] },
+            evaluationDistribution: Array.isArray(rawData?.evaluationDistribution) ? rawData.evaluationDistribution : [],
+            moduleScores: Array.isArray(rawData?.moduleScores) ? rawData.moduleScores : [],
+          };
+          return (
           <>
           <ImageHero
             image="/images/trainer-ai.webp"
             imageAlt="Trainer Command and Cohort Analytics"
             title="Trainer Command Studio"
-            subtitle="Authoritative oversight for your assigned student cohorts and institutional batches."
+            subtitle="Authoritative oversight for your assigned participant cohorts and institutional batches."
             badge={
               <div className="flex flex-wrap items-center gap-1.5">
                 {data.assignedBatches.map((batch: any) => (
@@ -73,7 +103,7 @@ export default function TrainerDashboardPage() {
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              label="Students"
+              label="Participants"
               value={num(data.studentCount)}
               icon={<Users />}
               deltaLabel={`${data.assignedBatches.length} batch(es) assigned`}
@@ -108,7 +138,7 @@ export default function TrainerDashboardPage() {
 
           <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
             <div className="space-y-5">
-              <Card className="card-interactive">
+              <Card elevated className="card-interactive">
                 <CardHeader>
                   <div>
                     <CardTitle>Today&apos;s classes</CardTitle>
@@ -131,7 +161,7 @@ export default function TrainerDashboardPage() {
                       {data.todaysClasses.sessions.map((session: any) => (
                         <li
                           key={session.id}
-                          className="flex flex-wrap items-center gap-3 rounded-[10px] border border-line-soft px-4 py-3.5 transition-all duration-200 hover:border-line-hover hover:bg-slate-50/60 hover:shadow-xs"
+                          className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 dark:border-white/[0.08] surface-3d px-4 py-3.5 transition-all duration-200 hover:border-indigo-400 hover:shadow-3d-hover"
                         >
                           <div className="min-w-[180px] flex-1">
                             <p className="text-base font-semibold">{session.topic}</p>
@@ -189,7 +219,7 @@ export default function TrainerDashboardPage() {
             </div>
 
             <div className="space-y-5">
-              <Card className="card-interactive">
+              <Card elevated className="card-interactive">
                 <CardHeader>
                   <div>
                     <CardTitle>Course completion</CardTitle>
@@ -206,6 +236,7 @@ export default function TrainerDashboardPage() {
               </Card>
 
               <Card
+                elevated
                 className={cn(
                   'card-interactive transition-all duration-200',
                   data.weakStudentAlerts > 0 && 'border-amber/50 bg-amber-50/50',
@@ -213,7 +244,7 @@ export default function TrainerDashboardPage() {
               >
                 <CardHeader>
                   <div>
-                    <CardTitle>Weak student alerts</CardTitle>
+                    <CardTitle>Participant alerts</CardTitle>
                     <CardSubtitle>Raised automatically from scores and attendance</CardSubtitle>
                   </div>
                   <AlertTriangle
@@ -229,7 +260,7 @@ export default function TrainerDashboardPage() {
                   </p>
                   <p className="mt-1.5 text-sm text-ink-2">
                     {data.weakStudentAlerts > 0
-                      ? 'Students who need attention this week.'
+                      ? 'Participants who need attention this week.'
                       : 'No open alerts for your batches.'}
                   </p>
                   <Button asChild variant="secondary" size="sm" className="mt-3.5 w-full">
@@ -238,7 +269,7 @@ export default function TrainerDashboardPage() {
                 </CardBody>
               </Card>
 
-              <Card className="card-interactive">
+              <Card elevated className="card-interactive">
                 <CardHeader>
                   <div>
                     <CardTitle>My batches</CardTitle>
@@ -251,7 +282,7 @@ export default function TrainerDashboardPage() {
                       <li key={batch.id}>
                         <Link
                           href={`/trainer/batches/${batch.id}`}
-                          className="flex items-center justify-between gap-3 rounded-[10px] border border-line-soft px-3.5 py-3 transition-all duration-200 hover:border-line-hover hover:bg-slate-50/60 hover:translate-x-0.5"
+                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 dark:border-white/[0.08] surface-3d px-3.5 py-3 transition-all duration-200 hover:border-indigo-400 hover:shadow-3d-hover hover:translate-x-0.5"
                         >
                           <span className="min-w-0">
                             <span className="block text-base font-semibold">{batch.name}</span>
@@ -271,8 +302,9 @@ export default function TrainerDashboardPage() {
             </div>
           </div>
         </>
-      )}
-    </AsyncSection>
-  </VisualPageBackground>
-);
+          );
+        }}
+      </AsyncSection>
+    </VisualPageBackground>
+  );
 }

@@ -27,18 +27,22 @@ const ENTITIES = [
   {
     code: 'students',
     label: 'Participants',
-    help: 'Name, email, roll number, department code and batch code are required.',
+    help: 'Columns: name, email, rollNumber, departmentCode, batchCode, semester, section.',
   },
   {
     code: 'trainers',
     label: 'Trainers',
-    help: 'Modules are pipe-separated, e.g. Communication|Teamwork.',
+    help: 'Columns: name, email, departmentCode, designation, specializations, phone, assignedBatchCode.',
   },
-  { code: 'batches', label: 'Batches', help: 'Creates batches inside existing departments.' },
+  {
+    code: 'batches',
+    label: 'Batches',
+    help: 'Columns: name, code, departmentCode, semester, capacity, status.',
+  },
   {
     code: 'attendance',
     label: 'Attendance',
-    help: 'Historical attendance for sessions that already exist.',
+    help: 'Columns: rollNumber, sessionId, status (PRESENT|ABSENT|LATE|EXCUSED), remarks.',
   },
 ];
 
@@ -54,6 +58,7 @@ export default function BulkImportPage() {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   async function upload(file: File) {
+    if (uploading) return;
     setUploading(true);
     setResult(null);
     try {
@@ -90,7 +95,7 @@ export default function BulkImportPage() {
         description="Every row is validated before it commits. Valid rows are imported; rejected rows come back with the exact reason."
       />
 
-      <Card className="mb-5">
+      <Card elevated className="mb-5">
         <CardHeader>
           <div>
             <CardTitle>Import a CSV</CardTitle>
@@ -106,10 +111,10 @@ export default function BulkImportPage() {
                 onClick={() => setEntity(item.code)}
                 aria-pressed={entity === item.code}
                 className={cn(
-                  'rounded-[10px] border p-3.5 text-left transition-colors',
+                  'rounded-xl border p-3.5 text-left transition-all duration-200 active:scale-[0.98]',
                   entity === item.code
-                    ? 'border-indigo-500 bg-indigo-500/20 text-white'
-                    : 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-200',
+                    ? 'border-indigo-500 bg-indigo-500/20 text-white shadow-3d-hover'
+                    : 'border-white/10 surface-3d hover:border-white/20 text-slate-200 hover:shadow-3d-card',
                 )}
               >
                 <span className="flex items-center gap-2 text-base font-semibold">
@@ -125,7 +130,7 @@ export default function BulkImportPage() {
             <Button asChild variant="secondary" size="sm">
               <a href={`${API_BASE}/admin/import/template/${entity}`} download>
                 <Download className="size-3.5" aria-hidden />
-                Download {chosen?.label} template
+                Download {chosen?.label} CSV Template
               </a>
             </Button>
             <input
@@ -143,6 +148,7 @@ export default function BulkImportPage() {
               variant="primary"
               size="sm"
               loading={uploading}
+              disabled={uploading}
               onClick={() => inputRef.current?.click()}
             >
               <Upload className="size-3.5" aria-hidden />
@@ -175,13 +181,27 @@ export default function BulkImportPage() {
             <StatusBadge status={result.status} />
           </CardHeader>
           <CardBody>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-[10px] bg-emerald-500/20 border border-emerald-500/30 px-3.5 py-3">
                 <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
                   <CheckCircle2 className="size-3.5" aria-hidden />
                   Imported
                 </p>
-                <p className="tnum mt-0.5 text-[22px] font-bold text-emerald-300">{num(result.successCount)}</p>
+                <p className="tnum mt-0.5 text-[22px] font-bold text-emerald-300">{num(result.insertedCount ?? result.successCount)}</p>
+              </div>
+              <div className="rounded-[10px] bg-cyan-500/20 border border-cyan-500/30 px-3.5 py-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
+                  <CheckCircle2 className="size-3.5" aria-hidden />
+                  Updated
+                </p>
+                <p className="tnum mt-0.5 text-[22px] font-bold text-cyan-300">{num(result.updatedCount ?? 0)}</p>
+              </div>
+              <div className="rounded-[10px] bg-amber-500/20 border border-amber-500/30 px-3.5 py-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+                  <Info className="size-3.5" aria-hidden />
+                  Duplicates Skipped
+                </p>
+                <p className="tnum mt-0.5 text-[22px] font-bold text-amber-300">{num(result.skippedDuplicates ?? 0)}</p>
               </div>
               <div className="rounded-[10px] bg-rose-500/20 border border-rose-500/30 px-3.5 py-3">
                 <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-400">
@@ -192,15 +212,15 @@ export default function BulkImportPage() {
               </div>
             </div>
 
-            {result.errors?.length > 0 && (
+            {((result.errors && result.errors.length > 0) || (result.failedRows && result.failedRows.length > 0)) && (
               <div className="mt-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Errors ({result.errors.length})
+                  Errors ({(result.errors ?? result.failedRows).length})
                 </p>
                 <div className="mt-2 max-h-48 overflow-y-auto rounded-[8px] border border-white/10 bg-slate-900/60 p-2 text-xs">
-                  {result.errors.map((err: any, idx: number) => (
+                  {(result.errors ?? result.failedRows).map((err: any, idx: number) => (
                     <div key={idx} className="border-b border-white/5 py-1 text-slate-300 last:border-b-0">
-                      Row {err.row}: <span className="text-rose-400">{err.error}</span>
+                      Row {err.row}: <span className="text-rose-400">{err.error ?? err.reason}</span>
                     </div>
                   ))}
                 </div>
@@ -241,14 +261,14 @@ export default function BulkImportPage() {
                   <tbody>
                     {data.items.map((job: any) => (
                       <Tr key={job.id}>
-                        <Td className="font-semibold text-white">{job.entity}</Td>
-                        <Td hideBelow="md" className="text-slate-300">
+                        <Td className="font-semibold text-ink-1">{job.entity}</Td>
+                        <Td hideBelow="md" className="text-ink-2">
                           {job.filename ?? '—'}
                         </Td>
-                        <Td hideBelow="sm" className="text-slate-300">
+                        <Td hideBelow="sm" className="text-ink-2">
                           {job.requestedByLabel ?? '—'}
                         </Td>
-                        <Td align="right" className="tnum text-slate-200">
+                        <Td align="right" className="tnum text-ink-2">
                           {num(job.totalRows)}
                         </Td>
                         <Td align="right" className="tnum text-emerald-400 font-semibold">

@@ -50,8 +50,8 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1 className="font-serif heading-section font-semibold tracking-tight text-white">Sign in</h1>
-      <p className="mt-2 text-base text-slate-300">
+      <h1 className="font-serif heading-section font-semibold tracking-tight text-ink-1">Sign in</h1>
+      <p className="mt-2 text-base text-ink-2">
         {hintedRole
           ? `${ROLE_LABEL[hintedRole] ?? 'Portal'} access — use your institution email or ID.`
           : 'Use your institution email address or your institution ID.'}

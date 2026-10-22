@@ -18,15 +18,15 @@ export default function PublicTrainersPage() {
   return (
     <div className="animate-enter pb-16">
       {/* ------------------------------------------------------------------ hero */}
-      <section className="relative text-white py-12 sm:py-16">
+      <section className="relative py-12 sm:py-16">
         <div className="relative mx-auto max-w-[1180px] px-5">
-          <Badge tone="indigo" className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium px-3 py-1">
+          <Badge tone="indigo">
             Institution Faculty
           </Badge>
-          <h1 className="mt-4 font-serif heading-hero text-white max-w-[700px]">
+          <h1 className="mt-4 font-serif heading-hero text-ink-1 max-w-[700px]">
             Expert Trainers Who Mentor & Assess You
           </h1>
-          <p className="mt-4 max-w-[640px] text-base sm:text-lg leading-relaxed text-white/80">
+          <p className="mt-4 max-w-[640px] text-base sm:text-lg leading-relaxed text-ink-2">
             Your own faculty members rate every parameter on evidence, never an anonymous
             algorithm. Direct mentorship across core domains.
           </p>
@@ -128,6 +128,9 @@ export default function PublicTrainersPage() {
                                 {trainer.name}
                               </h2>
                               <p className="text-xs font-medium text-ink-3 truncate">{trainer.department}</p>
+                              {trainer.institution && (
+                                <p className="text-[11px] text-ink-3/80 truncate mt-0.5">{trainer.institution}</p>
+                              )}
                             </div>
                           </div>
                           <p className="mt-3 text-xs font-medium text-indigo-600 uppercase tracking-wide">

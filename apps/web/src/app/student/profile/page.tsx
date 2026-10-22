@@ -105,7 +105,7 @@ export default function StudentProfilePage() {
           .map((item) => item.trim())
           .filter(Boolean),
       });
-      toast.success('Placement goal saved');
+      toast.success('Career goal saved');
       query.refetch();
     } catch (caught) {
       toast.error((caught as ApiError).message);
@@ -128,7 +128,7 @@ export default function StudentProfilePage() {
           <>
             <PageHeader
               title="My Profile & Plan"
-              description="Your details, your placement goal and the roadmap the platform derives from your scores."
+              description="Your details, your career goals and the roadmap the platform derives from your scores."
               actions={
                 <Button
                   variant={editing ? 'secondary' : 'primary'}
@@ -221,7 +221,7 @@ export default function StudentProfilePage() {
                 <Tabs defaultValue="details">
                   <TabsList>
                     <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="plan">Placement plan</TabsTrigger>
+                    <TabsTrigger value="plan">Career plan</TabsTrigger>
                     <TabsTrigger value="week">This week</TabsTrigger>
                   </TabsList>
 
@@ -342,8 +342,18 @@ export default function StudentProfilePage() {
                               { label: 'Phone', value: data.account.phone ?? '—' },
                               { label: 'Roll number', value: data.profile.rollNumber },
                               { label: 'Department', value: data.profile.departmentName },
-                              { label: 'Batch', value: data.profile.batchName ?? '—' },
-                              { label: 'Semester', value: data.profile.semester ?? '—' },
+                              {
+                                label: 'Batch',
+                                value: data.profile.batchName
+                                  ? data.profile.batchCode
+                                    ? `${data.profile.batchName} (${data.profile.batchCode})`
+                                    : data.profile.batchName
+                                  : '—',
+                              },
+                              {
+                                label: 'Semester',
+                                value: data.profile.semester != null ? `Semester ${data.profile.semester}` : '—',
+                              },
                               { label: 'Section', value: data.profile.section ?? '—' },
                               { label: 'Program', value: data.profile.program ?? '—' },
                               {
@@ -392,7 +402,7 @@ export default function StudentProfilePage() {
                     <Card>
                       <CardHeader>
                         <div>
-                          <CardTitle>Placement goal</CardTitle>
+                          <CardTitle>Career goal</CardTitle>
                           <CardSubtitle>
                             {goal
                               ? `Target ${goal.targetScore} by ${formatDate(goal.targetDate)}`

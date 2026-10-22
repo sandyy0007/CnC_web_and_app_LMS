@@ -21,6 +21,7 @@ from app.authz.roles import Role
 from app.core.config import settings
 from app.core.errors import BusinessRuleViolation, Conflict, NotFound, ValidationError
 from app.db.mongo import as_utc, get_db, serialize
+from app.repositories.base import _clean_doc
 from app.repositories.collections import (
     AchievementRepo,
     AiScoreRepo,
@@ -63,11 +64,12 @@ from app.schemas.requests import (
     SettingsUpdate,
     StartPracticeRequest,
 )
-from app.services import analytics
 from app.services import analytics, chat_service, payment_service, trial_service
 from app.services.ai_provider import FEEDBACK_DIMENSIONS, READINESS_DIMENSIONS
 from app.services.scoring import PILLAR_LABELS, PILLARS, band_for
 from app.services.storage import Keys, get_storage, put_object, signed_url
+from app.services.resume_ats_service import analyze_resume_ats
+from app.services.recommendation_engine import compute_course_recommendations, compute_skill_gaps
 from app.workers.queue import enqueue
 
 router = APIRouter()
@@ -85,6 +87,59 @@ def _now() -> datetime:
 
 
 async def _profile(ctx: ScopeContext) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow("""
+                SELECT u.id, u.name, u.email, u.phone, u.institution_id, u.department_id,
+                       sp.roll_number, sp.batch_id, sp.avatar_url,
+                       d.name as department_name, inst.name as institution_name,
+                       b.name as batch_name, b.code as batch_code,
+                       COALESCE(e.current_semester, b.semester, 1) as semester,
+                       b.academic_year
+                FROM users u
+                LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                LEFT JOIN departments d ON d.id = u.department_id
+                LEFT JOIN institutions inst ON inst.id = u.institution_id
+                LEFT JOIN batches b ON b.id = sp.batch_id
+                LEFT JOIN enrollments e ON e.participant_user_id = u.id AND e.enrollment_status = 'ACTIVE'
+                WHERE u.id = $1::uuid
+            """, uuid.UUID(str(ctx.user_id)))
+            if row:
+                parts = (row["name"] or "Student").split(" ", 1)
+                batch_name = row["batch_name"]
+                batch_code = row["batch_code"]
+                section = None
+                if batch_name and " - " in batch_name:
+                    section = batch_name.split(" - ")[-1].strip()
+                elif batch_code and len(batch_code) > 2:
+                    section = batch_code[-1]
+
+                dept_name = row["department_name"] or "Computer Science & Engineering"
+                program = f"B.Tech - {dept_name}" if dept_name else "B.Tech"
+
+                return {
+                    "id": str(row["id"]),
+                    "userId": str(row["id"]),
+                    "name": row["name"],
+                    "firstName": parts[0],
+                    "lastName": parts[1] if len(parts) > 1 else "",
+                    "email": row["email"],
+                    "phone": row["phone"],
+                    "rollNumber": row["roll_number"] or "N/A",
+                    "batchId": str(row["batch_id"]) if row.get("batch_id") else None,
+                    "batchName": batch_name,
+                    "batchCode": batch_code,
+                    "semester": row["semester"] if batch_name else None,
+                    "academicYear": row["academic_year"],
+                    "section": section,
+                    "program": program,
+                    "departmentId": str(row["department_id"]) if row["department_id"] else None,
+                    "departmentName": dept_name,
+                    "institutionId": str(row["institution_id"]) if row["institution_id"] else None,
+                    "institutionName": row["institution_name"] or "Institution",
+                    "avatarUrl": row.get("avatar_url"),
+                }
     profile = await StudentProfileRepo(ctx).find_one({"userId": ctx.user_id})
     if not profile:
         raise NotFound("Your student profile has not been set up yet")
@@ -472,6 +527,51 @@ async def learning_path(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
 
 @router.get("/courses")
 async def my_courses(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            trainer_row = await conn.fetchrow("""
+                SELECT u.name as trainer_name
+                FROM student_profiles sp
+                JOIN batch_trainers bt ON bt.batch_id = sp.batch_id
+                JOIN users u ON u.id = bt.trainer_user_id
+                WHERE sp.user_id = $1::uuid AND u.deleted_at IS NULL
+                LIMIT 1;
+            """, uuid.UUID(str(ctx.user_id)))
+            student_trainer = trainer_row["trainer_name"] if trainer_row else "Winners Creek Faculty"
+
+            rows = await conn.fetch("""
+                SELECT c.id, c.title, c.slug, c.code, c.description, c.category, c.training_type,
+                       c.delivery_mode, c.duration_hours, c.fee, c.published, c.order_index,
+                       e.enrollment_status, e.access_status, e.current_semester
+                FROM courses c
+                LEFT JOIN enrollments e ON e.course_id = c.id AND e.participant_user_id = $1::uuid AND e.enrollment_status = 'ACTIVE'
+                WHERE c.published = TRUE AND c.deleted_at IS NULL
+                ORDER BY c.order_index ASC, c.created_at DESC;
+            """, uuid.UUID(str(ctx.user_id)))
+            items = []
+            for r in rows:
+                enrolled = r["enrollment_status"] == "ACTIVE"
+                items.append({
+                    "id": str(r["id"]),
+                    "title": r["title"],
+                    "slug": r["slug"],
+                    "code": r["code"],
+                    "icon": "book-open",
+                    "category": r["category"] or "Soft Skills",
+                    "stage": "foundation" if "Old" in r["title"] or "Communication" in r["title"] else "placement",
+                    "trainerName": student_trainer,
+                    "difficulty": "Intermediate",
+                    "durationHours": r["duration_hours"] or 40,
+                    "percent": 0.0,
+                    "state": "not_started",
+                    "nextLesson": None,
+                    "timeRemainingMinutes": (r["duration_hours"] or 40) * 60,
+                    "enrolled": enrolled,
+                    "accessStatus": r["access_status"] or ("ACTIVE" if enrolled else "INACTIVE")
+                })
+            return {"success": True, "data": items}
+
     progress_rows = await CourseProgressRepo(ctx).find_all(
         {"studentUserId": ctx.user_id}, limit=200, sort=[("lastAccessedAt", -1)]
     )
@@ -509,6 +609,90 @@ async def my_courses(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
 
 @router.get("/courses/{course_id}")
 async def course_detail(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        try:
+            cid = uuid.UUID(str(course_id))
+        except ValueError:
+            cid = None
+        if cid:
+            async with get_pg_connection() as conn:
+                course = await conn.fetchrow("""
+                    SELECT id, title, slug, code, description, category, training_type,
+                           delivery_mode, duration_hours, fee, published,
+                           trial_duration_days, trial_enabled, payment_methods, upi_id, merchant_name,
+                           qr_code_url, payment_instructions, refund_policy, enrollment_open, status
+                    FROM courses WHERE id = $1 AND deleted_at IS NULL;
+                """, cid)
+                if course:
+                    modules = await conn.fetch("""
+                        SELECT id, title, slug, description, order_index
+                        FROM modules WHERE course_id = $1 AND deleted_at IS NULL
+                        ORDER BY order_index ASC;
+                    """, cid)
+                    m_ids = [m["id"] for m in modules]
+                    lessons = await conn.fetch("""
+                        SELECT id, module_id, title, slug, duration_minutes, order_index, content_type
+                        FROM lessons WHERE module_id = ANY($1::uuid[]) AND deleted_at IS NULL
+                        ORDER BY order_index ASC;
+                    """, m_ids) if m_ids else []
+                    
+                    lessons_by_m: dict[str, list[dict[str, Any]]] = {}
+                    for l in lessons:
+                        mid = str(l["module_id"])
+                        lessons_by_m.setdefault(mid, []).append({
+                            "id": str(l["id"]),
+                            "title": l["title"],
+                            "slug": l["slug"],
+                            "durationMinutes": l["duration_minutes"],
+                            "order": l["order_index"],
+                            "completed": False
+                        })
+                    
+                    serialized_modules = [
+                        {
+                            "id": str(m["id"]),
+                            "title": m["title"],
+                            "slug": m["slug"],
+                            "description": m["description"],
+                            "order": m["order_index"],
+                            "lessons": lessons_by_m.get(str(m["id"]), [])
+                        }
+                        for m in modules
+                    ]
+
+                    # Check participant access entitlement
+                    access_info = await trial_service.check_course_access(ctx.user_id, cid) if ctx.user_id else {"hasAccess": False}
+
+                    return {
+                        "success": True,
+                        "data": {
+                            "id": str(course["id"]),
+                            "_id": str(course["id"]),
+                            "title": course["title"],
+                            "slug": course["slug"],
+                            "code": course["code"],
+                            "description": course["description"],
+                            "category": course["category"],
+                            "durationHours": course["duration_hours"],
+                            "fee": float(course["fee"]) if course["fee"] is not None else 0.0,
+                            "published": course["published"],
+                            "status": course.get("status") or ("PUBLISHED" if course["published"] else "DRAFT"),
+                            "trialDurationDays": course.get("trial_duration_days") or 3,
+                            "trialEnabled": course.get("trial_enabled", True),
+                            "paymentMethods": course.get("payment_methods") or ["UPI", "GATEWAY"],
+                            "upiId": course.get("upi_id") or "",
+                            "merchantName": course.get("merchant_name") or "Winners Creek",
+                            "qrCodeUrl": course.get("qr_code_url") or "",
+                            "paymentInstructions": course.get("payment_instructions") or "Scan the UPI QR code or pay to the UPI ID. Enter the 12-digit transaction UTR reference to verify.",
+                            "refundPolicy": course.get("refund_policy") or "Full refund within 7 days of course purchase if less than 20% course completed.",
+                            "enrollmentOpen": course.get("enrollment_open", True),
+                            "access": access_info,
+                            "modules": serialized_modules,
+                            "progress": {"completedLessonIds": [], "percent": 0.0}
+                        }
+                    }
+
     course = await CourseRepo(ctx).get(course_id)
     db = get_db()
     modules = await db.modules.find({"courseId": course["_id"], "deletedAt": None}).sort(
@@ -600,15 +784,17 @@ async def _award_xp(
     if amount <= 0:
         return
     await get_db().xp_events.insert_one(
-        {
-            "studentUserId": ctx.user_id,
-            "collegeId": ctx.college_id,
-            "departmentId": ctx.department_id,
-            "amount": int(amount),
-            "source": source,
-            "label": label,
-            "at": _now(),
-        }
+        _clean_doc(
+            {
+                "studentUserId": ctx.user_id,
+                "collegeId": ctx.college_id,
+                "departmentId": ctx.department_id,
+                "amount": int(amount),
+                "source": source,
+                "label": label,
+                "at": _now(),
+            }
+        )
     )
 
 
@@ -617,6 +803,9 @@ async def _award_xp(
 async def games(
     category: str | None = Query(None, max_length=40), ctx: ScopeContext = StudentCtx
 ) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.routers.gamification import participant_list_games
+        return await participant_list_games(category=category, ctx=ctx)
     filters: dict[str, Any] = {"published": True}
     if category and category != "all":
         filters["category"] = category
@@ -692,6 +881,9 @@ async def games(
 @router.get("/games/{game_id}")
 async def game_detail(game_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
     """Returns the playable scenario, with the *correct* answers withheld."""
+    if settings.USE_POSTGRES:
+        from app.routers.gamification import participant_get_game
+        return await participant_get_game(game_id=game_id, ctx=ctx)
     definition = await GameDefinitionRepo(ctx).get(game_id)
     levels = []
     for index, level in enumerate(definition.get("levels", []), start=1):
@@ -750,6 +942,23 @@ async def game_detail(game_id: str, ctx: ScopeContext = StudentCtx) -> dict[str,
 @router.post("/games/{game_id}/launch")
 async def launch_game(game_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
     """Records game launch event for student learning engagement tracking."""
+    if settings.USE_POSTGRES:
+        from app.repositories.game_repo import GameRepository
+        try:
+            g = await GameRepository.get_game_by_id(game_id)
+        except Exception:
+            g = await GameRepository.get_game_by_code(game_id)
+        if not g:
+            raise NotFound(f"Game '{game_id}' not found.")
+        code = g.get("code") or str(g["id"])
+        return {
+            "success": True,
+            "message": "Game launch recorded",
+            "data": {
+                "gameUrl": f"/student/games/{code}/play",
+                "launchUrl": f"/student/games/{code}/play",
+            }
+        }
     definition = await GameDefinitionRepo(ctx).get(game_id)
     db = get_db()
     await db.game_definitions.update_one(
@@ -832,6 +1041,7 @@ async def submit_game_attempt(
         "deletedAt": None,
         "version": 1,
     }
+    document = _clean_doc(document)
     result = await get_db().game_attempts.insert_one(document)
     await _award_xp(ctx, amount=xp, source="game", label=definition.get("title"))
 
@@ -1053,6 +1263,7 @@ async def start_practice(
         "deletedAt": None,
         "version": 1,
     }
+    document = _clean_doc(document)
     try:
         result = await get_db().practice_sessions.insert_one(document)
     except Exception as exc:
@@ -1226,7 +1437,7 @@ async def complete_practice(
             {
                 "$set": {
                     "practiceSessionId": session["_id"],
-                    "studentUserId": ctx.user_id,
+                    "studentUserId": str(ctx.user_id),
                     "collegeId": ctx.college_id,
                     "departmentId": ctx.department_id,
                     "provider": "student_submitted",
@@ -1411,6 +1622,26 @@ async def recommendations(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
     }
 
 
+@router.get("/recommendations/courses")
+async def get_course_recommendations(
+    limit: int = Query(6, ge=1, le=20),
+    ctx: ScopeContext = StudentCtx
+) -> dict[str, Any]:
+    """Deterministic, explainable course recommendations based on EEDI & verified skill gaps."""
+    return await compute_course_recommendations(ctx, limit=limit)
+
+
+@router.get("/skill-gaps")
+async def get_skill_gaps(
+    ctx: ScopeContext = StudentCtx
+) -> dict[str, Any]:
+    """Diagnosed skill gaps, weakest pillar, and EEDI competency ratings."""
+    return {
+        "success": True,
+        "data": await compute_skill_gaps(ctx)
+    }
+
+
 # --------------------------------------------------------------------------- progress
 @router.get("/progress")
 async def progress(
@@ -1464,6 +1695,68 @@ async def progress(
     first = history[0] if history else {}
     breakdown = await _skill_breakdown(ctx)
     with_data = [b for b in breakdown if b["hasData"]]
+
+    semester_tracking = []
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            pg_evals = await conn.fetch("""
+                SELECT ee.semester, ee.eedi_score, ee.employment_score, ee.status, ee.submitted_at,
+                       c.title as course_title, c.code as course_code
+                FROM eedi_evaluations ee
+                LEFT JOIN courses c ON ee.course_id = c.id
+                WHERE ee.participant_user_id = $1::uuid
+                ORDER BY ee.semester ASC;
+            """, uuid.UUID(str(ctx.user_id)))
+            eval_by_sem = {r["semester"]: dict(r) for r in pg_evals}
+            
+            # Attendance count in Postgres
+            att_cnt = await conn.fetchval("""
+                SELECT count(*) FROM attendance_records WHERE participant_user_id = $1::uuid;
+            """, uuid.UUID(str(ctx.user_id)))
+            if att_cnt:
+                practice_count = att_cnt
+
+            current_sem = profile.get("semester") or (profile.get("current_semester") or 1)
+            grad_year = profile.get("academicYear") or "2025-2029"
+            
+            for sem in range(1, 9):
+                ev = eval_by_sem.get(sem)
+                if ev and ev.get("eedi_score") is not None:
+                    sem_status = "COMPLETED" if sem < current_sem else "ACTIVE"
+                    score_val = float(ev["eedi_score"])
+                    sem_label = f"Evaluated ({score_val:.1f} EEDI)"
+                elif sem < current_sem:
+                    sem_status = "NOT_EVALUATED"
+                    score_val = None
+                    if "2025" in str(grad_year) and sem in (1, 2):
+                        sem_label = "Not Evaluated / Baseline Cohort Entry at Sem 3"
+                    else:
+                        sem_label = "Not Evaluated"
+                elif sem == current_sem:
+                    sem_status = "ACTIVE"
+                    score_val = None
+                    sem_label = "Active (In Progress)"
+                else:
+                    sem_status = "UPCOMING"
+                    score_val = None
+                    sem_label = "Upcoming"
+                    
+                semester_tracking.append({
+                    "semester": sem,
+                    "status": sem_status,
+                    "score": score_val,
+                    "label": sem_label,
+                    "isCurrent": (sem == current_sem),
+                    "courseTitle": ev.get("course_title") if ev else "Soft Skills – Arya Old",
+                    "submittedAt": ev["submitted_at"].isoformat() if ev and ev.get("submitted_at") else None,
+                })
+
+            if eval_by_sem:
+                latest_eval = max(eval_by_sem.values(), key=lambda x: x["semester"])
+                if latest_eval.get("eedi_score") is not None:
+                    score["finalScore"] = float(latest_eval["eedi_score"])
+
     return {
         "success": True,
         "data": {
@@ -1477,6 +1770,7 @@ async def progress(
             "batchRank": rank,
             "trend": trend,
             "skillBreakdown": breakdown,
+            "semesterTracking": semester_tracking,
             "dayOneVsToday": {
                 "rows": [
                     {
@@ -1505,6 +1799,60 @@ async def progress(
             "recentAssessments": recent_assessments,
         },
     }
+
+
+@router.get("/attendance")
+async def student_attendance(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    """Retrieve authentic attendance history strictly for the authenticated student."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        s_uuid = UUID(str(ctx.user_id))
+        async with get_pg_connection() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT ar.id, ar.status, ar.marked_at, ar.remarks,
+                       ts.topic, ts.room, ts.session_date,
+                       u.name as trainer_name, b.name as batch_name
+                FROM attendance_records ar
+                JOIN training_sessions ts ON ar.session_id = ts.id
+                LEFT JOIN users u ON ts.trainer_user_id = u.id
+                LEFT JOIN batches b ON ts.batch_id = b.id
+                WHERE ar.participant_user_id = $1
+                ORDER BY ts.session_date DESC, ar.marked_at DESC
+                """,
+                s_uuid,
+            )
+            records = [
+                {
+                    "id": str(r["id"]),
+                    "status": (r["status"] or "PRESENT").lower(),
+                    "date": r["session_date"].isoformat() if r["session_date"] else None,
+                    "topic": r["topic"],
+                    "room": r["room"],
+                    "trainerName": r["trainer_name"],
+                    "batchName": r["batch_name"],
+                    "remark": r["remarks"],
+                    "markedAt": r["marked_at"].isoformat() if r["marked_at"] else None,
+                }
+                for r in rows
+            ]
+            total = len(records)
+            present_cnt = sum(1 for r in records if r["status"] == "present")
+            pct_val = round((present_cnt / total) * 100.0, 1) if total > 0 else 0.0
+            return {
+                "success": True,
+                "data": {
+                    "records": records,
+                    "totalSessions": total,
+                    "presentCount": present_cnt,
+                    "attendancePercent": pct_val,
+                },
+            }
+
+    # Mongo fallback
+    rows = await get_db().attendance.find({"studentUserId": ctx.user_id}).sort("date", -1).to_list(100)
+    return {"success": True, "data": {"records": serialize(rows)}}
 
 
 @router.post("/reports/progress")
@@ -1641,6 +1989,7 @@ async def submit_assessment(
         "deletedAt": None,
         "version": 1,
     }
+    document = _clean_doc(document)
     result = await get_db().assessment_attempts.insert_one(document)
     await _award_xp(ctx, amount=int(score / 5), source="quiz", label=quiz.get("title"))
     return {
@@ -1700,7 +2049,15 @@ async def leaderboard(
 @router.get("/profile")
 async def get_profile(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
     profile = await _profile(ctx)
-    user = await get_db().users.find_one({"_id": ctx.user_id})
+    user = None
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            u_row = await conn.fetchrow("SELECT id, name, email, phone, created_at FROM users WHERE id = $1::uuid", uuid.UUID(str(ctx.user_id)))
+            if u_row:
+                user = dict(u_row)
+    if not user:
+        user = await get_db().users.find_one({"_id": ctx.user_id})
     score = await EediScoreRepo(ctx).find_one({"studentUserId": ctx.user_id}) or {}
     goal = await PlacementGoalRepo(ctx).find_one({"studentUserId": ctx.user_id})
     resume = await ResumeDocumentRepo(ctx).find_all(
@@ -1872,12 +2229,18 @@ async def update_settings(
 # --------------------------------------------------------------------------- resume
 @router.post("/resume")
 async def upload_resume(
-    file: UploadFile = File(...), ctx: ScopeContext = StudentCtx
+    file: UploadFile = File(...),
+    roleKey: str = Form("senior-python-backend"),
+    customJd: str | None = Form(None),
+    ctx: ScopeContext = StudentCtx
 ) -> dict[str, Any]:
-    allowed = ("application/pdf", "application/msword",
-               "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    allowed = (
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
     content_type = (file.content_type or "").split(";")[0]
-    if content_type not in allowed:
+    if content_type not in allowed and not file.filename.endswith((".pdf", ".doc", ".docx")):
         raise ValidationError("Upload your resume as a PDF or Word document")
     data = await file.read()
     if not data:
@@ -1889,39 +2252,78 @@ async def upload_resume(
     stored = await put_object(Keys.resume(str(ctx.user_id), filename), data, content_type)
 
     text = ""
-    if content_type == "application/pdf":
+    if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
         try:
             from pypdf import PdfReader  # type: ignore
-
             import io as _io
 
             reader = PdfReader(_io.BytesIO(data))
-            text = "\n".join((page.extract_text() or "") for page in reader.pages[:8])
+            text = "\n".join((page.extract_text() or "") for page in reader.pages[:10])
+        except Exception:
+            try:
+                import fitz  # PyMuPDF
+                doc = fitz.open(stream=data, filetype="pdf")
+                text = "\n".join(page.get_text() for page in doc)
+            except Exception:
+                text = ""
+    elif filename.lower().endswith(".docx"):
+        try:
+            import zipfile
+            import io as _io
+            import xml.etree.ElementTree as ET
+
+            with zipfile.ZipFile(_io.BytesIO(data)) as zf:
+                xml_content = zf.read("word/document.xml")
+                root = ET.fromstring(xml_content)
+                namespaces = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                paragraphs = []
+                for p in root.iterfind(".//w:p", namespaces):
+                    texts = [t.text for t in p.iterfind(".//w:t", namespaces) if t.text]
+                    if texts:
+                        paragraphs.append("".join(texts))
+                text = "\n".join(paragraphs)
+        except Exception:
+            text = ""
+    elif filename.lower().endswith((".txt", ".md")):
+        try:
+            text = data.decode("utf-8", errors="ignore")
         except Exception:
             text = ""
 
-    analysis = _analyse_resume(text)
-    result = await get_db().resume_documents.insert_one(
+    # Execute role-grounded ATS analysis
+    ats_analysis = analyze_resume_ats(text, role_key=roleKey, custom_jd=customJd)
+    
+    # Merge standard structural flags for backward compatibility
+    legacy_analysis = _analyse_resume(text)
+    analysis = {**legacy_analysis, **ats_analysis}
+
+    inserted_doc = await ResumeDocumentRepo(ctx).insert(
         {
             "studentUserId": ctx.user_id,
-            "collegeId": ctx.college_id,
-            "departmentId": ctx.department_id,
             "filename": filename,
             "storageKey": stored.key,
             "bytes": stored.bytes,
             "contentType": content_type,
             "extractedCharacters": len(text),
+            "targetRole": roleKey,
             "analysis": analysis,
-            "createdAt": _now(),
-            "updatedAt": _now(),
-            "deletedAt": None,
-            "version": 1,
+            "version": 2,
         }
     )
+    target_role_title = ats_analysis.get("targetRoleTitle") or "Target Role"
     return {
         "success": True,
-        "data": {"id": str(result.inserted_id), "analysis": analysis},
-        "message": "Resume uploaded and analysed",
+        "data": {
+            "id": str(inserted_doc["_id"]),
+            "analysis": analysis,
+            "overallScore": ats_analysis.get("overallScore", 0),
+            "matchLevel": ats_analysis.get("matchLevel", "Entry"),
+            "matchedSkills": ats_analysis.get("matchedSkills", []),
+            "missingSkills": ats_analysis.get("missingSkills", []),
+            "targetRole": roleKey,
+            "targetRoleTitle": target_role_title,
+        },
+        "message": f"Resume uploaded and analyzed against {target_role_title}",
     }
 
 
@@ -2452,6 +2854,63 @@ async def mark_student_chat_read(conv_id: str, ctx: ScopeContext = StudentCtx) -
 # --------------------------------------------------------------------------- Payments
 @router.get("/payments")
 async def list_student_payments(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            try:
+                user_uuid = uuid.UUID(str(ctx.user_id))
+            except Exception:
+                user_uuid = None
+            if user_uuid:
+                rows = await conn.fetch('''
+                    SELECT 
+                        p.id,
+                        p.enrollment_id,
+                        p.course_id,
+                        p.semester,
+                        p.amount,
+                        p.currency,
+                        p.transaction_ref,
+                        p.payment_method,
+                        p.status,
+                        p.verified_by,
+                        p.verified_at,
+                        p.notes,
+                        p.created_at,
+                        c.title as course_title,
+                        c.code as course_code,
+                        c.delivery_mode as course_mode
+                    FROM payments p
+                    LEFT JOIN courses c ON p.course_id = c.id
+                    WHERE p.participant_user_id = $1
+                    ORDER BY p.created_at DESC
+                ''', user_uuid)
+                out = []
+                for r in rows:
+                    pid = str(r["id"])
+                    st = str(r["status"]).lower()
+                    out.append({
+                        "id": pid,
+                        "courseTitle": r["course_title"] or f"Semester {r['semester']} Curriculum Fee",
+                        "courseId": str(r["course_id"]) if r["course_id"] else "",
+                        "courseMode": str(r["course_mode"] or "ONLINE").upper(),
+                        "amount": float(r["amount"]) if r["amount"] is not None else 0.0,
+                        "currency": r["currency"] or "INR",
+                        "status": st,
+                        "paymentMethod": r["payment_method"] or "Official Institutional Fee",
+                        "transactionId": r["transaction_ref"],
+                        "invoiceNumber": f"INV-{r['transaction_ref'] or pid[:8].upper()}",
+                        "paidAt": r["verified_at"].isoformat() if r["verified_at"] else (r["created_at"].isoformat() if r["created_at"] else None),
+                        "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+                        "invoice": {
+                            "invoiceNumber": f"INV-{r['transaction_ref'] or pid[:8].upper()}",
+                            "status": st,
+                            "amount": float(r["amount"]) if r["amount"] is not None else 0.0,
+                        },
+                    })
+                return {"success": True, "data": out, "payments": out}
+        return {"success": True, "data": [], "payments": []}
+
     payments = await get_db().payments.find({"studentUserId": ctx.user_id}).sort("createdAt", -1).to_list(100)
     invoices = await get_db().invoices.find({"collegeId": ctx.college_id}).to_list(100)
     inv_map = {str(i.get("paymentId")): i for i in invoices}
@@ -2474,26 +2933,81 @@ async def list_student_payments(ctx: ScopeContext = StudentCtx) -> dict[str, Any
             "paidAt": p.get("createdAt").isoformat() if p.get("createdAt") else None,
             "invoice": serialize(inv) if inv else None,
         })
-    return {"success": True, "data": out}
+    return {"success": True, "data": out, "payments": out}
 
 
 @router.post("/payments/checkout")
 async def checkout_course(payload: dict[str, Any], ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
-    course_id = ObjectId(payload["courseId"])
-    course_mode = (payload.get("courseMode") or "ONLINE").strip().upper()
+    raw_course_id = payload.get("courseId") or payload.get("course_id")
+    if not raw_course_id:
+        raise ValidationError("courseId is required")
+
+    course_mode = (payload.get("courseMode") or payload.get("course_mode") or "ONLINE").strip().upper()
     res = await payment_service.create_course_payment(
         student_user_id=ctx.user_id,
         college_id=ctx.college_id,
-        course_id=course_id,
+        course_id=raw_course_id,
         course_mode=course_mode,
-        payment_method=payload.get("paymentMethod", "Mock Card / UPI"),
-        idempotency_key=payload.get("idempotencyKey"),
+        payment_method=payload.get("paymentMethod") or payload.get("payment_method") or "UPI",
+        idempotency_key=payload.get("idempotencyKey") or payload.get("idempotency_key"),
+        transaction_ref=payload.get("transactionRef") or payload.get("transaction_ref") or payload.get("utr"),
+        payer_upi_id=payload.get("payerUpiId") or payload.get("payer_upi_id"),
+        receipt_url=payload.get("receiptUrl") or payload.get("receipt_url"),
     )
     return {"success": True, "data": res}
 
 
 @router.get("/payments/{payment_id}/invoice")
 async def get_payment_invoice(payment_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            try:
+                pid_uuid = uuid.UUID(payment_id)
+                uid_uuid = uuid.UUID(str(ctx.user_id))
+            except Exception:
+                raise NotFound("Invoice not found.")
+            row = await conn.fetchrow('''
+                SELECT 
+                    p.id,
+                    p.amount,
+                    p.currency,
+                    p.transaction_ref,
+                    p.payment_method,
+                    p.status,
+                    p.verified_at,
+                    p.created_at,
+                    p.semester,
+                    c.title as course_title,
+                    u.name as student_name,
+                    inst.name as institution_name
+                FROM payments p
+                LEFT JOIN courses c ON p.course_id = c.id
+                LEFT JOIN users u ON p.participant_user_id = u.id
+                LEFT JOIN institutions inst ON u.institution_id = inst.id
+                WHERE p.id = $1 AND p.participant_user_id = $2
+            ''', pid_uuid, uid_uuid)
+            if not row:
+                raise NotFound("Invoice not found.")
+
+            st = str(row["status"]).lower()
+            inv_num = f"INV-{row['transaction_ref'] or str(row['id'])[:8].upper()}"
+            issued = row["verified_at"] or row["created_at"]
+            amount = float(row["amount"]) if row["amount"] is not None else 0.0
+            desc = f"{row['course_title'] or 'Curriculum Enrollment'} (Semester {row['semester'] or 1})"
+
+            inv = {
+                "invoiceNumber": inv_num,
+                "issuedAt": issued.isoformat() if issued else _now().isoformat(),
+                "studentName": row["student_name"] or "Student",
+                "collegeName": row["institution_name"] or "Arya College of Engineering and IT",
+                "items": [{"description": desc, "amount": amount}],
+                "total": amount,
+                "status": st,
+                "paymentMethod": row["payment_method"] or "Electronic",
+            }
+            return {"success": True, "invoice": inv, "data": {"invoice": inv}}
+
     pid = ObjectId(payment_id)
     inv = await get_db().invoices.find_one({"paymentId": pid})
     if not inv:
@@ -2501,11 +3015,10 @@ async def get_payment_invoice(payment_id: str, ctx: ScopeContext = StudentCtx) -
     return {"success": True, "data": serialize(inv)}
 
 
-# --------------------------------------------------------------------------- Free Trials
+# --------------------------------------------------------------------------- Free Trials & Entitlements
 @router.post("/courses/{course_id}/start-trial")
 async def start_course_trial(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
-    cid = ObjectId(course_id)
-    trial = await trial_service.activate_course_trial(ctx.user_id, ctx.college_id, cid)
+    trial = await trial_service.activate_course_trial(ctx.user_id, ctx.college_id, course_id)
     return {"success": True, "data": trial}
 
 
@@ -2517,9 +3030,191 @@ async def list_student_trials(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
 
 @router.get("/courses/{course_id}/access")
 async def get_course_access(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
-    cid = ObjectId(course_id)
-    access = await trial_service.check_course_access(ctx.user_id, cid)
+    access = await trial_service.check_course_access(ctx.user_id, course_id)
     return {"success": True, "data": access}
+
+
+# --------------------------------------------------------------------------- Student Course Learning Content (Phases 5-8)
+@router.get("/courses/{course_id}/materials")
+async def get_student_course_materials(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    """Retrieves class notes, slides, and exercise documents for authorized learners."""
+    from app.services.content_auth_service import authorize_course_content_access
+    await authorize_course_content_access(ctx, course_id, resource_type="materials")
+    from app.repositories.learning_content_repo import LearningContentRepository
+    materials = await LearningContentRepository.get_course_materials(course_id, published_only=True)
+    out = [
+        {
+            "id": str(m["id"]),
+            "courseId": str(m["course_id"]),
+            "title": m["title"],
+            "description": m.get("description"),
+            "materialType": m["material_type"],
+            "fileUrl": m["file_url"],
+            "fileSizeBytes": m.get("file_size_bytes", 0),
+            "createdAt": m["created_at"].isoformat() if m.get("created_at") else None,
+            "trainerName": m.get("trainer_name"),
+        }
+        for m in materials
+    ]
+    return {"success": True, "data": out}
+
+
+@router.get("/courses/{course_id}/recordings")
+async def get_student_course_recordings(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    """Retrieves class recordings for authorized learners."""
+    from app.services.content_auth_service import authorize_course_content_access
+    await authorize_course_content_access(ctx, course_id, resource_type="recordings")
+    from app.repositories.learning_content_repo import LearningContentRepository
+    recordings = await LearningContentRepository.get_course_recordings(course_id, published_only=True)
+    out = [
+        {
+            "id": str(r["id"]),
+            "courseId": str(r["course_id"]),
+            "title": r["title"],
+            "recordingUrl": r["recording_url"],
+            "durationSeconds": r.get("duration_seconds", 0),
+            "createdAt": r["created_at"].isoformat() if r.get("created_at") else None,
+            "trainerName": r.get("trainer_name"),
+        }
+        for r in recordings
+    ]
+    return {"success": True, "data": out}
+
+
+@router.get("/courses/{course_id}/sessions")
+async def get_student_course_sessions(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    """Retrieves live class schedule. Meeting links are strictly shielded unless actively enrolled/trialing."""
+    from app.services.content_auth_service import authorize_course_content_access
+    has_access = False
+    try:
+        await authorize_course_content_access(ctx, course_id, resource_type="sessions")
+        has_access = True
+    except Exception:
+        has_access = False
+
+    from app.repositories.learning_content_repo import LearningContentRepository
+    sessions = await LearningContentRepository.get_course_sessions(course_id, published_only=True)
+    out = []
+    for s in sessions:
+        out.append({
+            "id": str(s["id"]),
+            "courseId": str(s["course_id"]),
+            "topic": s["topic"],
+            "date": str(s.get("session_date") or s.get("date") or "") if (s.get("session_date") or s.get("date")) else None,
+            "startTime": s["starts_at"].strftime("%H:%M") if s.get("starts_at") else None,
+            "endTime": s["ends_at"].strftime("%H:%M") if s.get("ends_at") else None,
+            "meetingLink": s.get("meeting_link") if has_access else None,
+            "meetingPassword": s.get("meeting_password") if has_access else None,
+            "isLocked": not has_access,
+        })
+    return {"success": True, "data": out, "hasAccess": has_access}
+
+
+@router.post("/courses/{course_id}/enroll", status_code=status.HTTP_201_CREATED)
+async def enroll_course(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
+    """Enroll student in a course with database persistence."""
+    if not ctx.user_id:
+        raise ValidationError("Authentication required")
+
+    student_uid = uuid.UUID(str(ctx.user_id))
+
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        try:
+            cid = uuid.UUID(str(course_id))
+        except ValueError:
+            raise NotFound("Course not found")
+
+        async with get_pg_connection() as conn:
+            # 1. Verify course exists and is published
+            course = await conn.fetchrow("SELECT * FROM courses WHERE id = $1 AND deleted_at IS NULL", cid)
+            if not course:
+                raise NotFound("Course not found")
+            if not course["published"]:
+                raise BusinessRuleViolation("Course is not currently published for enrollment")
+
+            # 2. Check duplicate enrollment
+            existing = await conn.fetchrow("""
+                SELECT id, enrollment_status, access_status 
+                FROM enrollments 
+                WHERE participant_user_id = $1 AND course_id = $2 AND enrollment_status = 'ACTIVE'
+            """, student_uid, cid)
+            if existing:
+                raise Conflict("You are already enrolled in this course")
+
+            # 3. Retrieve student's profile details
+            profile = await conn.fetchrow("""
+                SELECT u.institution_id, u.department_id, sp.batch_id, sp.current_semester
+                FROM users u
+                LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                WHERE u.id = $1
+            """, student_uid)
+
+            inst_id = profile["institution_id"] if profile else None
+            dept_id = profile["department_id"] if profile else None
+            batch_id = profile["batch_id"] if profile else None
+            semester = (profile["current_semester"] if profile and profile.get("current_semester") else 1) or 1
+
+            # 4. Insert enrollment
+            enrollment_id = uuid.uuid4()
+            await conn.execute("""
+                INSERT INTO enrollments (
+                    id, participant_user_id, course_id, institution_id, department_id, batch_id,
+                    current_semester, enrollment_status, payment_status, access_status,
+                    created_at, updated_at
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6,
+                    $7, 'ACTIVE'::enrollment_status_enum, 'VERIFIED'::payment_status_enum, 'ACTIVE'::access_status_enum,
+                    NOW(), NOW()
+                )
+            """, enrollment_id, student_uid, cid, inst_id, dept_id, batch_id, semester)
+
+            await write_audit(ctx, action="enroll", entity_type="enrollments", entity_id=str(enrollment_id), detail=f"Enrolled in course {course['title']}")
+
+            return {
+                "success": True,
+                "message": f"Successfully enrolled in {course['title']}",
+                "data": {
+                    "enrollmentId": str(enrollment_id),
+                    "courseId": str(cid),
+                    "courseTitle": course["title"],
+                    "status": "ACTIVE",
+                    "accessStatus": "ACTIVE",
+                }
+            }
+
+    db = get_db()
+    cid_oid = ObjectId(course_id)
+    course = await db.courses.find_one({"_id": cid_oid, "deletedAt": None})
+    if not course:
+        raise NotFound("Course not found")
+    if not course.get("published", True):
+        raise BusinessRuleViolation("Course is not currently published for enrollment")
+
+    existing = await db.enrollments.find_one({"studentUserId": ctx.user_id, "courseId": cid_oid, "status": "active"})
+    if existing:
+        raise Conflict("You are already enrolled in this course")
+
+    doc = {
+        "studentUserId": ctx.user_id,
+        "courseId": cid_oid,
+        "collegeId": ctx.college_id,
+        "departmentId": ctx.department_id,
+        "status": "active",
+        "accessStatus": "active",
+        "createdAt": _now(),
+        "updatedAt": _now(),
+    }
+    res = await db.enrollments.insert_one(doc)
+    return {
+        "success": True,
+        "data": {
+            "enrollmentId": str(res.inserted_id),
+            "courseId": str(cid_oid),
+            "status": "active"
+        }
+    }
+
 
 
 # --------------------------------------------------------------------------- Evaluation Reports

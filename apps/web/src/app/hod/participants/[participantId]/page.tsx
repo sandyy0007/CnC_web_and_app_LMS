@@ -108,7 +108,6 @@ export default function ParticipantProfilePage() {
                     )}
                     <div className="mt-3.5 flex flex-wrap justify-center gap-2">
                       <StatusBadge status={data.participant.enrollmentStatus} />
-                      <StatusBadge status={data.participant.certificateStatus} />
                     </div>
                   </CardBody>
                 </Card>
@@ -141,7 +140,6 @@ export default function ParticipantProfilePage() {
                     <TabsTrigger value="assessments">Assessments</TabsTrigger>
                     <TabsTrigger value="feedback">Feedback</TabsTrigger>
                     <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
-                    <TabsTrigger value="certificate">Certificate</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-5">
@@ -376,62 +374,6 @@ export default function ParticipantProfilePage() {
                         </CardBody>
                       </Card>
                     )}
-                  </TabsContent>
-
-                  <TabsContent value="certificate">
-                    <Card>
-                      <CardHeader>
-                        <div>
-                          <CardTitle>Certificate</CardTitle>
-                          <CardSubtitle>
-                            Issued only when both criteria are actually met
-                          </CardSubtitle>
-                        </div>
-                        <Award className="size-4 text-amber" aria-hidden />
-                      </CardHeader>
-                      <CardBody>
-                        {data.certificate ? (
-                          <>
-                            <DetailList
-                              rows={[
-                                {
-                                  label: 'Status',
-                                  value: <StatusBadge status={data.certificate.status} />,
-                                },
-                                { label: 'Template', value: data.certificate.templateName },
-                                {
-                                  label: 'Attendance',
-                                  value: `${pct(data.certificate.attendancePct, 1)} (needs ${pct(data.certificate.criteria?.minAttendance, 0)})`,
-                                },
-                                {
-                                  label: 'Average score',
-                                  value: `${num(data.certificate.avgScore, 1)} (needs ${num(data.certificate.criteria?.minAvgScore, 0)})`,
-                                },
-                                {
-                                  label: 'Certificate no.',
-                                  value: data.certificate.certificateNo ?? '—',
-                                },
-                                {
-                                  label: 'Issued',
-                                  value: data.certificate.issuedAt
-                                    ? formatDate(data.certificate.issuedAt)
-                                    : 'Not issued',
-                                },
-                              ]}
-                            />
-                            {data.certificate.reason && (
-                              <p className="mt-3.5 rounded-[10px] bg-amber-50 px-3.5 py-2.5 text-sm text-amber-dark">
-                                {data.certificate.reason}
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <p className="py-4 text-center text-base text-ink-2">
-                            No certificate record has been opened for this participant.
-                          </p>
-                        )}
-                      </CardBody>
-                    </Card>
                   </TabsContent>
                 </Tabs>
               </div>

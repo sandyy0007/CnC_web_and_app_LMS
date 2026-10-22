@@ -111,26 +111,51 @@ async def get_scope_context(request: Request) -> ScopeContext:
         raise Unauthenticated("Please verify your email address to continue")
 
     role = parse_role(user["role"])
-    # A token minted before a role/scope change is refused rather than honoured.
-    if str(payload.get("role")) != str(role):
-        raise Unauthenticated("Your access level changed — please sign in again")
+    token_role_str = str(payload.get("role", "")).upper()
+    user_primary_role_str = str(role).upper()
+
+    # Support dual-role switching (e.g. SUPER_ADMIN or ADMIN who also has a TRAINER profile)
+    active_role = role
+    effective_college_id = user.get("collegeId")
+    effective_dept_id = user.get("departmentId")
+
+    if token_role_str and token_role_str != user_primary_role_str:
+        if token_role_str == "TRAINER" and settings.USE_POSTGRES:
+            from app.db.postgres import get_pg_connection
+            async with get_pg_connection() as conn:
+                try:
+                    tp = await conn.fetchrow(
+                        "SELECT institution_id, department_id FROM trainer_profiles WHERE user_id = $1::uuid",
+                        str(user_id),
+                    )
+                    if tp:
+                        active_role = Role.TRAINER
+                        if tp["institution_id"]:
+                            effective_college_id = str(tp["institution_id"])
+                        if tp["department_id"]:
+                            effective_dept_id = str(tp["department_id"])
+                except Exception:
+                    pass
+        if str(active_role).upper() != token_role_str:
+            raise Unauthenticated("Your access level changed — please sign in again")
+
     token_college = payload.get("college_id")
-    actual_college = str(user["collegeId"]) if user.get("collegeId") else None
+    actual_college = str(effective_college_id) if effective_college_id else None
     if (token_college or None) != actual_college:
         raise Unauthenticated("Your institution assignment changed — please sign in again")
     token_dept = payload.get("department_id")
-    actual_dept = str(user["departmentId"]) if user.get("departmentId") else None
+    actual_dept = str(effective_dept_id) if effective_dept_id else None
     if (token_dept or None) != actual_dept:
         raise Unauthenticated("Your department assignment changed — please sign in again")
 
-    if role in DEPARTMENT_BOUND and not user.get("departmentId"):
+    if active_role in DEPARTMENT_BOUND and not effective_dept_id:
         raise ScopeForbidden("Your account is not assigned to a department")
 
     ctx = ScopeContext(
         user_id=user_id,
-        role=role,
-        college_id=user.get("collegeId"),
-        department_id=user.get("departmentId"),
+        role=active_role,
+        college_id=effective_college_id,
+        department_id=effective_dept_id,
         session_id=session_id,
         request_id=getattr(request.state, "request_id", "unknown"),
         ip=_client_ip(request),
@@ -138,9 +163,9 @@ async def get_scope_context(request: Request) -> ScopeContext:
         name=user.get("name"),
     )
 
-    if role is Role.TRAINER:
+    if active_role is Role.TRAINER:
         ctx = await _hydrate_trainer_scope(ctx)
-    elif role is Role.PARENT:
+    elif active_role is Role.PARENT:
         ctx = await _hydrate_parent_scope(ctx)
 
     # FR-12: a request naming a scope other than the caller's own is rejected and logged —
@@ -268,6 +293,31 @@ async def _reject_client_scope_claims(request: Request, ctx: ScopeContext) -> No
 
 async def _hydrate_trainer_scope(ctx: ScopeContext) -> ScopeContext:
     """Trainer scope is derived from active assignments — never from the request."""
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        import uuid
+        async with get_pg_connection() as conn:
+            try:
+                u_uuid = uuid.UUID(str(ctx.user_id))
+            except Exception:
+                u_uuid = None
+            if u_uuid:
+                rows = await conn.fetch('''
+                    SELECT bt.batch_id, b.department_id
+                    FROM batch_trainers bt
+                    JOIN batches b ON bt.batch_id = b.id
+                    WHERE bt.trainer_user_id = $1
+                      AND (bt.status IS NULL OR bt.status = 'ACTIVE')
+                      AND (bt.start_date IS NULL OR bt.start_date <= CURRENT_DATE)
+                      AND (bt.end_date IS NULL OR bt.end_date >= CURRENT_DATE)
+                      AND b.status = 'ACTIVE'
+                      AND b.deleted_at IS NULL
+                ''', u_uuid)
+                batches = tuple({str(r["batch_id"]) for r in rows if r.get("batch_id")})
+                depts = tuple({str(r["department_id"]) for r in rows if r.get("department_id")})
+                return ScopeContext(
+                    **{**ctx.__dict__, "batch_ids": batches, "department_ids": depts}
+                )
     rows = await (
         get_db()
         .trainer_assignments.find(
@@ -369,12 +419,51 @@ def require_college_scope(ctx: ScopeContext, requested: Any) -> ObjectId:
     return ctx.college_id
 
 
-async def require_department_scope(ctx: ScopeContext, requested: Any = None) -> ObjectId:
+async def require_department_scope(ctx: ScopeContext, requested: Any = None) -> Any:
     """HOD is bound to exactly one department; admins may address any in their own college."""
+    req_str = str(requested) if requested is not None else None
+
+    # PostgreSQL UUID resolution
+    if settings.USE_POSTGRES and req_str:
+        from uuid import UUID
+        from app.db.postgres import get_pg_connection
+        is_uuid = False
+        try:
+            req_uuid = UUID(req_str)
+            is_uuid = True
+        except (ValueError, TypeError):
+            is_uuid = False
+
+        if is_uuid:
+            inst_uuid = None
+            if ctx.college_id:
+                try:
+                    inst_uuid = UUID(str(ctx.college_id))
+                except Exception:
+                    pass
+            if not inst_uuid:
+                inst_uuid = UUID("39a363c8-635a-4a0b-b9c0-d0c51529774f")
+
+            async with get_pg_connection() as conn:
+                dept = await conn.fetchrow(
+                    "SELECT id, institution_id, name FROM departments WHERE id = $1 AND deleted_at IS NULL",
+                    req_uuid,
+                )
+                if not dept:
+                    await _deny_scope(ctx, f"department {requested} not found")
+                if not ctx.is_platform_wide and dept["institution_id"] != inst_uuid:
+                    await _deny_scope(ctx, f"admin requested out-of-college department {requested}")
+                if ctx.role is Role.HOD and ctx.department_id is not None:
+                    if str(ctx.department_id) != req_str:
+                        await _deny_scope(
+                            ctx, f"HOD of department {ctx.department_id} requested department {requested}"
+                        )
+                return req_uuid
+
     if ctx.role is Role.HOD:
         if ctx.department_id is None:
             raise ScopeForbidden()
-        if requested and ObjectId(str(requested)) != ctx.department_id:
+        if requested and str(requested) != str(ctx.department_id):
             await _deny_scope(
                 ctx, f"HOD of department {ctx.department_id} requested department {requested}"
             )
@@ -382,28 +471,58 @@ async def require_department_scope(ctx: ScopeContext, requested: Any = None) -> 
     if ctx.role in (Role.ADMIN, Role.SUPER_ADMIN):
         if not requested:
             raise ScopeForbidden("A department must be specified")
+        try:
+            oid = ObjectId(str(requested))
+        except Exception:
+            await _deny_scope(ctx, f"invalid department identifier {requested}")
         dept = await get_db().departments.find_one(
-            {"_id": ObjectId(str(requested))}, {"collegeId": 1}
+            {"_id": oid}, {"collegeId": 1}
         )
         if not dept or (not ctx.is_platform_wide and dept["collegeId"] != ctx.college_id):
             await _deny_scope(ctx, f"admin requested out-of-college department {requested}")
-        return ObjectId(str(requested))
+        return oid
     if ctx.role is Role.TRAINER:
-        if requested and ObjectId(str(requested)) not in ctx.department_ids:
+        if requested and str(requested) not in [str(d) for d in ctx.department_ids]:
             await _deny_scope(ctx, f"trainer requested unassigned department {requested}")
-        return ObjectId(str(requested)) if requested else (
-            ctx.department_ids[0] if ctx.department_ids else ObjectId()
+        return requested if requested else (
+            ctx.department_ids[0] if ctx.department_ids else None
         )
     if ctx.role is Role.STUDENT and ctx.department_id is not None:
-        if requested and ObjectId(str(requested)) != ctx.department_id:
+        if requested and str(requested) != str(ctx.department_id):
             await _deny_scope(ctx, "student requested another department")
         return ctx.department_id
     raise ScopeForbidden()
 
 
-async def require_trainer_batch_scope(ctx: ScopeContext, batch_id: Any) -> ObjectId:
+async def require_trainer_batch_scope(ctx: ScopeContext, batch_id: Any) -> Any:
     """A trainer may only act on batches they are actively assigned to."""
-    oid = ObjectId(str(batch_id))
+    bid_str = str(batch_id)
+    if settings.USE_POSTGRES and len(bid_str) == 36:
+        try:
+            from uuid import UUID
+            from app.db.postgres import get_pg_connection
+            b_uuid = UUID(bid_str)
+            t_uuid = UUID(str(ctx.user_id))
+            async with get_pg_connection() as conn:
+                is_assigned = await conn.fetchval(
+                    """
+                    SELECT 1 FROM batch_trainers 
+                    WHERE batch_id = $1 AND trainer_user_id = $2
+                      AND (status IS NULL OR status = 'ACTIVE')
+                      AND (start_date IS NULL OR start_date <= CURRENT_DATE)
+                      AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+                    """,
+                    b_uuid, t_uuid
+                )
+                if not is_assigned and ctx.role is Role.TRAINER:
+                    await _deny_scope(ctx, f"trainer requested unassigned batch {batch_id}")
+            return batch_id
+        except ScopeForbidden:
+            raise
+        except Exception:
+            pass
+
+    oid = ObjectId(bid_str)
     if ctx.role in (Role.ADMIN, Role.SUPER_ADMIN, Role.HOD):
         batch = await get_db().batches.find_one({"_id": oid}, {"collegeId": 1, "departmentId": 1})
         if not batch:
@@ -422,13 +541,73 @@ async def require_trainer_batch_scope(ctx: ScopeContext, batch_id: Any) -> Objec
 
 async def require_trainer_session_scope(ctx: ScopeContext, session_id: Any) -> dict[str, Any]:
     """Attendance/evaluation writes are only allowed on the trainer's own sessions."""
-    session = await get_db().training_sessions.find_one({"_id": ObjectId(str(session_id))})
+    s_id_str = str(session_id)
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        is_uuid = False
+        try:
+            s_uuid = UUID(s_id_str)
+            is_uuid = True
+        except (ValueError, TypeError):
+            is_uuid = False
+
+        if is_uuid:
+            async with get_pg_connection() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT ts.id, ts.institution_id, ts.department_id, ts.batch_id, ts.trainer_user_id,
+                           ts.topic, ts.room, ts.session_date, ts.status, b.name as batch_name
+                    FROM training_sessions ts
+                    LEFT JOIN batches b ON ts.batch_id = b.id
+                    WHERE ts.id = $1
+                    """,
+                    s_uuid,
+                )
+                if not row:
+                    raise ScopeForbidden()
+                session = {
+                    "_id": str(row["id"]),
+                    "id": str(row["id"]),
+                    "collegeId": str(row["institution_id"]) if row["institution_id"] else None,
+                    "departmentId": str(row["department_id"]) if row["department_id"] else None,
+                    "batchId": str(row["batch_id"]) if row["batch_id"] else None,
+                    "batchName": row["batch_name"],
+                    "trainerUserId": str(row["trainer_user_id"]) if row["trainer_user_id"] else None,
+                    "topic": row["topic"],
+                    "room": row["room"],
+                    "date": row["session_date"].isoformat() if row["session_date"] else None,
+                    "status": row["status"],
+                }
+                if ctx.role is Role.TRAINER:
+                    if session.get("trainerUserId") and str(session.get("trainerUserId")) != str(ctx.user_id):
+                        await _deny_scope(ctx, f"trainer requested session {session_id} owned by another trainer")
+                    if session.get("batchId") and str(session["batchId"]) not in [str(b) for b in (ctx.batch_ids or ())]:
+                        await _deny_scope(ctx, "trainer requested session outside assigned batches")
+                    return session
+                if ctx.is_platform_wide:
+                    return session
+                if session.get("collegeId") and ctx.college_id and str(session.get("collegeId")) != str(ctx.college_id):
+                    await _deny_scope(ctx, "out-of-college session")
+                if ctx.role is Role.HOD and session.get("departmentId") and ctx.department_id and str(session.get("departmentId")) != str(ctx.department_id):
+                    await _deny_scope(ctx, "out-of-department session")
+                return session
+
+    try:
+        oid = ObjectId(s_id_str)
+        session = await get_db().training_sessions.find_one({"_id": oid})
+    except Exception:
+        session = None
+
+    if not session:
+        session = await get_db().training_sessions.find_one({"$or": [{"_id": s_id_str}, {"id": s_id_str}]})
+
     if not session:
         raise ScopeForbidden()
     if ctx.role is Role.TRAINER:
-        if session.get("trainerUserId") != ctx.user_id:
+        if str(session.get("trainerUserId")) != str(ctx.user_id):
             await _deny_scope(ctx, f"trainer requested session {session_id} owned by another trainer")
-        if session.get("batchId") and session["batchId"] not in ctx.batch_ids:
+        if session.get("batchId") and ctx.batch_ids and str(session["batchId"]) not in [str(b) for b in ctx.batch_ids]:
             await _deny_scope(ctx, "trainer requested session outside assigned batches")
         return session
     if ctx.is_platform_wide:
@@ -459,8 +638,43 @@ async def require_parent_student_link(ctx: ScopeContext, student_id: Any) -> Obj
     return oid
 
 
-async def require_student_in_scope(ctx: ScopeContext, student_id: Any) -> ObjectId:
+async def require_student_in_scope(ctx: ScopeContext, student_id: Any) -> Any:
     """Resolve a student and prove they sit inside the caller's scope (check 5)."""
+    sid_str = str(student_id)
+    if settings.USE_POSTGRES and len(sid_str) == 36:
+        try:
+            from uuid import UUID
+            from app.db.postgres import get_pg_connection
+            s_uuid = UUID(sid_str)
+            async with get_pg_connection() as conn:
+                prof = await conn.fetchrow("""
+                    SELECT sp.user_id, sp.batch_id, u.institution_id, u.department_id
+                    FROM users u
+                    JOIN student_profiles sp ON sp.user_id = u.id
+                    WHERE u.id = $1 AND u.deleted_at IS NULL
+                """, s_uuid)
+                if not prof:
+                    raise ScopeForbidden()
+                if ctx.is_platform_wide:
+                    return student_id
+                if ctx.role is Role.TRAINER:
+                    is_assigned = await conn.fetchval(
+                        """
+                        SELECT 1 FROM batch_trainers 
+                        WHERE batch_id = $1 AND trainer_user_id = $2
+                          AND (status IS NULL OR status = 'ACTIVE')
+                          AND (start_date IS NULL OR start_date <= CURRENT_DATE)
+                          AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+                        """,
+                        prof["batch_id"], UUID(str(ctx.user_id))
+                    )
+                    if not is_assigned:
+                        await _deny_scope(ctx, f"trainer requested student outside assigned batches ({student_id})")
+                return student_id
+        except ScopeForbidden:
+            raise
+        except Exception:
+            pass
     oid = ObjectId(str(student_id))
     profile = await get_db().student_profiles.find_one(
         {"userId": oid}, {"collegeId": 1, "departmentId": 1, "batchId": 1}
@@ -512,10 +726,36 @@ def utcnow() -> datetime:
 async def require_course_access(ctx: ScopeContext, course_id: Any) -> dict[str, Any]:
     """Verify server-side that the student or staff caller is authorized to access course content."""
     from app.services.domain_rules import can_access_course, is_access_active
+    from uuid import UUID
 
     db = get_db()
-    course_oid = ObjectId(str(course_id))
-    course = await db.courses.find_one({"_id": course_oid, "deletedAt": None})
+    course = None
+    course_oid = None
+    cid_uuid = None
+    try:
+        cid_uuid = UUID(str(course_id))
+    except (ValueError, TypeError):
+        cid_uuid = None
+
+    if cid_uuid and settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow("SELECT * FROM courses WHERE id = $1 AND deleted_at IS NULL", cid_uuid)
+            if row:
+                course = dict(row)
+                course["_id"] = str(row["id"])
+                raw_mode = "BOTH" if row["delivery_mode"] == "HYBRID" else str(row["delivery_mode"]).upper()
+                course["courseMode"] = raw_mode
+                course["availableModes"] = ["ONLINE", "OFFLINE"] if row["delivery_mode"] == "HYBRID" else [raw_mode]
+                course["collegeId"] = None
+
+    if not course:
+        try:
+            course_oid = ObjectId(str(course_id))
+            course = await db.courses.find_one({"_id": course_oid, "deletedAt": None})
+        except Exception:
+            pass
+
     if not course:
         raise ScopeForbidden("Course not found")
 
@@ -525,30 +765,40 @@ async def require_course_access(ctx: ScopeContext, course_id: Any) -> dict[str, 
     course_mode = course.get("courseMode", "ONLINE")
 
     if ctx.role is Role.STUDENT:
-        enrollment = await db.enrollments.find_one({
-            "studentUserId": ctx.user_id,
-            "courseId": course_oid,
-            "deletedAt": None,
-        })
+        if cid_uuid and settings.USE_POSTGRES:
+            from app.db.postgres import get_pg_connection
+            async with get_pg_connection() as conn:
+                try:
+                    s_uuid = UUID(str(ctx.user_id))
+                    erow = await conn.fetchrow("SELECT * FROM enrollments WHERE participant_user_id = $1 AND course_id = $2", s_uuid, cid_uuid)
+                    if erow:
+                        return course
+                except Exception:
+                    pass
+        elif course_oid:
+            enrollment = await db.enrollments.find_one({
+                "studentUserId": ctx.user_id,
+                "courseId": course_oid,
+                "deletedAt": None,
+            })
+            if enrollment:
+                allowed, reason = can_access_course(ctx, course, enrollment)
+                if allowed:
+                    return course
+                await _deny_scope(ctx, f"participant access denied to course {course_id}: {reason}")
 
-        if enrollment:
-            allowed, reason = can_access_course(ctx, course, enrollment)
-            if allowed:
-                return course
-            await _deny_scope(ctx, f"participant access denied to course {course_id}: {reason}")
-
-        now = datetime.now(timezone.utc)
-        trial = await db.course_trials.find_one({
-            "studentUserId": ctx.user_id,
-            "courseId": course_oid,
-            "status": "active",
-        })
-        if trial:
-            expires_at = trial["expiresAt"]
-            if expires_at.tzinfo is None:
-                expires_at = expires_at.replace(tzinfo=timezone.utc)
-            if now < expires_at:
-                return course
+            now = datetime.now(timezone.utc)
+            trial = await db.course_trials.find_one({
+                "studentUserId": ctx.user_id,
+                "courseId": course_oid,
+                "status": "active",
+            })
+            if trial:
+                expires_at = trial["expiresAt"]
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                if now < expires_at:
+                    return course
 
         await _deny_scope(ctx, f"participant {ctx.user_id} attempted access to course {course_id} without active enrollment or trial")
 

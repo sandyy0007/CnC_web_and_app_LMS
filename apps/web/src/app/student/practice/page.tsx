@@ -1,6 +1,6 @@
 'use client';
 
-import { Flame, History, Play, Sparkles, Target } from 'lucide-react';
+import { Flame, History, Mic, Play, Sparkles, Target, Video } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 
@@ -71,6 +71,37 @@ export default function PracticeLabPage() {
                     </CardBody>
                   </Card>
                 )}
+
+                {/* AI Presentation Simulator Card */}
+                <Card className="mb-4 card-interactive border-indigo/30 bg-gradient-to-r from-indigo-50/70 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20">
+                  <CardBody className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
+                    <span className="flex size-11 items-center justify-center rounded-2xl bg-indigo text-white shadow-xs">
+                      <Video className="size-5" aria-hidden />
+                    </span>
+                    <div className="min-w-[220px] flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-indigo">
+                          Interactive Simulation Arena
+                        </p>
+                        <Badge tone="indigo" className="text-[10px] py-0 px-1.5">
+                          8-Stage Simulator
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 text-md font-bold text-ink-1 dark:text-white">
+                        AI Presentation Simulator & Speech Coach
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-2 dark:text-slate-300">
+                        Live slide delivery (SIH 2026 Bhoorakshak deck), real-time speech-to-text, WPM cadence tracking, and verbal filler diagnostics.
+                      </p>
+                    </div>
+                    <Button asChild variant="primary" size="sm" className="px-4">
+                      <Link href="/student/practice/presentation-coach">
+                        <Play className="size-3.5 mr-1" aria-hidden />
+                        Launch Simulator
+                      </Link>
+                    </Button>
+                  </CardBody>
+                </Card>
 
                 <div
                   className="mb-4 flex flex-wrap gap-1.5"

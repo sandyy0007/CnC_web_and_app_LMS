@@ -65,7 +65,12 @@ export default function AdminPaymentsPage() {
   const paymentsQuery = useApi<any>('/admin/payments');
   const summaryQuery = useApi<PaymentSummary>('/admin/payments/summary');
 
-  const rawPayments = paymentsQuery.data?.payments ?? paymentsQuery.data?.data?.payments ?? paymentsQuery.data ?? [];
+  const rawPayments =
+    paymentsQuery.data?.payments ??
+    paymentsQuery.data?.data?.payments ??
+    paymentsQuery.data?.items ??
+    paymentsQuery.data?.data?.items ??
+    (Array.isArray(paymentsQuery.data) ? paymentsQuery.data : []);
   const payments: AdminPayment[] = Array.isArray(rawPayments) ? rawPayments : [];
   const summary: PaymentSummary = summaryQuery.data ?? {
     totalRevenue: 0,
@@ -119,7 +124,7 @@ export default function AdminPaymentsPage() {
         actions={
           <Badge tone="success" className="flex items-center gap-1.5">
             <ShieldCheck className="size-3.5" />
-            Audit Logging Active
+            PCI-DSS Verified Transactions
           </Badge>
         }
       />

@@ -95,7 +95,7 @@ function AssignmentSubmitDialog({
               id="assignment-file"
               type="file"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              className="block w-full rounded-[9px] border border-white/15 bg-slate-900/80 text-white px-3 py-2 text-sm file:mr-3 file:rounded-[6px] file:border-0 file:bg-white/10 file:text-white file:px-2.5 file:py-1 file:text-sm file:font-semibold"
+              className="block w-full rounded-[9px] border border-input-border bg-input text-ink-1 px-3 py-2 text-sm file:mr-3 file:rounded-[6px] file:border-0 file:bg-surface-muted file:text-ink-1 file:px-2.5 file:py-1 file:text-sm file:font-semibold hover:file:bg-surface-hover cursor-pointer"
             />
           </div>
         </DialogBody>

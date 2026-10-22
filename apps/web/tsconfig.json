@@ -14,8 +14,28 @@
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] }
+    "paths": {
+      "@/*": ["./src/*"],
+      "@games/*": ["../game/*"],
+      "@games": ["../game/index.ts"]
+    }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "e2e"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../game/**/*.ts",
+    "../game/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "e2e",
+    "../game/winners-creek",
+    "../game/email-games",
+    "../game/games",
+    "../game/Listening skills",
+    "../game/pubspeak"
+  ]
 }
+

@@ -37,6 +37,25 @@ class UserRepository:
             return dict(row) if row else None
 
     @staticmethod
+    async def get_by_identifier(identifier: str) -> dict[str, Any] | None:
+        """Find user by email or by college roll number."""
+        clean_id = identifier.strip()
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT u.id, u.email, u.password_hash, u.name, u.role, u.institution_id, u.department_id,
+                       u.phone, u.status, u.last_login_at, u.created_at, sp.roll_number
+                FROM users u
+                LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                WHERE (LOWER(u.email) = LOWER($1) OR UPPER(sp.roll_number) = UPPER($1))
+                  AND u.deleted_at IS NULL
+                LIMIT 1
+                """,
+                clean_id,
+            )
+            return dict(row) if row else None
+
+    @staticmethod
     async def create_user(
         email: str,
         password_hash: str,

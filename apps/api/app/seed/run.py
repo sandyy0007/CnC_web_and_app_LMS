@@ -183,6 +183,9 @@ def _score_targets(count: int, named: list[float], batches: list[str]) -> list[f
 
 # --------------------------------------------------------------------------- seeding
 async def seed(reset: bool = False, minimal: bool = False) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        log.warning("seed_refused_postgres_mode", extra={"message": "Demo seeding is disabled when USE_POSTGRES is active to prevent polluting real institutional data."})
+        return {"status": "disabled_in_postgres_mode"}
     db = await connect_to_mongo()
 
     if reset:

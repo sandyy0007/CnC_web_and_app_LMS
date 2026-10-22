@@ -45,7 +45,7 @@ export const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      'peer size-[17px] shrink-0 rounded-[5px] border border-white/20 bg-slate-900/80',
+      'peer size-[17px] shrink-0 rounded-[5px] border border-slate-300 bg-white dark:border-white/20 dark:bg-slate-900/80',
       'data-[state=checked]:border-indigo-600 data-[state=checked]:bg-indigo-600',
       'data-[state=checked]:text-white disabled:opacity-50 transition-colors',
       className,
@@ -70,7 +70,7 @@ export const Progress = React.forwardRef<
 >(({ className, value, barClassName, thin, ...props }, ref) => (
   <ProgressPrimitive.Root
     ref={ref}
-    value={value ?? 0}
+    value={Math.min(100, Math.max(0, value ?? 0))}
     className={cn(
       'relative w-full overflow-hidden rounded-full bg-line-soft',
       thin ? 'h-1.5' : 'h-[7px]',

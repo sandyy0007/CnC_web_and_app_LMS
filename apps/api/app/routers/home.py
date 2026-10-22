@@ -42,11 +42,11 @@ async def overview() -> dict[str, Any]:
             "productName": "Winners Creek",
             "tagline": TAGLINE,
             "philosophy": list(PHILOSOPHY),
-            "description": (
-                "A college-focused soft-skills, personality development and employability "
-                "platform that runs alongside your curriculum — structured learning, AI-assessed "
-                "practice, trainer feedback and placement readiness in one place."
-            ),
+           "description": (
+    "A unified digital learning ecosystem that brings structured learning, "
+    "intelligent assessments, performance insights, expert feedback, and "
+    "career-focused development together in one platform."
+),
             "pillars": [
                 {
                     "code": "structured_learning",
@@ -97,9 +97,9 @@ async def overview() -> dict[str, Any]:
                 },
             ],
             "roleAccess": [
-                {"role": "STUDENT", "label": "Student Login", "href": ROLE_HOME[Role.STUDENT]},
+                {"role": "STUDENT", "label": "Participant Login", "href": ROLE_HOME[Role.STUDENT]},
                 {"role": "TRAINER", "label": "Trainer Login", "href": ROLE_HOME[Role.TRAINER]},
-                {"role": "HOD", "label": "HOD Login", "href": ROLE_HOME[Role.HOD]},
+                {"role": "HOD", "label": "SPOC Login", "href": ROLE_HOME[Role.HOD]},
                 {"role": "ADMIN", "label": "Admin Login", "href": ROLE_HOME[Role.ADMIN]},
             ],
         },
@@ -161,17 +161,25 @@ async def courses(
     if settings.USE_POSTGRES:
         pg_courses = await CourseRepository.list_courses(search=search, category=category, limit=limit)
         categories = await CourseRepository.get_categories()
-        # Ensure UUIDs/decimals serialize safely
-        serialized = [
-            {
+        serialized = []
+        for c in pg_courses:
+            mode = str(c.get("delivery_mode") or "HYBRID").upper()
+            course_mode = "BOTH" if mode == "HYBRID" else mode
+            serialized.append({
                 **c,
                 "id": str(c["id"]),
                 "_id": str(c["id"]),
                 "fee": float(c["fee"]) if c.get("fee") is not None else 0.0,
+                "price": float(c["fee"]) if c.get("fee") is not None else 0.0,
+                "courseMode": course_mode,
+                "deliveryMode": mode,
+                "durationHours": c.get("duration_hours") or 40,
+                "duration_hours": c.get("duration_hours") or 40,
+                "difficulty": "Intermediate",
+                "stage": c.get("category") or "Employability",
+                "icon": "book-open",
                 "createdAt": c["created_at"].isoformat() if c.get("created_at") else None,
-            }
-            for c in pg_courses
-        ]
+            })
         return {
             "success": True,
             "data": serialized,
@@ -209,11 +217,21 @@ async def course_detail(slug: str) -> dict[str, Any]:
         if not course:
             raise NotFound("We couldn't find that course")
         modules = await CourseRepository.get_modules_with_lessons(course["id"])
+        mode = str(course.get("delivery_mode") or "HYBRID").upper()
+        course_mode = "BOTH" if mode == "HYBRID" else mode
         c_dict = {
             **course,
             "id": str(course["id"]),
             "_id": str(course["id"]),
             "fee": float(course["fee"]) if course.get("fee") is not None else 0.0,
+            "price": float(course["fee"]) if course.get("fee") is not None else 0.0,
+            "courseMode": course_mode,
+            "deliveryMode": mode,
+            "durationHours": course.get("duration_hours") or 40,
+            "duration_hours": course.get("duration_hours") or 40,
+            "difficulty": "Intermediate",
+            "stage": course.get("category") or "Employability",
+            "icon": "book-open",
             "modules": [
                 {
                     **m,
@@ -290,8 +308,68 @@ async def institutions() -> dict[str, Any]:
 
 
 @router.get("/trainers")
-async def trainers(limit: int = Query(12, ge=1, le=50)) -> dict[str, Any]:
-    """Public trainer showcase — no contact details or internal identifiers exposed."""
+async def trainers(
+    institution_id: str | None = Query(None),
+    institution_code: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+) -> dict[str, Any]:
+    """Public trainer showcase — strictly institution-scoped, no contact details or internal identifiers exposed."""
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            target_inst_id = None
+            if institution_id:
+                try:
+                    target_inst_id = UUID(str(institution_id))
+                except (ValueError, TypeError):
+                    target_inst_id = None
+            elif institution_code:
+                row = await conn.fetchrow(
+                    "SELECT id FROM institutions WHERE code = $1 AND deleted_at IS NULL", institution_code
+                )
+                if row:
+                    target_inst_id = row["id"]
+
+            if not target_inst_id:
+                # Default to verified Arya College of Engineering and IT
+                row = await conn.fetchrow(
+                    "SELECT id FROM institutions WHERE id = '39a363c8-635a-4a0b-b9c0-d0c51529774f'::uuid OR name ILIKE '%Arya%' AND deleted_at IS NULL LIMIT 1"
+                )
+                if row:
+                    target_inst_id = row["id"]
+
+            rows = await conn.fetch("""
+                SELECT u.id, u.name, d.name as department_name, inst.name as institution_name,
+                       tp.title, tp.specializations
+                FROM users u
+                JOIN institutions inst ON inst.id = u.institution_id
+                LEFT JOIN departments d ON d.id = u.department_id
+                LEFT JOIN trainer_profiles tp ON tp.user_id = u.id
+                WHERE u.role = 'TRAINER'
+                  AND u.status = 'ACTIVE'
+                  AND u.deleted_at IS NULL
+                  AND u.institution_id = $1
+                ORDER BY u.name ASC
+                LIMIT $2
+            """, target_inst_id, limit)
+
+            return {
+                "success": True,
+                "data": [
+                    {
+                        "id": str(r["id"]),
+                        "name": r["name"],
+                        "designation": r["title"] or "Soft Skills Trainer",
+                        "department": r["department_name"] or "Faculty of Soft Skills & Career Readiness",
+                        "institution": r["institution_name"],
+                        "expertise": r["specializations"] or ["Communication Skills", "Workplace Readiness", "Personality Development"],
+                        "avatarColor": "indigo",
+                        "bio": f"Faculty trainer at {r['institution_name'] or 'Arya College of Engineering and IT'}",
+                    }
+                    for r in rows
+                ],
+            }
+
     db = get_db()
     rows = await db.users.find(
         {"role": "TRAINER", "status": "active", "deletedAt": None, "showOnPublicSite": True},

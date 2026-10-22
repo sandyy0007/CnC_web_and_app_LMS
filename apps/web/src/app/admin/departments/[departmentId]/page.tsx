@@ -401,7 +401,7 @@ export default function AdminDepartmentDetailPage() {
               open={archiving}
               onOpenChange={setArchiving}
               title={`Archive ${department.name}?`}
-              description="Archiving makes the department read-only. Nothing is deleted: participants, evaluations, attendance and certificates all stay exactly as they are."
+              description="Archiving makes the department read-only. Nothing is deleted: participants, evaluations and attendance all stay exactly as they are."
               confirmLabel="Archive department"
               tone="danger"
               requireReason

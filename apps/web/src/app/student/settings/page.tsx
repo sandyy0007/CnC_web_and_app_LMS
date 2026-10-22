@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardBody, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/misc';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useApi } from '@/hooks/useApi';
 import { ApiError, api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -44,11 +45,6 @@ const TOGGLES: { key: string; label: string; help: string }[] = [
     key: 'recordingConsent',
     label: 'Practice recording consent',
     help: 'Required to capture audio in the Practice Lab. Turning this off disables recording — you can still practise by typing.',
-  },
-  {
-    key: 'profileVisibleToRecruiters',
-    label: 'Profile visible to recruiters',
-    help: 'Let verified recruiters brought in by your placement cell see your readiness profile.',
   },
 ];
 
@@ -129,8 +125,27 @@ export default function StudentSettingsPage() {
         <div className="mx-auto max-w-[760px]">
           <PageHeader
             title="Settings"
-            description="Notifications, privacy and the devices signed in to your account."
+            description="Notifications, appearance, privacy and the devices signed in to your account."
           />
+
+          {/* Appearance & Theme Settings */}
+          <Card className="mb-5">
+            <CardHeader>
+              <div>
+                <CardTitle>Appearance &amp; Theme</CardTitle>
+                <CardSubtitle>Customize how Winners Creek looks on your screen</CardSubtitle>
+              </div>
+            </CardHeader>
+            <CardBody>
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-base font-semibold text-ink-1">Interface theme</p>
+                  <p className="mt-0.5 text-sm text-ink-3">Choose between bright high-contrast light mode and immersive midnight slate dark mode.</p>
+                </div>
+                <ThemeToggle variant="pill" />
+              </div>
+            </CardBody>
+          </Card>
 
           <Card>
             <CardHeader>

@@ -21,44 +21,44 @@ export interface WinnersCreekLogoProps {
 
 const VARIANT_STYLES: Record<LogoVariant, { className: string; width: number; height: number }> = {
   header: {
-    className: 'h-9 sm:h-10 w-auto object-contain',
-    width: 150,
-    height: 100,
+    className: 'h-10 sm:h-12 md:h-12 w-auto max-w-[210px] object-contain',
+    width: 210,
+    height: 140,
   },
   sidebar: {
-    className: 'h-10 sm:h-11 w-auto max-w-[190px] object-contain',
-    width: 165,
-    height: 110,
+    className: 'h-11 sm:h-12 md:h-13 w-auto max-w-[215px] object-contain',
+    width: 215,
+    height: 140,
   },
   compact: {
-    className: 'h-7 w-auto object-contain',
-    width: 105,
-    height: 70,
+    className: 'h-8 sm:h-9 w-auto object-contain',
+    width: 130,
+    height: 85,
   },
   footer: {
-    className: 'h-10 sm:h-11 w-auto object-contain',
-    width: 165,
-    height: 110,
-  },
-  auth: {
     className: 'h-11 sm:h-12 w-auto object-contain',
     width: 180,
     height: 120,
   },
+  auth: {
+    className: 'h-12 sm:h-14 md:h-16 w-auto object-contain',
+    width: 240,
+    height: 160,
+  },
   invoice: {
-    className: 'h-9 sm:h-10 w-auto object-contain',
-    width: 150,
-    height: 100,
+    className: 'h-10 sm:h-11 w-auto object-contain',
+    width: 170,
+    height: 110,
   },
   intro: {
-    className: 'h-24 sm:h-32 md:h-40 w-auto object-contain',
-    width: 360,
-    height: 240,
+    className: 'h-24 sm:h-36 md:h-44 w-auto object-contain',
+    width: 400,
+    height: 260,
   },
   full: {
-    className: 'h-10 w-auto object-contain',
-    width: 150,
-    height: 100,
+    className: 'h-12 sm:h-14 md:h-16 w-auto object-contain',
+    width: 240,
+    height: 160,
   },
 };
 

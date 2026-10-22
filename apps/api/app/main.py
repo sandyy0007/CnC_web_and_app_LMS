@@ -34,6 +34,7 @@ from app.routers import (
     auth,
     ebooks,
     files,
+    gamification,
     health,
     home,
     hod,
@@ -64,11 +65,7 @@ async def lifespan(app: FastAPI):
 
     database = await connect_to_mongo()
     await ensure_indexes(database)
-    if is_inmemory() and await database.colleges.count_documents({}) == 0:
-        log.info("inmemory_db_empty_auto_seeding")
-        from app.seed.run import seed
-
-        await seed()
+    # Production policy: Do not auto-seed synthetic demo institutions or users into any store.
     redis_ok = await ping_redis()
     log.info(
         "api_started",
@@ -159,6 +156,15 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router, prefix=f"{prefix}/auth", tags=["auth"])
     app.include_router(home.router, prefix=f"{prefix}/home", tags=["home"])
+
+    @app.get(f"{prefix}/courses", tags=["courses"])
+    async def get_courses_alias(
+        search: str | None = None,
+        category: str | None = None,
+        limit: int = 12,
+    ):
+        return await home.courses(search=search, category=category, limit=limit)
+
     app.include_router(student.router, prefix=f"{prefix}/student", tags=["student"])
     app.include_router(trainer.router, prefix=f"{prefix}/trainer", tags=["trainer"])
     app.include_router(hod.router, prefix=f"{prefix}/hod", tags=["hod"])
@@ -173,6 +179,7 @@ def create_app() -> FastAPI:
     app.include_router(
         super_admin.router, prefix=f"{prefix}/super-admin", tags=["super-admin"]
     )
+    app.include_router(gamification.router, prefix=f"{prefix}", tags=["gamification"])
     app.include_router(
         live_classes.router, prefix=f"{prefix}/live-classes", tags=["live-classes"]
     )

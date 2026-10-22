@@ -338,7 +338,24 @@ async def generate_report(payload: dict[str, Any]) -> None:
         {"_id": job_id}, {"$set": {"status": report_service.PROCESSING, "updatedAt": _now()}}
     )
 
-    requester = await db.users.find_one({"_id": job["requestedBy"]})
+    requester = None
+    if settings.USE_POSTGRES:
+        from app.repositories.user_repo import UserRepository
+        try:
+            pg_u = await UserRepository.get_by_id(str(job["requestedBy"]))
+            if pg_u:
+                requester = {
+                    "_id": str(pg_u["id"]),
+                    "name": pg_u["name"],
+                    "email": pg_u["email"],
+                    "role": pg_u["role"],
+                    "collegeId": str(pg_u["institution_id"]) if pg_u.get("institution_id") else None,
+                    "departmentId": str(pg_u["department_id"]) if pg_u.get("department_id") else None,
+                }
+        except Exception:
+            pass
+    if not requester:
+        requester = await db.users.find_one({"_id": job["requestedBy"]})
     if not requester:
         await report_service.mark_failed(job_id, "The requesting account no longer exists")
         return
@@ -355,16 +372,31 @@ async def generate_report(payload: dict[str, Any]) -> None:
         email=requester.get("email"),
     )
     if ctx.role is Role.TRAINER:
-        rows = await db.trainer_assignments.find(
-            {"trainerUserId": ctx.user_id, "active": True}, {"batchId": 1, "departmentId": 1}
-        ).to_list(length=500)
-        ctx = ScopeContext(
-            **{
-                **ctx.__dict__,
-                "batch_ids": tuple({r["batchId"] for r in rows if r.get("batchId")}),
-                "department_ids": tuple({r["departmentId"] for r in rows if r.get("departmentId")}),
-            }
-        )
+        if settings.USE_POSTGRES:
+            from app.db.postgres import get_pg_connection
+            async with get_pg_connection() as conn:
+                t_rows = await conn.fetch(
+                    "SELECT batch_id FROM batch_trainers WHERE trainer_user_id = $1::uuid",
+                    str(ctx.user_id),
+                )
+                b_ids = tuple(str(r["batch_id"]) for r in t_rows if r.get("batch_id"))
+                ctx = ScopeContext(
+                    **{
+                        **ctx.__dict__,
+                        "batch_ids": b_ids,
+                    }
+                )
+        else:
+            rows = await db.trainer_assignments.find(
+                {"trainerUserId": ctx.user_id, "active": True}, {"batchId": 1, "departmentId": 1}
+            ).to_list(length=500)
+            ctx = ScopeContext(
+                **{
+                    **ctx.__dict__,
+                    "batch_ids": tuple({r["batchId"] for r in rows if r.get("batchId")}),
+                    "department_ids": tuple({r["departmentId"] for r in rows if r.get("departmentId")}),
+                }
+            )
 
     columns, data_rows, title = await report_service.build_dataset(
         ctx, job["reportType"], job.get("filters", {})

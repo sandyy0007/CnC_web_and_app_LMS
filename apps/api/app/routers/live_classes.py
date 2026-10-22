@@ -42,6 +42,17 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _safe_oid(val: Any) -> Any:
+    if not val:
+        return None
+    if isinstance(val, uuid.UUID):
+        return str(val)
+    try:
+        return ObjectId(str(val))
+    except Exception:
+        return str(val)
+
+
 def _serialize_doc(doc: dict[str, Any] | None) -> dict[str, Any] | None:
     if not doc:
         return None
@@ -141,13 +152,13 @@ async def create_live_class(
         "meetingType": payload.meetingType.value,
         "provider": payload.provider.value,
         "roomId": room_id,
-        "courseId": ObjectId(payload.courseId) if payload.courseId else None,
+        "courseId": _safe_oid(payload.courseId),
         "courseMode": payload.courseMode,
-        "collegeId": ObjectId(payload.collegeId) if payload.collegeId else ctx.college_id,
-        "departmentId": ObjectId(payload.departmentId) if payload.departmentId else (
+        "collegeId": _safe_oid(payload.collegeId) if payload.collegeId else ctx.college_id,
+        "departmentId": _safe_oid(payload.departmentId) if payload.departmentId else (
             ctx.department_id if ctx.role is Role.HOD else None
         ),
-        "batchId": ObjectId(payload.batchId) if payload.batchId else None,
+        "batchId": _safe_oid(payload.batchId),
         "batchName": payload.batchName,
         "trainerUserId": ctx.user_id if ctx.role is Role.TRAINER else None,
         "trainerName": ctx.name or ctx.email or "Trainer",
@@ -158,7 +169,7 @@ async def create_live_class(
         "status": ClassStatus.SCHEDULED.value,
         "attendanceThreshold": payload.attendanceThreshold,
         "attendanceFinalized": False,
-        "allowedTrainerIds": [ObjectId(t) for t in payload.allowedTrainerIds],
+        "allowedTrainerIds": [_safe_oid(t) for t in payload.allowedTrainerIds],
         "createdAt": now,
         "updatedAt": now,
         "createdBy": ctx.user_id,
@@ -167,7 +178,11 @@ async def create_live_class(
 
     # If trainer is creating for an offline batch, lookup batch and course details
     if payload.batchId and not payload.batchName:
-        batch = await db.batches.find_one({"_id": ObjectId(payload.batchId)})
+        batch = None
+        try:
+            batch = await db.batches.find_one({"_id": ObjectId(payload.batchId)})
+        except Exception:
+            batch = await db.batches.find_one({"_id": str(payload.batchId)})
         if batch:
             doc["batchName"] = batch.get("name")
             if not doc.get("collegeId"):
@@ -175,7 +190,8 @@ async def create_live_class(
             if not doc.get("departmentId"):
                 doc["departmentId"] = batch.get("departmentId")
 
-    res = await db.live_classes.insert_one(doc)
+    from app.repositories.base import _clean_doc
+    res = await db.live_classes.insert_one(_clean_doc(doc))
     doc["_id"] = res.inserted_id
     return {"success": True, "data": _serialize_doc(doc)}
 

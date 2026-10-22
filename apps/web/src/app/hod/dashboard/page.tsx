@@ -44,7 +44,44 @@ export default function HodDashboardPage() {
       className="min-h-full rounded-2xl p-4 sm:p-6"
     >
       <AsyncSection query={query} skeleton="kpis">
-        {(data) => (
+        {(rawData) => {
+          const data = {
+            scope: rawData?.scope ?? {
+              departmentName: 'Department',
+              breadcrumb: 'Department Oversight',
+              readOnly: false,
+              isolationNotice: 'Department Scoped',
+              departmentCode: '',
+              collegeName: 'Institution',
+            },
+            kpis: {
+              participants: {
+                value: rawData?.kpis?.participants?.value ?? 0,
+                delta: rawData?.kpis?.participants?.delta,
+                deltaLabel: rawData?.kpis?.participants?.deltaLabel ?? 'in this department',
+              },
+              trainers: {
+                value: rawData?.kpis?.trainers?.value ?? 0,
+                deltaLabel: rawData?.kpis?.trainers?.deltaLabel ?? 'assigned faculty',
+              },
+              averageSessionAttendance: {
+                value: rawData?.kpis?.averageSessionAttendance?.value ?? 0,
+                hasData: Boolean(rawData?.kpis?.averageSessionAttendance?.hasData),
+              },
+              averageSkillScore: {
+                value: rawData?.kpis?.averageSkillScore?.value ?? null,
+                outOf: rawData?.kpis?.averageSkillScore?.outOf ?? 100,
+                hasData: Boolean(rawData?.kpis?.averageSkillScore?.hasData),
+              },
+            },
+            thresholds: rawData?.thresholds ?? { attendance: 75, certificateAttendance: 80, certificateScore: 70 },
+            alerts: Array.isArray(rawData?.alerts) ? rawData.alerts : [],
+            attendanceTrend: Array.isArray(rawData?.attendanceTrend) ? rawData.attendanceTrend : [],
+            moduleAttendance: Array.isArray(rawData?.moduleAttendance) ? rawData.moduleAttendance : [],
+            moduleScores: Array.isArray(rawData?.moduleScores) ? rawData.moduleScores : [],
+            recentEnrollments: Array.isArray(rawData?.recentEnrollments) ? rawData.recentEnrollments : [],
+          };
+          return (
           <>
             <ImageHero
               image="/images/backgrounds/hod.webp"
@@ -100,8 +137,9 @@ export default function HodDashboardPage() {
               {data.alerts.map((alert: any) => (
                 <Link key={alert.code} href={alert.href} className="group">
                   <Card
+                    elevated
                     className={cn(
-                      'h-full transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-card-hover',
+                      'h-full surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover transition-all duration-300',
                       ALERT_TONE[alert.tone] ?? '',
                     )}
                   >
@@ -178,7 +216,7 @@ export default function HodDashboardPage() {
               />
             </ChartCard>
 
-            <Card className="card-interactive">
+            <Card elevated className="card-interactive">
               <CardHeader>
                 <div>
                   <CardTitle>Recent enrollments</CardTitle>
@@ -191,9 +229,9 @@ export default function HodDashboardPage() {
               <CardBody>
                 <ul className="divide-y divide-line-soft">
                   {data.recentEnrollments.map((row: any) => (
-                    <li key={row.id} className="flex flex-wrap items-center gap-3 py-3 transition-colors hover:bg-slate-50/50">
+                    <li key={row.id} className="flex flex-wrap items-center gap-3 py-3 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                       <div className="min-w-[160px] flex-1">
-                        <p className="text-base font-semibold">{row.studentName}</p>
+                        <p className="text-base font-semibold">{row.participantName ?? row.studentName}</p>
                         <p className="mt-0.5 text-xs text-ink-3">
                           {row.rollNumber} · {row.batchName}
                         </p>
@@ -209,48 +247,28 @@ export default function HodDashboardPage() {
             </Card>
           </div>
 
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            <Card className="card-interactive">
-              <CardHeader>
-                <div>
-                  <CardTitle>Certificates issued</CardTitle>
-                  <CardSubtitle>
-                    Needs {num(data.thresholds.certificateAttendance, 0)}% attendance and{' '}
-                    {num(data.thresholds.certificateScore, 0)} average
-                  </CardSubtitle>
-                </div>
-                <Award className="size-4 text-amber" aria-hidden />
-              </CardHeader>
-              <CardBody>
-                <p className="tnum text-[26px] font-bold leading-none">
-                  <AnimatedCounter value={data.certificatesIssued} />
-                </p>
-                <Button asChild variant="secondary" size="sm" className="mt-3.5">
-                  <Link href="/hod/certificates">Feedback &amp; certificates</Link>
-                </Button>
-              </CardBody>
-            </Card>
-
-            <Card className="card-interactive border-info-bg bg-info-bg/30">
+          <div className="mt-5">
+            <Card elevated className="card-interactive border-info-bg bg-info-bg/30">
               <CardBody>
                 <p className="flex items-center gap-1.5 text-sm font-bold text-info">
                   <ShieldCheck className="size-3.5" aria-hidden />
-                  Scope
+                  Multi-Tenant Department Scope
                 </p>
                 <p className="mt-2 text-base leading-relaxed text-ink-1">
                   {data.scope.isolationNotice}
                 </p>
                 <p className="mt-2 text-sm text-ink-2">
-                  You are the head of {data.scope.departmentName} ({data.scope.departmentCode}) at{' '}
-                  {data.scope.collegeName}. Other departments and other colleges are refused by the
+                  You are the SPOC of {data.scope.departmentName} ({data.scope.departmentCode}) at{' '}
+                  {data.scope.collegeName}. Other departments and other institutions are strictly isolated by the
                   server, not merely hidden from this menu.
                 </p>
               </CardBody>
             </Card>
           </div>
-        </>
-      )}
-    </AsyncSection>
+          </>
+          );
+        }}
+      </AsyncSection>
   </VisualPageBackground>
 );
 }

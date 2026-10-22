@@ -101,10 +101,8 @@ const HOD: NavGroup[] = [
       { label: 'Trainers', href: '/hod/trainers', icon: GraduationCap },
       { label: 'Skill Assessment', href: '/hod/assessments', icon: BarChart3 },
       { label: 'Games & Activities', href: '/hod/games', icon: Gamepad2 },
-      { label: 'Feedback & Certificates', href: '/hod/certificates', icon: Award },
       { label: 'Enrollment', href: '/hod/enrollment', icon: ClipboardList },
       { label: 'Reports', href: '/hod/reports', icon: FileSpreadsheet },
-      { label: 'Audit Logs', href: '/hod/audit-logs', icon: ShieldCheck },
     ],
   },
   {
@@ -137,7 +135,6 @@ const ADMIN: NavGroup[] = [
       { label: 'Departments & batches', href: '/admin/departments', icon: Building2 },
       { label: 'Trainers & access', href: '/admin/trainers', icon: GraduationCap },
       { label: 'Users & roles', href: '/admin/users', icon: Users },
-      { label: 'Placements & certificates', href: '/admin/placements', icon: Award },
     ],
   },
   {
@@ -153,7 +150,6 @@ const ADMIN: NavGroup[] = [
     items: [
       { label: 'Payments', href: '/admin/payments', icon: CreditCard },
       { label: 'Bulk import', href: '/admin/bulk-import', icon: Upload },
-      { label: 'Audit log', href: '/admin/audit-log', icon: ShieldCheck },
     ],
   },
 ];

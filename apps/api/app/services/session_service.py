@@ -99,6 +99,15 @@ async def open_session(
     }
 
 
+def _safe_user_id(uid: Any) -> Any:
+    if uid is None:
+        return None
+    s = str(uid).strip()
+    if ObjectId.is_valid(s):
+        return ObjectId(s)
+    return s
+
+
 async def rotate_session(refresh_token: str, *, ip: str | None = None) -> dict[str, Any]:
     """Validate + rotate. Reuse of a retired token revokes the entire family."""
     payload = decode_token(refresh_token, expected_type="refresh")
@@ -111,7 +120,7 @@ async def rotate_session(refresh_token: str, *, ip: str | None = None) -> dict[s
         await revoke_family(user_id, family_id, reason="refresh_token_reuse")
         await write_security_event(
             kind="refresh_token_reuse",
-            user_id=ObjectId(user_id),
+            user_id=_safe_user_id(user_id),
             detail="A retired refresh token was replayed; the token family was revoked",
             ip=ip,
             metadata={"familyId": family_id},
@@ -127,8 +136,25 @@ async def rotate_session(refresh_token: str, *, ip: str | None = None) -> dict[s
     if revoked_at and int(revoked_at) > int(payload.get("iat", 0)):
         raise Unauthenticated("Please sign in again")
 
-    user = await get_db().users.find_one({"_id": ObjectId(user_id)})
-    if not user or user.get("status") != "active":
+    user = None
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        async with get_pg_connection() as conn:
+            try:
+                user_row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", UUID(str(user_id)))
+                if user_row:
+                    user = dict(user_row)
+                    user["id"] = str(user["id"])
+                    user["_id"] = str(user["id"])
+                    user["role"] = user["role"].upper() if isinstance(user["role"], str) else str(user["role"]).upper()
+                    user["collegeId"] = user.get("institution_id")
+                    user["departmentId"] = user.get("department_id")
+            except Exception:
+                user = None
+    if not user:
+        user = await get_db().users.find_one({"_id": _safe_user_id(user_id)})
+    if not user or user.get("status") not in ("active", "ACTIVE", None):
         await close_session(user_id, session_id)
         raise Unauthenticated("This account is no longer active")
 
@@ -206,7 +232,7 @@ async def revoke_all_sessions(user_id: str, *, reason: str = "logout_all") -> in
     # Any access token minted before this instant is refused by the guard.
     await redis.setex(K.user_revoked_at(user_id), REFRESH_TTL, str(int(_now().timestamp())))
     await get_db().refresh_sessions.update_many(
-        {"userId": ObjectId(user_id), "revokedAt": None},
+        {"userId": _safe_user_id(user_id), "revokedAt": None},
         {"$set": {"revokedAt": _now(), "revokeReason": reason}},
     )
     log.info("sessions_revoked", extra={"user_id": user_id, "count": len(sessions), "reason": reason})
@@ -216,7 +242,7 @@ async def revoke_all_sessions(user_id: str, *, reason: str = "logout_all") -> in
 async def list_active_sessions(user_id: str, current_session_id: str | None = None) -> list[dict]:
     rows = await (
         get_db()
-        .refresh_sessions.find({"userId": ObjectId(user_id), "revokedAt": None})
+        .refresh_sessions.find({"userId": _safe_user_id(user_id), "revokedAt": None})
         .sort("lastUsedAt", -1)
         .to_list(length=50)
     )

@@ -26,10 +26,13 @@ import { num } from '@/lib/format';
 interface AdminGame {
   code: string;
   title: string;
-  description: string;
+  description?: string;
   category: string;
+  difficulty?: string;
+  xpReward?: number;
   skillsTrained: string[];
-  active: boolean;
+  active?: boolean;
+  isEnabled?: boolean;
   availableInCollege: boolean;
   collegePlays: number;
   collegeAvgScore: number;
@@ -39,14 +42,25 @@ export default function AdminGamesPage() {
   const query = useApi<any>('/admin/games');
   const [togglingCode, setTogglingCode] = React.useState<string | null>(null);
 
-  const rawGames = query.data?.games ?? query.data?.data?.games ?? query.data ?? [];
-  const games: AdminGame[] = Array.isArray(rawGames) ? rawGames : [];
+  const rawGames = query.data?.data ?? query.data?.games ?? query.data ?? [];
+  const games: AdminGame[] = (Array.isArray(rawGames) ? rawGames : []).map((g: any) => ({
+    code: g.code,
+    title: g.title || g.code,
+    description: g.description || `Gamified ${g.category || ''} cognitive challenge.`,
+    category: g.category || 'General',
+    difficulty: g.difficulty || 'Intermediate',
+    xpReward: g.xpReward ?? 50,
+    availableInCollege: Boolean(g.isEnabled ?? g.availableInCollege ?? true),
+    collegePlays: g.totalAttempts ?? g.collegePlays ?? 0,
+    collegeAvgScore: g.averageScore ?? g.collegeAvgScore ?? 0,
+    skillsTrained: Array.isArray(g.skillsTrained) ? g.skillsTrained : [g.category, g.difficulty].filter(Boolean),
+  }));
 
   const handleToggle = async (game: AdminGame) => {
     setTogglingCode(game.code);
     try {
       await api.patch(`/admin/games/${game.code}/availability`, {
-        available: !game.availableInCollege,
+        enabled: !game.availableInCollege,
       });
       query.refetch();
     } catch {
@@ -154,7 +168,7 @@ export default function AdminGamesPage() {
                     <Badge tone="neutral">
                       {game.category}
                     </Badge>
-                    {game.skillsTrained.slice(0, 2).map((s) => (
+                    {(game.skillsTrained || []).slice(0, 2).map((s) => (
                       <span
                         key={s}
                         className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500"

@@ -1,0 +1,7 @@
+question_id,difficulty,tag,eedi_parameter,weight,scenario,passage,question,option_0,option_1,option_2,option_3,correct_option,explanation
+SYM_001,BEGINNER,synonym,COM02,1.0,"Please assist the new hire with onboarding.","","Reach the closest synonym of 'assist'.","ignore","block","help","delay",2,"Assist means to help."
+SYM_002,BEGINNER,antonym,COM04,1.0,"The client may reject the first draft.","","Reach the opposite of 'accept'.","refuse","approve","receive","allow",0,"Refuse is the opposite of accept; approve, receive and allow all point the same way as accept."
+SYM_003,INTERMEDIATE,synonym,COM05,1.25,"We had to postpone the review until Friday.","","Reach the closest synonym of 'postpone'.","cancel","delay","approve","repeat",1,"To postpone is to delay something until a later time; cancel drops it completely."
+SYM_004,INTERMEDIATE,antonym,COM02,1.5,"Her instructions were vague, so the team asked questions.","","Reach the opposite of 'vague'.","unclear","brief","precise","polite",2,"Vague means not clear; precise means exact and clear."
+SYM_005,ADVANCED,antonym,COM04,1.5,"The vendor's pricing was transparent.","","Reach the opposite of 'transparent'.","clear","open","candid","opaque",3,"Opaque is the opposite of transparent; clear, open and candid all share its meaning."
+SYM_006,ADVANCED,synonym,COM05,2.0,"The auditor was meticulous about every figure.","","Reach the closest synonym of 'meticulous'.","thorough","careless","hurried","relaxed",0,"Meticulous means very careful about details, which is what thorough means here."

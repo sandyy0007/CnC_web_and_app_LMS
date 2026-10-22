@@ -17,12 +17,19 @@ env/
 .env
 .env.*
 !.env.example
+!.env.local.example
+*.pem
+*.key
+*.pfx
 
-# Runtime storage
+# Runtime & test storage
 apps/api/.storage/
 **/.storage/
+.storage-test/
+**/.storage-test/
 
-# Logs
+# Scratch, temporary test artifacts, and local logs
+scratch/
 *.log
 
 # IDE
@@ -41,3 +48,18 @@ Thumbs.db
 dist/
 build/
 coverage/
+
+# Database dumps and private backups
+backups/
+**/backups/
+*.dump
+
+# Local spreadsheet data files (containing student PII)
+*.xlsx
+
+# Scratch scripts and temporary audit artifacts
+scratch/
+**/scratch/
+scratch_*
+**/scratch_*
+

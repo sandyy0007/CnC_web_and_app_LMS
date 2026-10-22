@@ -15,13 +15,13 @@ export const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { wide?: boolean }
 >(({ className, children, wide, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md data-[state=open]:animate-fade" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md data-[state=open]:animate-fade" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
         'fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[calc(100vw-2rem)] -translate-x-1/2',
-        '-translate-y-1/2 overflow-y-auto rounded-card border border-white/16 bg-slate-900/95',
-        'backdrop-blur-2xl shadow-2xl text-white data-[state=open]:animate-fade scroll-thin',
+        '-translate-y-1/2 overflow-y-auto rounded-2xl border border-line dark:border-white/15 bg-card/95',
+        'backdrop-blur-2xl shadow-3d-pop text-ink-1 data-[state=open]:animate-scale-in scroll-thin surface-3d',
         wide ? 'max-w-3xl' : 'max-w-lg',
         className,
       )}
@@ -30,7 +30,7 @@ export const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         aria-label="Close"
-        className="absolute right-4 top-4 rounded-[6px] p-1 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+        className="absolute right-4 top-4 rounded-[6px] p-1 text-ink-3 hover:bg-surface-hover hover:text-ink-1 transition-colors"
       >
         <X className="size-4" aria-hidden />
       </DialogPrimitive.Close>
@@ -40,7 +40,7 @@ export const DialogContent = React.forwardRef<
 DialogContent.displayName = 'DialogContent';
 
 export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('border-b border-white/10 px-6 py-5 pr-12', className)} {...props} />;
+  return <div className={cn('border-b border-line px-6 py-5 pr-12', className)} {...props} />;
 }
 
 export const DialogTitle = React.forwardRef<
@@ -49,7 +49,7 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-[17px] font-bold text-white', className)}
+    className={cn('text-[17px] font-bold text-ink-1', className)}
     {...props}
   />
 ));
@@ -61,7 +61,7 @@ export const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('mt-1 text-base text-slate-300', className)}
+    className={cn('text-xs text-ink-3 mt-1 leading-relaxed', className)}
     {...props}
   />
 ));
@@ -75,7 +75,7 @@ export function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLD
   return (
     <div
       className={cn(
-        'flex flex-col-reverse gap-2 border-t border-white/10 px-6 py-4 sm:flex-row sm:justify-end',
+        'flex flex-col-reverse gap-2 border-t border-line px-6 py-4 sm:flex-row sm:justify-end',
         className,
       )}
       {...props}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Two interactive email-writing games for EEDI learners.">
+  <title>EEDI Email Arcade</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✉️</text></svg>">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/mechanics.css">
+  <link rel="stylesheet" href="/static/game-modes.css">
+  <link rel="stylesheet" href="/static/polish.css">
+  <link rel="stylesheet" href="/static/campaign.css">
+  <link rel="stylesheet" href="/static/level-map.css">
+  <link rel="stylesheet" href="/static/timing.css">
+</head>
+<body>
+  <div class="aurora a1"></div><div class="aurora a2"></div>
+  <header class="topbar">
+    <button class="brand" data-go="home" aria-label="Go to game home"><span class="brand-mark">E</span><span>EEDI <b>Email Arcade</b></span></button>
+    <div class="top-stats"><span class="live-pill">● LIVE MISSIONS</span><button id="soundBtn" class="icon-btn" aria-label="Toggle sound">🔊</button></div>
+  </header>
+
+  <main id="app" tabindex="-1">
+    <section id="home" class="screen active">
+      <div class="hero">
+        <span class="eyebrow">COMMUNICATION QUEST</span>
+        <h1>Write smarter.<br><em>Save the inbox.</em></h1>
+        <p>A 15-level writing campaign and a completely separate escape investigation.</p>
+        <div class="hero-badges"><span>🗺️ 15-level journey</span><span>🎧 Reactive sound</span><span>🏆 Skill metrics</span></div>
+      </div>
+      <div class="game-grid">
+        <article class="game-card rescue-card">
+          <div class="card-art"><span class="floating-mail">🚀</span><span class="alert-dot">15</span></div>
+          <span class="level-tag">GAME 01 · CAMPAIGN</span><h2>Inbox Odyssey</h2><p>Travel through fifteen escalating email missions—from group projects to the executive final boss.</p>
+          <ul><li>15 levels</li><li>5 topics</li><li>Final boss</li></ul>
+          <button class="primary coral" data-start="rescue">Launch campaign <span>→</span></button>
+        </article>
+        <article class="game-card escape-card">
+          <div class="card-art"><span class="floating-mail">🔐</span><span class="spark">✦</span></div>
+          <span class="level-tag">GAME 02 · CASE FILE</span><h2>Email Escape Room</h2><p>Decode a communication crisis, rebuild the trust circuit, and unlock the final transmission.</p>
+          <ul><li>Evidence board</li><li>Trust circuit</li><li>Deadline grid</li></ul>
+          <button class="primary purple" data-start="escape">Enter mission <span>→</span></button>
+        </article>
+      </div>
+    </section>
+
+    <section id="chapters" class="screen">
+      <div class="chapter-head"><button class="back-btn" data-go="home">← Games</button><div><span class="eyebrow">YOUR SAVED JOURNEY</span><h1 id="chapterTitle">Choose a level</h1><p id="chapterSubtitle"></p></div><span class="profile-saved">☁ Progress saved</span></div>
+      <div class="chapter-summary"><div><small>Next level</small><b id="nextLevelLabel">Level 1</b></div><div class="chapter-line"><i id="chapterLine"></i></div><div><small>Levels completed</small><b id="completedCount">0 / 15</b></div></div>
+      <div id="levelGrid" class="level-grid"></div>
+    </section>
+
+    <section id="game" class="screen">
+      <div class="mission-head">
+        <button class="back-btn" data-go="home">← Exit</button>
+        <div><span id="gameLabel" class="eyebrow"></span><h2 id="gameTitle"></h2><small id="missionBrief" class="mission-brief"></small></div>
+        <div class="timer" id="timer" aria-live="polite">⏱ 00:00</div>
+      </div>
+      <div class="progress-wrap"><div id="progressBar"></div></div>
+      <div id="campaignTrail" class="campaign-trail hidden"></div>
+      <div class="game-layout">
+        <aside class="mission-panel">
+          <div class="client-avatar" id="avatar">👩🏽‍💼</div>
+          <span class="status-label">CLIENT SATISFACTION</span>
+          <div class="satisfaction"><div id="satisfactionBar"></div></div>
+          <strong id="satisfactionText">50%</strong>
+          <div class="mission-score"><span>Mission score</span><b id="score">0</b><small>/ 100</small></div>
+          <div class="attempts"><span>Energy</span><b id="attempts">3 ⚡</b></div>
+          <div class="combo-line"><span>Momentum</span><b id="combo">—</b></div>
+        </aside>
+        <section class="challenge-card">
+          <div class="challenge-meta"><span id="stepCount"></span><span id="challengeType"></span></div>
+          <h3 id="challengeTitle"></h3><p id="challengePrompt"></p><div id="coachBubble" class="coach-bubble"></div>
+          <div id="challengeContent"></div>
+          <div id="feedback" class="feedback" role="status"></div>
+          <div class="action-row"><button id="hintBtn" class="secondary">💡 Hint <span id="hintCount">2</span></button><button id="checkBtn" class="primary purple">Check answer</button><button id="nextBtn" class="primary coral hidden">Next challenge →</button></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="results" class="screen">
+      <div class="result-card">
+        <div id="resultBadge" class="result-badge">🏆</div><span class="eyebrow">MISSION COMPLETE</span>
+        <h1 id="resultTitle">Inbox saved!</h1><p id="resultMessage"></p>
+        <div class="result-score"><small>LEVEL SCORE</small><span id="finalScore">0</span><small>/ 100</small></div>
+        <div class="metric-grid">
+          <div><span>⏱</span><b id="finalTime">00:00</b><small>Time</small></div>
+          <div><span>🎯</span><b id="finalAccuracy">0%</b><small>Accuracy</small></div>
+          <div><span>😊</span><b id="finalSatisfaction">0%</b><small>Satisfaction</small></div>
+          <div><span>⚡</span><b id="finalPace">—</b><small>Pace</small></div>
+        </div>
+        <div class="skills"><h3>EEDI skill signals</h3><div id="skillBars"></div></div>
+        <div class="result-actions"><button class="secondary" id="playAgain">↻ Replay level</button><button class="primary coral" id="levelMapBtn">Level map</button><button class="secondary" data-go="home">All games</button></div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

@@ -52,8 +52,8 @@ export function CourseCard({
   return (
     <div
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800',
-        'bg-white dark:bg-slate-900/90 shadow-sm hover:shadow-xl hover:-translate-y-1',
+        'group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.08]',
+        'surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover',
         'transition-all duration-300',
         className,
       )}

@@ -100,6 +100,41 @@ class EvaluationRepository:
 
             return dict(eval_row)
 
+    @classmethod
+    async def save_evaluation(
+        cls,
+        participant_id: UUID | str,
+        trainer_id: UUID | str,
+        course_id: UUID | str,
+        semester: int,
+        pillar_scores: dict[str, float],
+        institution_id: UUID | str | None = None,
+        department_id: UUID | str | None = None,
+        eedi_score: float | None = None,
+        employment_score: float | None = None,
+        strengths: list[str] | None = None,
+        weaknesses: list[str] | None = None,
+        improvements: list[str] | None = None,
+        trainer_notes: str | None = None,
+        parameter_scores: dict[str, float] | None = None,
+    ) -> dict[str, Any]:
+        return await cls.create_or_complete_evaluation(
+            participant_id=participant_id,
+            trainer_id=trainer_id,
+            institution_id=institution_id,
+            department_id=department_id,
+            course_id=course_id,
+            semester=semester,
+            eedi_score=eedi_score,
+            employment_score=employment_score,
+            strengths=strengths or [],
+            weaknesses=weaknesses or [],
+            improvements=improvements or [],
+            trainer_notes=trainer_notes,
+            pillar_scores=pillar_scores,
+            parameter_scores=parameter_scores,
+        )
+
     @staticmethod
     async def get_report_by_id(evaluation_id: UUID | str) -> dict[str, Any] | None:
         """Full evaluation report retrieval with participant, trainer, pillars, and parameters."""

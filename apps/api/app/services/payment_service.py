@@ -55,28 +55,186 @@ def get_payment_provider() -> PaymentProvider:
     return MockPaymentProvider()
 
 
+def _clean_doc(val: Any) -> Any:
+    if isinstance(val, uuid.UUID):
+        return str(val)
+    if isinstance(val, dict):
+        return {k: _clean_doc(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_clean_doc(v) for v in val]
+    return val
+
+
 async def create_course_payment(
     *,
-    student_user_id: ObjectId,
-    college_id: ObjectId | None,
-    course_id: ObjectId,
+    student_user_id: Any,
+    college_id: Any = None,
+    course_id: Any,
     course_mode: str = "ONLINE",
-    payment_method: str = "Card / NetBanking",
+    payment_method: str = "UPI",
     idempotency_key: str | None = None,
+    transaction_ref: str | None = None,
+    payer_upi_id: str | None = None,
+    receipt_url: str | None = None,
 ) -> dict[str, Any]:
+    c_uuid = None
+    u_uuid = None
+    try:
+        c_uuid = uuid.UUID(str(course_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+    try:
+        u_uuid = uuid.UUID(str(student_user_id))
+    except (ValueError, TypeError):
+        u_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid and u_uuid:
+        from app.repositories.course_repo import CourseRepository
+        from app.repositories.enrollment_repo import EnrollmentRepository
+        from app.repositories.payment_repo import PaymentRepository
+        from app.db.postgres import get_pg_connection
+
+        course = await CourseRepository.get_by_id(c_uuid)
+        if not course:
+            raise NotFound("Course not found.")
+
+        fee = float(course.get("fee") or 0.0)
+        currency = course.get("currency") or "INR"
+
+        if fee < 0:
+            raise ValidationError("Course fee cannot be negative.")
+
+        # Check existing enrollment
+        async with get_pg_connection() as conn:
+            if transaction_ref:
+                existing_ref = await conn.fetchval("SELECT id FROM payments WHERE transaction_ref = $1", transaction_ref.strip())
+                if existing_ref:
+                    raise Conflict("This transaction reference / UTR has already been submitted.")
+
+            user = await conn.fetchrow("SELECT id, name, email, institution_id, department_id FROM users WHERE id = $1", u_uuid)
+            if not user:
+                raise NotFound("User account not found.")
+
+            enr = await conn.fetchrow(
+                "SELECT id, payment_status, access_status FROM enrollments WHERE participant_user_id = $1 AND course_id = $2",
+                u_uuid, c_uuid
+            )
+            enr_id = None
+            if enr:
+                if enr["payment_status"] == "VERIFIED" and enr["access_status"] == "ACTIVE":
+                    raise Conflict("You are already enrolled with verified access.")
+                enr_id = enr["id"]
+            else:
+                profile = await conn.fetchrow(
+                    "SELECT institution_id, department_id, batch_id, current_semester FROM student_profiles WHERE user_id = $1",
+                    u_uuid,
+                )
+                inst_id = user["institution_id"] or (profile["institution_id"] if profile else None)
+                dept_id = user["department_id"] or (profile["department_id"] if profile else None)
+                batch_id = profile["batch_id"] if profile else None
+                sem = profile["current_semester"] if profile and profile["current_semester"] else 1
+
+                new_enr = await conn.fetchrow(
+                    """
+                    INSERT INTO enrollments (
+                        participant_user_id, course_id, institution_id, department_id, batch_id,
+                        current_semester, enrollment_status, payment_status, access_status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', 'PENDING', 'INACTIVE')
+                    RETURNING id;
+                    """,
+                    u_uuid, c_uuid, inst_id, dept_id, batch_id, sem
+                )
+                enr_id = new_enr["id"]
+
+            txn_ref = transaction_ref or f"UTR-{secrets.token_hex(6).upper()}"
+            metadata = {
+                "courseTitle": course.get("title"),
+                "courseSlug": course.get("slug"),
+                "merchantName": course.get("merchant_name") or "Winners Creek LMS",
+                "upiId": course.get("upi_id") or "pay@winnerscreek",
+                "courseMode": course_mode,
+                "idempotencyKey": idempotency_key,
+            }
+
+            pay_row = await PaymentRepository.create_payment(
+                enrollment_id=enr_id,
+                participant_id=u_uuid,
+                course_id=c_uuid,
+                amount=fee,
+                transaction_ref=txn_ref,
+                semester=1,
+                currency=currency,
+                method=payment_method,
+                status="PENDING",
+                receipt_url=receipt_url,
+                payer_upi_id=payer_upi_id,
+                metadata=metadata,
+            )
+
+            inv_num = f"INV-{txn_ref}"
+            return {
+                "id": str(pay_row["id"]),
+                "_id": str(pay_row["id"]),
+                "paymentId": str(pay_row["id"]),
+                "enrollmentId": str(enr_id),
+                "courseId": str(c_uuid),
+                "courseTitle": course.get("title"),
+                "courseMode": course_mode,
+                "amount": fee,
+                "currency": currency,
+                "status": "pending_verification",
+                "paymentMethod": payment_method,
+                "transactionId": txn_ref,
+                "transactionRef": txn_ref,
+                "invoiceNumber": inv_num,
+                "upiId": course.get("upi_id") or "pay@winnerscreek",
+                "merchantName": course.get("merchant_name") or "Winners Creek LMS",
+                "qrCodeUrl": course.get("qr_code_url"),
+                "paymentInstructions": course.get("payment_instructions"),
+                "receiptUrl": receipt_url,
+                "payerUpiId": payer_upi_id,
+                "createdAt": pay_row["created_at"].isoformat() if pay_row.get("created_at") else _now().isoformat(),
+            }
+
     db = get_db()
     if idempotency_key:
         existing = await db.payments.find_one({"idempotencyKey": idempotency_key})
         if existing:
             return serialize(existing)
 
-    user = await db.users.find_one({"_id": student_user_id})
+    user = None
+    try:
+        user = await db.users.find_one({"$or": [{"_id": student_user_id}, {"_id": str(student_user_id)}]})
+    except Exception:
+        pass
+    if not user:
+        try:
+            from app.repositories.user_repo import UserRepository
+            pg_user = await UserRepository.get_by_id(student_user_id)
+            if pg_user:
+                user = {
+                    "_id": pg_user["id"],
+                    "id": str(pg_user["id"]),
+                    "name": pg_user["name"],
+                    "email": pg_user["email"],
+                    "collegeId": pg_user.get("institution_id"),
+                    "departmentId": pg_user.get("department_id"),
+                }
+        except Exception:
+            pass
     if not user:
         raise NotFound("User account not found.")
 
-    course = await db.courses.find_one({"_id": course_id})
+    course_oid = course_id
+    try:
+        from bson import ObjectId
+        course_oid = ObjectId(str(course_id))
+    except Exception:
+        pass
+    course = await db.courses.find_one({"$or": [{"_id": course_oid}, {"_id": str(course_id)}]})
     if not course:
         raise NotFound("Course not found.")
+    course_id = course["_id"]
 
     # Validate mode against availableModes
     available_modes = course.get("availableModes") or [course.get("courseMode", "ONLINE")]
@@ -129,7 +287,7 @@ async def create_course_payment(
         "createdAt": now,
         "updatedAt": now,
     }
-    res = await db.payments.insert_one(payment_doc)
+    res = await db.payments.insert_one(_clean_doc(payment_doc))
     payment_doc["_id"] = res.inserted_id
 
     # Create associated invoice
@@ -148,27 +306,27 @@ async def create_course_payment(
         "status": "pending_verification",
         "issuedAt": now,
     }
-    await db.invoices.insert_one(invoice_doc)
+    await db.invoices.insert_one(_clean_doc(invoice_doc))
 
     # Create enrollment in pending_verification status (access unlocked only on Super Admin verification)
-    existing_enrollment = await db.enrollments.find_one({"studentUserId": student_user_id, "courseId": course_id})
+    existing_enrollment = await db.enrollments.find_one({"studentUserId": str(student_user_id), "courseId": course_id})
     if existing_enrollment:
         await db.enrollments.update_one(
             {"_id": existing_enrollment["_id"]},
             {
-                "$set": {
+                "$set": _clean_doc({
                     "courseMode": course_mode,
                     "collegeId": effective_college_id,
                     "status": "pending_verification",
                     "updatedAt": now,
-                }
+                })
             },
         )
     else:
-        await db.enrollments.insert_one({
+        await db.enrollments.insert_one(_clean_doc({
             "collegeId": effective_college_id,
             "departmentId": user.get("departmentId") if course_mode == "OFFLINE" else None,
-            "studentUserId": student_user_id,
+            "studentUserId": str(student_user_id),
             "studentName": user.get("name"),
             "rollNumber": user.get("rollNumber", "N/A"),
             "courseId": course_id,
@@ -180,21 +338,40 @@ async def create_course_payment(
             "createdAt": now,
             "updatedAt": now,
             "deletedAt": None,
-        })
+        }))
 
     return serialize(payment_doc)
 
 
-async def verify_course_payment(payment_id: ObjectId, verified_by: ObjectId, note: str = "") -> dict[str, Any]:
-    """Super Admin approves transaction: transitions payment to verified.
-    Requirement 15: For institution-based training, payment verification does NOT automatically
-    grant active access until authorized Admin activates it.
-    For ONLINE courses, Super Admin verification directly activates access.
-    """
+async def verify_course_payment(payment_id: Any, verified_by: Any, note: str = "") -> dict[str, Any]:
+    """Super Admin approves transaction: transitions payment to verified."""
+    try:
+        pid_uuid = uuid.UUID(str(payment_id))
+    except (ValueError, TypeError):
+        pid_uuid = None
+
+    if settings.USE_POSTGRES and pid_uuid:
+        from app.repositories.payment_repo import PaymentRepository
+        from app.db.postgres import get_pg_connection
+        v_uid = None
+        try:
+            v_uid = uuid.UUID(str(verified_by)) if verified_by else None
+        except Exception:
+            v_uid = None
+
+        res = await PaymentRepository.verify_payment(pid_uuid, v_uid or pid_uuid, note, activate_access=True)
+        return {
+            "success": True,
+            "status": "VERIFIED",
+            "accessStatus": "ACTIVE",
+            "paymentId": str(res["id"]),
+        }
+
     from app.models.domain_models import AccessStatus, DeliveryMode, EnrollmentStatus, PaymentStatus
 
     db = get_db()
-    payment = await db.payments.find_one({"_id": payment_id})
+    p_oid = ObjectId(str(payment_id)) if not isinstance(payment_id, ObjectId) else payment_id
+    payment = await db.payments.find_one({"_id": p_oid})
     if not payment:
         raise NotFound("Payment transaction not found.")
 
@@ -205,13 +382,13 @@ async def verify_course_payment(payment_id: ObjectId, verified_by: ObjectId, not
     await db.payments.update_one(
         {"_id": payment_id},
         {
-            "$set": {
+            "$set": _clean_doc({
                 "status": PaymentStatus.VERIFIED,
                 "verifiedBy": verified_by,
                 "verifiedAt": now,
                 "verificationNote": note,
                 "updatedAt": now,
-            }
+            })
         },
     )
 
@@ -220,10 +397,12 @@ async def verify_course_payment(payment_id: ObjectId, verified_by: ObjectId, not
 
     # For online training, Super Admin directly activates. For college/institution, access requires Admin activation.
     initial_access_status = AccessStatus.ACTIVE if is_online else AccessStatus.INACTIVE
-    initial_enrollment_status = EnrollmentStatus.ACTIVE
+    initial_enrollment_status = "active"
 
+    stu_id = payment["studentUserId"]
+    uid_match = {"$in": [stu_id, str(stu_id)]} if not isinstance(stu_id, list) else stu_id
     enrollment = await db.enrollments.find_one({
-        "studentUserId": payment["studentUserId"],
+        "studentUserId": uid_match,
         "courseId": payment["courseId"],
     })
 
@@ -245,19 +424,18 @@ async def verify_course_payment(payment_id: ObjectId, verified_by: ObjectId, not
         "activatedAt": now if is_online else None,
     }
 
-    await db.enrollments.update_one(
-        {"studentUserId": payment["studentUserId"], "courseId": payment["courseId"]},
+    await db.enrollments.update_many(
+        {"studentUserId": uid_match, "courseId": payment["courseId"]},
         {
-            "$set": {
+            "$set": _clean_doc({
                 "status": initial_enrollment_status,
                 "enrollmentStatus": initial_enrollment_status,
                 "paymentStatus": PaymentStatus.VERIFIED,
                 "accessStatus": initial_access_status,
                 "currentPeriod": updated_period,
                 "updatedAt": now,
-            }
+            })
         },
-        upsert=True,
     )
 
     # Mark invoice paid
@@ -272,7 +450,7 @@ async def verify_course_payment(payment_id: ObjectId, verified_by: ObjectId, not
         {"$set": {"status": "converted", "convertedAt": now, "updatedAt": now}},
     )
 
-    await db.payment_events.insert_one({
+    await db.payment_events.insert_one(_clean_doc({
         "paymentId": payment_id,
         "eventType": "verification_approved",
         "actorId": verified_by,
@@ -280,11 +458,11 @@ async def verify_course_payment(payment_id: ObjectId, verified_by: ObjectId, not
         "accessStatus": initial_access_status,
         "note": note,
         "createdAt": now,
-    })
+    }))
 
     return {
         "success": True,
-        "status": PaymentStatus.VERIFIED,
+        "status": "verified",
         "accessStatus": initial_access_status,
         "paymentId": str(payment_id),
     }
@@ -481,16 +659,33 @@ async def renew_participant_semester(
     }
 
 
-async def reject_course_payment(payment_id: ObjectId, rejected_by: ObjectId, reason: str = "") -> dict[str, Any]:
-    """Super Admin rejects transaction: transitions payment to rejected and cancels enrollment."""
+async def reject_course_payment(payment_id: Any, rejected_by: Any = None, reason: str = "") -> dict[str, Any]:
+    """Super Admin rejects transaction: transitions payment to rejected."""
+    try:
+        pid_uuid = uuid.UUID(str(payment_id))
+    except (ValueError, TypeError):
+        pid_uuid = None
+
+    if settings.USE_POSTGRES and pid_uuid:
+        from app.repositories.payment_repo import PaymentRepository
+        v_uid = None
+        try:
+            v_uid = uuid.UUID(str(rejected_by)) if rejected_by else None
+        except Exception:
+            v_uid = None
+
+        res = await PaymentRepository.reject_payment(pid_uuid, v_uid or pid_uuid, reason)
+        return {"success": True, "status": "REJECTED", "paymentId": str(res["id"])}
+
     db = get_db()
-    payment = await db.payments.find_one({"_id": payment_id})
+    p_oid = ObjectId(str(payment_id)) if not isinstance(payment_id, ObjectId) else payment_id
+    payment = await db.payments.find_one({"_id": p_oid})
     if not payment:
         raise NotFound("Payment transaction not found.")
 
     now = _now()
     await db.payments.update_one(
-        {"_id": payment_id},
+        {"_id": p_oid},
         {
             "$set": {
                 "status": "rejected",
@@ -509,12 +704,12 @@ async def reject_course_payment(payment_id: ObjectId, rejected_by: ObjectId, rea
     )
 
     await db.invoices.update_many(
-        {"paymentId": payment_id},
+        {"paymentId": p_oid},
         {"$set": {"status": "rejected"}},
     )
 
     await db.payment_events.insert_one({
-        "paymentId": payment_id,
+        "paymentId": p_oid,
         "eventType": "verification_rejected",
         "actorId": rejected_by,
         "reason": reason,
@@ -524,9 +719,32 @@ async def reject_course_payment(payment_id: ObjectId, rejected_by: ObjectId, rea
     return {"success": True, "status": "rejected", "paymentId": str(payment_id)}
 
 
-async def refund_course_payment(payment_id: ObjectId, reason: str = "Admin approved refund") -> dict[str, Any]:
+async def refund_course_payment(payment_id: Any, refunded_by: Any = None, amount: float | None = None, refund_ref: str | None = None, reason: str = "Admin approved refund") -> dict[str, Any]:
+    """Super Admin refunds transaction: transitions payment to refunded and revokes enrollment."""
+    try:
+        pid_uuid = uuid.UUID(str(payment_id))
+    except (ValueError, TypeError):
+        pid_uuid = None
+
+    if settings.USE_POSTGRES and pid_uuid:
+        from app.repositories.payment_repo import PaymentRepository
+        v_uid = None
+        try:
+            v_uid = uuid.UUID(str(refunded_by)) if refunded_by else None
+        except Exception:
+            v_uid = None
+
+        res = await PaymentRepository.refund_payment(pid_uuid, v_uid or pid_uuid, amount, refund_ref, reason=reason)
+        return {
+            "success": True,
+            "status": "REFUNDED",
+            "paymentId": str(res["id"]),
+            "refundAmount": float(res["refund_amount"]),
+        }
+
     db = get_db()
-    payment = await db.payments.find_one({"_id": payment_id})
+    p_oid = ObjectId(str(payment_id)) if not isinstance(payment_id, ObjectId) else payment_id
+    payment = await db.payments.find_one({"_id": p_oid})
     if not payment:
         raise NotFound("Payment not found.")
 
@@ -534,15 +752,15 @@ async def refund_course_payment(payment_id: ObjectId, reason: str = "Admin appro
         raise Conflict("Payment has already been refunded.")
 
     provider = get_payment_provider()
-    charge = await provider.refund_charge(payment["transactionId"], payment["amount"])
+    charge = await provider.refund_charge(payment.get("transactionId", "TXN"), payment.get("amount", 0.0))
 
     now = _now()
     await db.payments.update_one(
-        {"_id": payment_id},
+        {"_id": p_oid},
         {"$set": {"status": "refunded", "refundReason": reason, "refundedAt": now, "updatedAt": now}},
     )
     await db.payment_events.insert_one({
-        "paymentId": payment_id,
+        "paymentId": p_oid,
         "eventType": "refund",
         "reason": reason,
         "refundDetails": charge,

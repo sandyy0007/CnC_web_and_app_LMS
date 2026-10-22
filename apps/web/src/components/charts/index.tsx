@@ -41,17 +41,17 @@ const GRID = 'var(--border-soft)';
 function ChartTooltip({ active, payload, label, unit }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-[10px] border border-line bg-white/95 px-3 py-2.5 text-sm shadow-pop backdrop-blur-md">
-      <p className="mb-1 font-semibold text-ink-1">{label}</p>
+    <div className="surface-3d rounded-xl border border-line dark:border-white/15 bg-card/95 px-3.5 py-2.5 text-sm shadow-3d-pop backdrop-blur-xl">
+      <p className="mb-1.5 font-bold text-ink-1 text-xs tracking-tight">{label}</p>
       {payload.map((entry: any) => (
-        <p key={entry.name} className="flex items-center gap-1.5 text-xs text-ink-2">
+        <p key={entry.name} className="flex items-center gap-2 text-xs text-ink-2 py-0.5">
           <span
-            className="size-2 shrink-0 rounded-full"
+            className="size-2 shrink-0 rounded-full shadow-xs"
             style={{ background: entry.color }}
             aria-hidden
           />
           <span className="text-ink-3">{entry.name}:</span>{' '}
-          <span className="tnum font-semibold text-ink-1">
+          <span className="tnum font-bold text-ink-1">
             {entry.value}
             {unit}
           </span>
@@ -84,7 +84,7 @@ export function ChartCard({
   height?: number;
 }) {
   return (
-    <Card className={cn('card-interactive', className)}>
+    <Card className={cn('surface-3d-interactive rounded-2xl overflow-hidden hover:border-indigo-500/35', className)}>
       <CardHeader>
         <div>
           <CardTitle>{title}</CardTitle>

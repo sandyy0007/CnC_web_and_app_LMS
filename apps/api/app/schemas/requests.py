@@ -1,14 +1,19 @@
 """Request/response schemas. Validation happens here before any handler runs."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 Str1 = Annotated[str, Field(min_length=1, max_length=200)]
 Text = Annotated[str, Field(min_length=1, max_length=4000)]
-ObjectIdStr = Annotated[str, Field(pattern=r"^[a-fA-F0-9]{24}$")]
+ObjectIdStr = Annotated[
+    str,
+    Field(
+        pattern=r"^([a-fA-F0-9]{24}|[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$"
+    ),
+]
 
 
 class Base(BaseModel):
@@ -311,6 +316,21 @@ class AssignStudentsRequest(Base):
 class AssignTrainersRequest(Base):
     trainerUserIds: list[ObjectIdStr] = Field(min_length=1, max_length=50)
     trainingModuleId: ObjectIdStr | None = None
+    startDate: date | None = None
+    endDate: date | None = None
+    weekdays: list[int] | None = None
+    status: Literal["ACTIVE", "INACTIVE", "SUSPENDED"] = "ACTIVE"
+    notes: Annotated[str, Field(max_length=500)] | None = None
+    scheduleReference: Annotated[str, Field(max_length=200)] | None = None
+
+
+class UpdateTrainerAssignmentRequest(Base):
+    startDate: date | None = None
+    endDate: date | None = None
+    weekdays: list[int] | None = None
+    status: Literal["ACTIVE", "INACTIVE", "SUSPENDED"] | None = None
+    notes: Annotated[str, Field(max_length=500)] | None = None
+    scheduleReference: Annotated[str, Field(max_length=200)] | None = None
 
 
 class UserRequest(Base):

@@ -35,15 +35,14 @@ export default function AboutPage() {
   return (
     <GlobalPageBackground
       image="/images/backgrounds/colleges.webp"
-      variant="dark"
       orbTone="indigo"
       className="min-h-screen py-12 px-4"
     >
       <div className="mx-auto max-w-[960px]">
-        <h1 className="font-serif heading-section font-semibold tracking-tight text-white">
+        <h1 className="font-serif heading-section font-semibold tracking-tight text-ink-1">
           Employability, treated like a subject
         </h1>
-        <p className="mt-4 text-base sm:text-lg leading-relaxed text-slate-300">
+        <p className="mt-4 text-base sm:text-lg leading-relaxed text-ink-2">
           Winners Creek is a parallel platform for the part of a degree that rarely gets a syllabus:
           communication, confidence, teamwork, aptitude, interview craft and workplace behaviour. It
           sits alongside the academic LMS rather than replacing it — marks, curriculum attendance and
@@ -51,42 +50,42 @@ export default function AboutPage() {
           assessment and measured improvement.
         </p>
 
-        <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-ink-3">
           How the platform thinks
         </h2>
         <div className="mt-4 grid gap-5 sm:grid-cols-2">
           {PRINCIPLES.map((item) => (
             <Card key={item.title} className="card-interactive group transition-all duration-200 hover:-translate-y-1 hover:border-indigo-400/50">
               <CardBody className="p-6">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-500 border border-indigo-500/30 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200">
                   <item.icon className="size-5" aria-hidden />
                 </span>
-                <h3 className="mt-4 heading-card text-white group-hover:text-indigo-400 transition-colors">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-300">{item.body}</p>
+                <h3 className="mt-4 heading-card text-ink-1 group-hover:text-brand-primary transition-colors">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink-2">{item.body}</p>
               </CardBody>
             </Card>
           ))}
         </div>
 
-        <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-ink-3">
           Who uses it
         </h2>
-        <dl className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-md shadow-card">
+        <dl className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card backdrop-blur-md shadow-card dark:divide-white/10 dark:border-white/10 dark:bg-slate-900/60">
           {[
             ['Students', 'Learn, practise, take assessments, watch a readiness score move and see exactly what to fix next.'],
             ['Trainers', 'Run classes, mark attendance, rate students on the parameter set, set assignments and see who is slipping.'],
-            ['Heads of Department', 'One department, end to end: participants, attendance, trainers, assessments, certificates, enrollment, reports and an audit trail.'],
-            ['Institution admins', 'Departments, batches, semesters, users, roles, bulk imports, placements, certificates and system usage for one college.'],
-            ['Placement cell, recruiters, parents', 'Reserved, architecture-ready portals provisioned per institution.'],
+            ['Heads of Department', 'One department, end to end: participants, attendance, trainers, assessments, enrollment, and cohort reports.'],
+            ['Institution admins', 'Departments, batches, semesters, users, roles, bulk imports, and system usage for one college.'],
+            ['Parents', 'Reserved, read-only portals provisioned per institution for student progress tracking.'],
           ].map(([who, what]) => (
-            <div key={who} className="grid gap-1 px-5 py-4 transition-colors hover:bg-white/5 sm:grid-cols-[190px_1fr] sm:gap-4">
-              <dt className="text-sm font-semibold text-white">{who}</dt>
-              <dd className="text-sm leading-relaxed text-slate-300">{what}</dd>
+            <div key={who} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface-hover sm:grid-cols-[190px_1fr] sm:gap-4">
+              <dt className="text-sm font-semibold text-ink-1">{who}</dt>
+              <dd className="text-sm leading-relaxed text-ink-2">{what}</dd>
             </div>
           ))}
         </dl>
 
-        <Card className="mt-10 border border-white/15 bg-navy-950/80 backdrop-blur-md text-white shadow-card-hover transition-all duration-300">
+        <Card className="mt-10 border border-line bg-surface-muted text-ink-1 shadow-card-hover transition-all duration-300 dark:border-white/15 dark:bg-navy-950/80 dark:text-white">
           <CardBody className="flex flex-wrap items-center justify-between gap-5 p-7">
             <p className="min-w-[240px] flex-1 font-serif text-[20px] font-semibold">
               Practise → Assess → Improve → Become Employable

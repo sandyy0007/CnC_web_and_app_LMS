@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+/*
+ * Winners Creek — design tokens
+ * Corporate assessment-center aesthetic: restrained palette, one accent,
+ * generous whitespace, no gradients/glassmorphism. Tokens are CSS variables
+ * so dark mode is a value swap, not a second set of classes.
+ */
+
+:root {
+  /* Surfaces */
+  --surface-0: #f6f7f9;   /* page background */
+  --surface-1: #ffffff;   /* card background */
+  --surface-2: #ffffff;   /* raised / hover */
+  --surface-inverse: #12141a;
+
+  /* Borders */
+  --border-subtle: #e4e6eb;
+  --border-default: #d7dae1;
+  --border-strong: #b8bcc6;
+
+  /* Text */
+  --ink-primary: #14161c;
+  --ink-secondary: #4a4e5a;
+  --ink-tertiary: #7b7f8c;
+  --ink-on-accent: #ffffff;
+  --ink-inverse: #f2f3f6;
+
+  /* Brand accent — single confident blue, used sparingly */
+  --accent-50: #eef2ff;
+  --accent-100: #dfe6ff;
+  --accent-400: #4f6fe0;
+  --accent-500: #3452d9;
+  --accent-600: #2a41c2;
+  --accent-700: #22349c;
+
+  /* Secondary accent — interview / warm graphite (not a second brand color) */
+  --accent2-500: #6b5cd9;
+  --accent2-600: #5847c4;
+
+  /* Semantic */
+  --success-500: #1f9d55;
+  --success-100: #e3f7ea;
+  --warning-500: #b8790a;
+  --warning-100: #fbf0dc;
+  --danger-500: #c93b3b;
+  --danger-100: #fbe6e6;
+  --info-500: #2a6fdb;
+  --info-100: #e7f0fd;
+
+  /* Score bands (content, structure, communication, delivery, time, slide handling) */
+  --score-track: #e7e8ec;
+
+  --focus-ring: #3452d9;
+  --shadow-color: 220 20% 10%;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+:root[data-theme="dark"] {
+  --surface-0: #0b0c10;
+  --surface-1: #14161c;
+  --surface-2: #191c24;
+  --surface-inverse: #f6f7f9;
+
+  --border-subtle: #23262f;
+  --border-default: #2c2f3a;
+  --border-strong: #3d4150;
+
+  --ink-primary: #f2f3f6;
+  --ink-secondary: #b7bac5;
+  --ink-tertiary: #82869373;
+  --ink-tertiary: #82869a;
+  --ink-on-accent: #ffffff;
+  --ink-inverse: #14161c;
+
+  --accent-50: #161c34;
+  --accent-100: #1d2547;
+  --accent-400: #6f8bf0;
+  --accent-500: #5d7bee;
+  --accent-600: #7690f2;
+  --accent-700: #a4b5f6;
+
+  --accent2-500: #8f81ec;
+  --accent2-600: #a396f0;
+
+  --success-500: #35c073;
+  --success-100: #12291c;
+  --warning-500: #d99a2b;
+  --warning-100: #2c2312;
+  --danger-500: #e2605f;
+  --danger-100: #2c1616;
+  --info-500: #5b93ef;
+  --info-100: #101d30;
+
+  --score-track: #23262f;
+
+  --focus-ring: #7690f2;
+  --shadow-color: 220 40% 2%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --surface-0: #0b0c10;
+    --surface-1: #14161c;
+    --surface-2: #191c24;
+    --surface-inverse: #f6f7f9;
+
+    --border-subtle: #23262f;
+    --border-default: #2c2f3a;
+    --border-strong: #3d4150;
+
+    --ink-primary: #f2f3f6;
+    --ink-secondary: #b7bac5;
+    --ink-tertiary: #82869a;
+    --ink-on-accent: #ffffff;
+    --ink-inverse: #14161c;
+
+    --accent-50: #161c34;
+    --accent-100: #1d2547;
+    --accent-400: #6f8bf0;
+    --accent-500: #5d7bee;
+    --accent-600: #7690f2;
+    --accent-700: #a4b5f6;
+
+    --accent2-500: #8f81ec;
+    --accent2-600: #a396f0;
+
+    --success-500: #35c073;
+    --success-100: #12291c;
+    --warning-500: #d99a2b;
+    --warning-100: #2c2312;
+    --danger-500: #e2605f;
+    --danger-100: #2c1616;
+    --info-500: #5b93ef;
+    --info-100: #101d30;
+
+    --score-track: #23262f;
+    --focus-ring: #7690f2;
+  }
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-inverse: var(--surface-inverse);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-ink-on-accent: var(--ink-on-accent);
+  --color-ink-inverse: var(--ink-inverse);
+
+  --color-accent-50: var(--accent-50);
+  --color-accent-100: var(--accent-100);
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+  --color-accent-700: var(--accent-700);
+
+  --color-accent2-500: var(--accent2-500);
+  --color-accent2-600: var(--accent2-600);
+
+  --color-success-500: var(--success-500);
+  --color-success-100: var(--success-100);
+  --color-warning-500: var(--warning-500);
+  --color-warning-100: var(--warning-100);
+  --color-danger-500: var(--danger-500);
+  --color-danger-100: var(--danger-100);
+  --color-info-500: var(--info-500);
+  --color-info-100: var(--info-100);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border-default);
+}
+
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--ink-primary);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent-100);
+  color: var(--accent-700);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Subtle, purposeful motion only */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.wc-fade-in {
+  animation: wc-fade-in 260ms ease-out both;
+}
+
+@keyframes wc-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wc-card-shadow {
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 8px 24px -12px hsl(var(--shadow-color) / 0.18);
+}

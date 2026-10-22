@@ -4,18 +4,18 @@ import * as React from 'react';
 import { cn } from '@/lib/cn';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-[5px] rounded-full px-[9px] py-1 text-xs font-semibold',
+  'inline-flex items-center gap-[5px] rounded-full px-2.5 py-0.5 text-xs font-semibold backdrop-blur-md shadow-xs transition-all duration-200',
   {
     variants: {
       tone: {
-        success: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
-        danger: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
-        info: 'bg-blue-500/15 text-blue-300 border border-blue-500/30',
-        purple: 'bg-purple-500/15 text-purple-300 border border-purple-500/30',
-        amber: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-        teal: 'bg-teal-500/15 text-teal-300 border border-teal-500/30',
-        neutral: 'bg-white/10 text-slate-200 border border-white/15',
-        indigo: 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30',
+        success: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-[inset_0_1px_0_0_rgba(16,185,129,0.2)]',
+        danger: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 shadow-[inset_0_1px_0_0_rgba(244,63,94,0.2)]',
+        info: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shadow-[inset_0_1px_0_0_rgba(59,130,246,0.2)]',
+        purple: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 shadow-[inset_0_1px_0_0_rgba(168,85,247,0.2)]',
+        amber: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 shadow-[inset_0_1px_0_0_rgba(245,158,11,0.2)]',
+        teal: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30 shadow-[inset_0_1px_0_0_rgba(20,184,166,0.2)]',
+        neutral: 'bg-slate-200/80 text-slate-800 border border-slate-300 dark:bg-white/10 dark:text-slate-200 dark:border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]',
+        indigo: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 shadow-[inset_0_1px_0_0_rgba(99,102,241,0.2)]',
       },
     },
     defaultVariants: { tone: 'neutral' },

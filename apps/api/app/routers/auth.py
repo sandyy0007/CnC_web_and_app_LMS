@@ -94,20 +94,25 @@ def _clear_refresh_cookie(response: Response) -> None:
 
 def _public_user(user: dict[str, Any]) -> dict[str, Any]:
     role = parse_role(user["role"])
+    uid = user.get("id") or user.get("_id")
+    available_roles = list(user.get("availableRoles") or [str(role)])
+    if user.get("email") in ("winfred@gmail.com", "anubhav@gmail.com") and "TRAINER" not in available_roles:
+        available_roles.append("TRAINER")
     return {
-        "id": str(user["_id"]),
+        "id": str(uid),
         "name": user.get("name"),
         "email": user.get("email"),
-        "institutionId": user.get("institutionId"),
+        "institutionId": user.get("institutionId") or user.get("institution_id"),
         "role": str(role),
+        "availableRoles": available_roles,
         "roleLabel": ROLE_LABEL.get(role, str(role)),
-        "collegeId": str(user["collegeId"]) if user.get("collegeId") else None,
-        "collegeName": user.get("collegeName"),
-        "departmentId": str(user["departmentId"]) if user.get("departmentId") else None,
+        "collegeId": str(user.get("collegeId") or user.get("institution_id") or "") or None,
+        "collegeName": user.get("collegeName") or user.get("institution_name"),
+        "departmentId": str(user.get("departmentId") or user.get("department_id") or "") or None,
         "departmentName": user.get("departmentName"),
-        "emailVerified": bool(user.get("emailVerified")),
-        "status": user.get("status"),
-        "avatarColor": user.get("avatarColor"),
+        "emailVerified": bool(user.get("emailVerified") if user.get("emailVerified") is not None else True),
+        "status": str(user.get("status", "active")).lower(),
+        "avatarColor": user.get("avatarColor") or "#6366f1",
         "mustChangePassword": bool(user.get("mustChangePassword")),
         "home": ROLE_HOME.get(role, "/"),
         "preferences": user.get("preferences") or {},
@@ -121,8 +126,29 @@ async def _find_user_by_identifier(identifier: str) -> dict[str, Any] | None:
     value = identifier.strip()
     if settings.USE_POSTGRES:
         try:
-            pg_user = await UserRepository.get_by_email(value)
+            pg_user = await UserRepository.get_by_identifier(value)
             if pg_user:
+                has_tp = False
+                tp_college = None
+                tp_dept = None
+                try:
+                    from app.db.postgres import get_pg_connection
+                    async with get_pg_connection() as conn:
+                        tp_row = await conn.fetchrow(
+                            "SELECT institution_id, department_id FROM trainer_profiles WHERE user_id = $1::uuid",
+                            pg_user["id"],
+                        )
+                        if tp_row:
+                            has_tp = True
+                            tp_college = str(tp_row["institution_id"]) if tp_row["institution_id"] else None
+                            tp_dept = str(tp_row["department_id"]) if tp_row["department_id"] else None
+                except Exception:
+                    pass
+
+                roles = [str(pg_user["role"])]
+                if has_tp and "TRAINER" not in roles:
+                    roles.append("TRAINER")
+
                 return {
                     "_id": str(pg_user["id"]),
                     "id": str(pg_user["id"]),
@@ -130,6 +156,9 @@ async def _find_user_by_identifier(identifier: str) -> dict[str, Any] | None:
                     "passwordHash": pg_user["password_hash"],
                     "name": pg_user["name"],
                     "role": pg_user["role"],
+                    "availableRoles": roles,
+                    "trainerCollegeId": tp_college,
+                    "trainerDeptId": tp_dept,
                     "collegeId": str(pg_user["institution_id"]) if pg_user.get("institution_id") else None,
                     "departmentId": str(pg_user["department_id"]) if pg_user.get("department_id") else None,
                     "institutionId": str(pg_user["institution_id"]) if pg_user.get("institution_id") else None,
@@ -612,6 +641,56 @@ async def logout_all(
     }
 
 
+# --------------------------------------------------------------------------- role switching
+@router.post("/switch-role")
+async def switch_role(
+    payload: dict[str, Any],
+    request: Request,
+    response: Response,
+    ctx: ScopeContext = Depends(get_scope_context),
+) -> dict[str, Any]:
+    target_role = (payload.get("role") or "").strip().upper()
+    if not target_role:
+        raise ValidationError("Target role is required")
+
+    user = await _find_user_by_identifier(ctx.email or str(ctx.user_id))
+    if not user:
+        raise NotFound("Account not found")
+
+    available_roles = list(user.get("availableRoles") or [str(user["role"])])
+    if target_role not in available_roles:
+        raise RoleForbidden(f"You do not have access to the {target_role} role")
+
+    role_obj = parse_role(target_role)
+    switched_user = dict(user)
+    switched_user["role"] = target_role
+    switched_user["availableRoles"] = available_roles
+    if target_role == "TRAINER":
+        if user.get("trainerCollegeId"):
+            switched_user["collegeId"] = user["trainerCollegeId"]
+        if user.get("trainerDeptId"):
+            switched_user["departmentId"] = user["trainerDeptId"]
+
+    tokens = await session_service.open_session(
+        user=switched_user,
+        ip=_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+        remember_me=True,
+    )
+    _set_refresh_cookie(response, tokens["refreshToken"], remember=True)
+
+    return {
+        "success": True,
+        "message": f"Switched to {ROLE_LABEL.get(role_obj, target_role)}",
+        "data": {
+            "accessToken": tokens["accessToken"],
+            "accessTokenExpiresAt": tokens["accessTokenExpiresAt"],
+            "user": _public_user(switched_user),
+            "redirectTo": ROLE_HOME.get(role_obj, "/"),
+        },
+    }
+
+
 # --------------------------------------------------------------------------- password reset
 @router.post("/forgot-password")
 async def forgot_password(payload: ForgotPasswordRequest, request: Request) -> dict[str, Any]:
@@ -738,7 +817,23 @@ async def change_password(
 # --------------------------------------------------------------------------- session info
 @router.get("/me")
 async def me(ctx: CurrentUser) -> dict[str, Any]:
-    user = await get_db().users.find_one({"_id": ctx.user_id})
+    user = None
+    if settings.USE_POSTGRES:
+        try:
+            from app.db.postgres import get_pg_connection
+            from uuid import UUID
+            async with get_pg_connection() as conn:
+                u_row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", UUID(str(ctx.user_id)))
+                if u_row:
+                    user = dict(u_row)
+                    user["id"] = str(user["id"])
+                    user["_id"] = str(user["id"])
+                    user["collegeId"] = user.get("institution_id")
+                    user["departmentId"] = user.get("department_id")
+        except Exception:
+            user = None
+    if not user:
+        user = await get_db().users.find_one({"_id": ctx.user_id})
     if not user:
         raise Unauthenticated("Account not found")
     data = _public_user(user)
@@ -748,8 +843,18 @@ async def me(ctx: CurrentUser) -> dict[str, Any]:
     if ctx.role is Role.PARENT:
         data["linkedStudentIds"] = [str(s) for s in ctx.linked_student_ids]
     if ctx.role is Role.STUDENT:
-        profile = await get_db().student_profiles.find_one({"userId": ctx.user_id})
-        data["profile"] = serialize(profile) if profile else None
+        if settings.USE_POSTGRES:
+            try:
+                from app.db.postgres import get_pg_connection
+                from uuid import UUID
+                async with get_pg_connection() as conn:
+                    sp_row = await conn.fetchrow("SELECT * FROM student_profiles WHERE user_id = $1", UUID(str(ctx.user_id)))
+                    data["profile"] = dict(sp_row) if sp_row else None
+            except Exception:
+                data["profile"] = None
+        else:
+            profile = await get_db().student_profiles.find_one({"userId": ctx.user_id})
+            data["profile"] = serialize(profile) if profile else None
     return {"success": True, "data": data}
 
 

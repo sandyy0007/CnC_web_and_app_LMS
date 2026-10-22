@@ -22,11 +22,10 @@ export function VisualPageBackground({
   children,
   ...rest
 }: VisualPageBackgroundProps) {
-  const chosenVariant = variant || (overlay === 'dark' ? 'dark' : 'light');
   return (
     <GlobalPageBackground
       image={image}
-      variant={chosenVariant}
+      variant={variant}
       orbTone={orbColor}
       {...rest}
     >

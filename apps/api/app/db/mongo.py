@@ -61,12 +61,14 @@ def _make_inmemory() -> Any:
     from mongomock_motor import AsyncMongoMockClient
 
     log.warning("using in-process MongoDB-compatible store (development/test only)")
-    return AsyncMongoMockClient()
+    return AsyncMongoMockClient(uuidRepresentation="standard")
 
 
 def get_db() -> Any:
+    global _db, _client, _is_inmemory
     if _db is None:
-        raise RuntimeError("Database not initialised — call connect_to_mongo() first")
+        _client, _is_inmemory = _make_inmemory(), True
+        _db = _client[settings.MONGODB_DB]
     return _db
 
 

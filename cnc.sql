@@ -208,6 +208,15 @@ CREATE TABLE IF NOT EXISTS batch_trainers (
     batch_id UUID NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
     trainer_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    institution_id UUID REFERENCES institutions(id) ON DELETE CASCADE,
+    start_date DATE,
+    end_date DATE,
+    weekdays INTEGER[] DEFAULT '{1,2,3,4,5,6,7}'::integer[],
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_batch_trainer UNIQUE (batch_id, trainer_user_id)
 );
 
@@ -576,3 +585,153 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO users (email, password_hash, name, role, status) VALUES
 ('admin@eedilms.app', '$2b$12$K8/zG5oA1wB3rQ2xV4mOeOYj7eF2h9a3d4f5g6h7i8j9k0l1m2n3o', 'Platform Super Admin', 'SUPER_ADMIN', 'ACTIVE')
 ON CONFLICT (email) DO NOTHING;
+
+-- ============================================================================
+-- 26. GAMIFICATION & ADAPTIVE LEARNING ENGINE
+-- ============================================================================
+
+DO $$ BEGIN
+    CREATE TYPE game_status_enum AS ENUM (
+        'DRAFT', 'UNDER_REVIEW', 'APPROVED', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'
+    );
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE game_difficulty_enum AS ENUM (
+        'BEGINNER', 'INTERMEDIATE', 'ADVANCED'
+    );
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE game_attempt_status_enum AS ENUM (
+        'IN_PROGRESS', 'COMPLETED', 'ABANDONED', 'TIMED_OUT'
+    );
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+CREATE TABLE IF NOT EXISTS games (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(100) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) NOT NULL DEFAULT 'Reading Comprehension',
+    version VARCHAR(20) NOT NULL DEFAULT '1.0.0',
+    status game_status_enum NOT NULL DEFAULT 'PUBLISHED',
+    supported_parameters TEXT[] NOT NULL DEFAULT '{"COM04", "COM06"}',
+    duration_minutes INT NOT NULL DEFAULT 10,
+    xp_reward INT NOT NULL DEFAULT 150,
+    thumbnail_url TEXT,
+    config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS trg_games_timestamp ON games;
+CREATE TRIGGER trg_games_timestamp
+    BEFORE UPDATE ON games
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp_column();
+
+CREATE TABLE IF NOT EXISTS game_question_sets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    trainer_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    institution_id UUID REFERENCES institutions(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    version INT NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    total_questions INT NOT NULL DEFAULT 0,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS trg_game_question_sets_timestamp ON game_question_sets;
+CREATE TRIGGER trg_game_question_sets_timestamp
+    BEFORE UPDATE ON game_question_sets
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp_column();
+
+CREATE TABLE IF NOT EXISTS game_questions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question_set_id UUID NOT NULL REFERENCES game_question_sets(id) ON DELETE CASCADE,
+    difficulty game_difficulty_enum NOT NULL DEFAULT 'INTERMEDIATE',
+    question TEXT NOT NULL,
+    option_a TEXT NOT NULL,
+    option_b TEXT NOT NULL,
+    option_c TEXT NOT NULL,
+    option_d TEXT NOT NULL,
+    answer_index INT NOT NULL CHECK (answer_index >= 0 AND answer_index <= 3),
+    tag VARCHAR(100) DEFAULT 'General',
+    eedi_parameter VARCHAR(50) NOT NULL REFERENCES evaluation_parameters(code) ON DELETE RESTRICT,
+    weight NUMERIC(4,2) NOT NULL DEFAULT 1.00 CHECK (weight > 0),
+    explanation TEXT,
+    scenario TEXT,
+    passage TEXT,
+    lock_type VARCHAR(50),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS game_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    question_set_id UUID REFERENCES game_question_sets(id) ON DELETE SET NULL,
+    trainer_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    institution_id UUID REFERENCES institutions(id) ON DELETE CASCADE,
+    department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
+    batch_id UUID REFERENCES batches(id) ON DELETE CASCADE,
+    deadline TIMESTAMPTZ,
+    max_attempts INT NOT NULL DEFAULT 3,
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+    eedi_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS trg_game_assignments_timestamp ON game_assignments;
+CREATE TRIGGER trg_game_assignments_timestamp
+    BEFORE UPDATE ON game_assignments
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp_column();
+
+CREATE TABLE IF NOT EXISTS game_attempts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    assignment_id UUID REFERENCES game_assignments(id) ON DELETE SET NULL,
+    question_set_id UUID NOT NULL REFERENCES game_question_sets(id) ON DELETE CASCADE,
+    participant_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    institution_id UUID REFERENCES institutions(id) ON DELETE SET NULL,
+    department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+    current_difficulty game_difficulty_enum NOT NULL DEFAULT 'BEGINNER',
+    highest_difficulty game_difficulty_enum NOT NULL DEFAULT 'BEGINNER',
+    raw_score INT NOT NULL DEFAULT 0,
+    final_eedi NUMERIC(5,2) DEFAULT 0.00,
+    status game_attempt_status_enum NOT NULL DEFAULT 'IN_PROGRESS',
+    total_questions INT NOT NULL DEFAULT 0,
+    correct_answers INT NOT NULL DEFAULT 0,
+    duration_seconds INT NOT NULL DEFAULT 0,
+    lives_remaining INT NOT NULL DEFAULT 3,
+    xp_earned INT NOT NULL DEFAULT 0,
+    performance_metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS game_attempt_answers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    attempt_id UUID NOT NULL REFERENCES game_attempts(id) ON DELETE CASCADE,
+    question_id UUID NOT NULL REFERENCES game_questions(id) ON DELETE CASCADE,
+    selected_option INT NOT NULL CHECK (selected_option >= 0 AND selected_option <= 3),
+    is_correct BOOLEAN NOT NULL,
+    response_time_ms INT NOT NULL DEFAULT 0,
+    difficulty_at_submission game_difficulty_enum NOT NULL,
+    eedi_parameter VARCHAR(50) NOT NULL REFERENCES evaluation_parameters(code) ON DELETE RESTRICT,
+    weight NUMERIC(4,2) NOT NULL DEFAULT 1.00,
+    earned_score INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_game_questions_set_diff ON game_questions(question_set_id, difficulty);
+CREATE INDEX IF NOT EXISTS ix_game_attempts_participant ON game_attempts(participant_user_id, status);
+CREATE INDEX IF NOT EXISTS ix_game_attempts_game ON game_attempts(game_id, status);
+CREATE INDEX IF NOT EXISTS ix_game_attempt_answers_attempt ON game_attempt_answers(attempt_id);
+CREATE INDEX IF NOT EXISTS ix_game_attempt_answers_consumed ON game_attempt_answers(attempt_id, question_id);
+CREATE INDEX IF NOT EXISTS ix_game_assignments_batch ON game_assignments(batch_id, game_id);

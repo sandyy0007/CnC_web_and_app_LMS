@@ -12,6 +12,7 @@ os.environ.update(
     {
         "ENV": "test",
         "USE_INMEMORY_DB": "true",
+        "USE_POSTGRES": "false",
         "USE_FAKE_REDIS": "true",
         "QUEUE_EAGER": "true",
         "STORAGE_DRIVER": "local",

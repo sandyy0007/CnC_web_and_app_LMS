@@ -51,7 +51,7 @@ export default function TrainerBatchesPage() {
                   <dl className="tnum mt-4 grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-[8px] bg-app px-2 py-2">
                       <dd className="text-md font-bold">{num(batch.studentCount)}</dd>
-                      <dt className="text-2xs text-ink-3">Students</dt>
+                      <dt className="text-2xs text-ink-3">Participants</dt>
                     </div>
                     <div className="rounded-[8px] bg-app px-2 py-2">
                       <dd

@@ -3,19 +3,111 @@
 @tailwind utilities;
 
 /*
- * Winners Creek centralized design tokens — modern, premium technology-focused system
- * across Student, Trainer, HOD, Admin and Super Admin workspaces.
+ * Winners Creek centralized design tokens — dual theme architecture:
+ * :root defines professional bright Winners Creek light theme (#F4F6F8 base, crisp white surfaces, accessible slate typography).
+ * .dark defines the canonical midnight navy slate Winners Creek dark theme.
  */
 :root {
-  /*
-   * Self-hosted-or-system typography. See `src/app/layout.tsx`: these resolve to a system
-   * stack so a build never depends on a font CDN, and are overridden by the @font-face block
-   * in the README once the woff2 files are in `public/fonts/`.
-   */
   --font-inter: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
   --font-serif: 'Source Serif 4', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
 
+  --navy-950: #0b0f19;
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --indigo: #6366f1;
+  --indigo-600: #4f46e5;
+  --indigo-500: #6366f1;
+  --indigo-100: #dedafb;
+  --indigo-50: rgba(99, 102, 241, 0.08);
+  --cyan: #0891b2;
+  --cyan-500: #0891b2;
+  --amber: #d97706;
+  --amber-dark: #b45309;
+  --amber-50: rgba(245, 158, 11, 0.08);
+
+  /* Light Theme Canvas & Surface Architecture */
+  --bg-app: #F4F6F8;
+  --background: #F4F6F8;
+  --background-secondary: #EEF1F4;
+
+  /* Crisp Light Surfaces */
+  --surface: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-muted: #EEF1F4;
+  --surface-glass: rgba(255, 255, 255, 0.88);
+  --surface-hover: #E9ECEF;
+
+  /* Card Surfaces & Borders */
+  --card: #FFFFFF;
+  --card-border: #E2E8F0;
+  --border: #E2E8F0;
+  --border-soft: #EDF2F7;
+  --border-subtle: #F1F5F9;
+
+  /* High-Contrast Accessible Light Typography (>= 4.5:1) */
+  --text-1: #0F172A;
+  --text-2: #334155;
+  --text-3: #64748B;
+  --foreground: #0F172A;
+  --foreground-secondary: #334155;
+  --foreground-muted: #64748B;
+
+  /* Shell Components */
+  --sidebar-background: #FFFFFF;
+  --header-background: rgba(255, 255, 255, 0.92);
+
+  /* Input Controls */
+  --input-background: #FFFFFF;
+  --input-border: #CBD5E1;
+  --input-focus: #6366f1;
+
+  /* Brand & Actions */
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-foreground: #ffffff;
+  --accent: #0891b2;
+  --accent-hover: #0e7490;
+
+  /* Accessible Light Status Tokens */
+  --success: #059669;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --danger: #dc2626;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --warning: #d97706;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --info: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.12);
+  --purple: #9333ea;
+  --purple-bg: rgba(147, 51, 234, 0.12);
+  --teal: #0d9488;
+  --teal-bg: rgba(13, 148, 136, 0.12);
+
+  --radius-card: 14px;
+  --radius-sm: 8px;
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-pop: 0 12px 28px -6px rgba(15, 23, 42, 0.12);
+
+  /* 3D Dimensional Surfaces & Bevel Lighting */
+  --bevel-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --shadow-3d-card: 0 4px 14px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  --shadow-3d-hover: 0 14px 30px -6px rgba(15, 23, 42, 0.10), 0 6px 12px -3px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  --shadow-3d-pop: 0 24px 48px -12px rgba(15, 23, 42, 0.16), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+
+  /* Categorical series for charts */
+  --chart-1: #6366f1;
+  --chart-2: #0891b2;
+  --chart-3: #d97706;
+  --chart-4: #9333ea;
+  --chart-5: #2563eb;
+  --chart-6: #059669;
+
+  --scrollbar-thumb: rgba(100, 116, 139, 0.35);
+  --scrollbar-thumb-hover: rgba(100, 116, 139, 0.55);
+}
+
+.dark {
   --navy-950: #0b0f19;
   --navy-900: #0f172a;
   --navy-800: #1e293b;
@@ -30,15 +122,17 @@
   --amber-dark: #d97706;
   --amber-50: rgba(245, 158, 11, 0.12);
 
-  /* Modern Midnight Navy Canvas & Surface Architecture */
+  /* Canonical Modern Midnight Navy Canvas & Surface Architecture */
   --bg-app: #080c18;
   --background: #080c18;
   --background-secondary: #0b0f19;
 
   /* Coordinated Tinted Glass Surfaces */
   --card: rgba(15, 23, 42, 0.72);
+  --card-border: rgba(255, 255, 255, 0.12);
   --surface: rgba(15, 23, 42, 0.72);
   --surface-elevated: rgba(26, 35, 58, 0.94);
+  --surface-muted: rgba(15, 23, 42, 0.85);
   --surface-glass: rgba(255, 255, 255, 0.06);
   --surface-hover: rgba(255, 255, 255, 0.10);
 
@@ -54,6 +148,15 @@
   --foreground: #f8fafc;
   --foreground-secondary: #cbd5e1;
   --foreground-muted: #94a3b8;
+
+  /* Shell Components */
+  --sidebar-background: rgba(11, 15, 25, 0.85);
+  --header-background: rgba(11, 15, 25, 0.65);
+
+  /* Input Controls */
+  --input-background: rgba(15, 23, 42, 0.75);
+  --input-border: rgba(255, 255, 255, 0.14);
+  --input-focus: #6366f1;
 
   /* Brand & Actions */
   --primary: #6366f1;
@@ -76,19 +179,26 @@
   --teal: #14b8a6;
   --teal-bg: rgba(20, 184, 166, 0.15);
 
-  --radius-card: 14px;
-  --radius-sm: 8px;
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 2px 6px -1px rgba(0, 0, 0, 0.35);
   --shadow-card-hover: 0 10px 30px -4px rgba(0, 0, 0, 0.55), 0 0 20px -2px rgba(99, 102, 241, 0.2);
   --shadow-pop: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
 
-  /* Categorical series for charts, drawn from the same palette. */
+  /* 3D Dimensional Surfaces & Bevel Lighting */
+  --bevel-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --shadow-3d-card: 0 6px 20px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --shadow-3d-hover: 0 16px 36px -6px rgba(0, 0, 0, 0.65), 0 0 24px -2px rgba(99, 102, 241, 0.22), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  --shadow-3d-pop: 0 28px 56px -14px rgba(0, 0, 0, 0.8), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+
+  /* Categorical series for charts */
   --chart-1: #6366f1;
   --chart-2: #06b6d4;
   --chart-3: #f59e0b;
   --chart-4: #a855f7;
   --chart-5: #3b82f6;
   --chart-6: #10b981;
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
 }
 
 * {
@@ -150,11 +260,11 @@ body {
   height: 8px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--scrollbar-thumb, rgba(255, 255, 255, 0.18));
   border-radius: 8px;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--scrollbar-thumb-hover, rgba(255, 255, 255, 0.28));
 }
 .scroll-thin::-webkit-scrollbar-track {
   background: transparent;
@@ -212,7 +322,7 @@ body {
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: #ffffff;
+  color: var(--text-1);
 }
 
 .heading-section {
@@ -220,7 +330,7 @@ body {
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: var(--text-1);
 }
 
 .heading-card {
@@ -228,7 +338,7 @@ body {
   line-height: 1.35;
   font-weight: 600;
   letter-spacing: -0.015em;
-  color: #ffffff;
+  color: var(--text-1);
 }
 
 .heading-1 {
@@ -267,6 +377,79 @@ body {
   background-image: 
     linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* ------------------------------------------------------------------ 3D Layered Surface & Lighting System */
+.surface-3d {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-3d-card);
+  position: relative;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease;
+}
+
+.surface-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.25) 50%, transparent 100%);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.surface-3d-elevated {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-3d-pop);
+}
+
+.surface-3d-interactive {
+  will-change: transform, box-shadow;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease;
+}
+
+.surface-3d-interactive:hover {
+  transform: translateY(-3.5px) scale(1.008);
+  box-shadow: var(--shadow-3d-hover);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.surface-3d-interactive:active {
+  transform: translateY(-1px) scale(0.995);
+  transition-duration: 0.1s;
+}
+
+.ambient-aura {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  pointer-events: none;
+  opacity: 0.45;
+  mix-blend-mode: screen;
+}
+
+.orbital-ring {
+  border: 1.5px solid rgba(99, 102, 241, 0.3);
+  border-top-color: var(--indigo);
+  border-radius: 50%;
+  animation: orbitalSpin 3.5s linear infinite;
+}
+
+@keyframes orbitalSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ------------------------------------------------------------------ Purpose Gradients */
@@ -332,6 +515,66 @@ body {
   transform: translateX(4px);
 }
 
+/* ------------------------------------------------------------------ 3D Perspective & Spatial Depth */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.translate-z-8 {
+  transform: translateZ(8px);
+}
+
+.translate-z-16 {
+  transform: translateZ(16px);
+}
+
+.translate-z-24 {
+  transform: translateZ(24px);
+}
+
+.translate-z-32 {
+  transform: translateZ(32px);
+}
+
+/* Smooth specular highlight layer across interactive cards */
+.specular-glare {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    transparent 70%
+  );
+  opacity: var(--glare-opacity, 0);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  mix-blend-mode: overlay;
+  z-index: 10;
+}
+
+/* Tactile magnetic button */
+.magnetic-press {
+  will-change: transform;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+}
+.magnetic-press:active {
+  transform: scale(0.96) !important;
+}
+
 /* Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -341,5 +584,7 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transform: none !important;
   }
 }
+

@@ -22,6 +22,7 @@ import { NOTIFICATION_ICONS } from '@/lib/nav';
 import { ROLE_LABEL, type Role } from '@/lib/roleRoutes';
 import { useAppDispatch } from '@/store';
 import { signOut, signOutEverywhere, type SessionUser } from '@/store/authSlice';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function NotificationMenu() {
   const [open, setOpen] = React.useState(false);
@@ -45,7 +46,7 @@ export function NotificationMenu() {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}
-        className="relative flex size-[34px] items-center justify-center rounded-[9px] border border-white/15 bg-white/10 text-white hover:bg-white/20 transition-all active:scale-95"
+        className="relative flex size-[34px] items-center justify-center rounded-[9px] border border-line bg-surface text-ink-2 hover:bg-surface-hover hover:text-ink-1 transition-all active:scale-95 shadow-xs"
       >
         <Bell className="size-4" aria-hidden />
         {unread > 0 && (
@@ -55,8 +56,8 @@ export function NotificationMenu() {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[22rem] p-0">
-        <div className="flex items-center justify-between border-b border-white/10 px-3.5 py-3 text-white">
-          <p className="text-sm font-bold text-white">Notifications</p>
+        <div className="flex items-center justify-between border-b border-line px-3.5 py-3 text-ink-1">
+          <p className="text-sm font-bold text-ink-1">Notifications</p>
           {unread > 0 && (
             <button
               type="button"
@@ -144,26 +145,30 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Account menu"
-        className="flex items-center gap-2 rounded-full border border-white/15 bg-slate-900/80 p-[3px] pr-2.5 text-white hover:bg-slate-800 transition-all active:scale-95"
+        className="flex items-center gap-2 rounded-full border border-line bg-surface/80 p-[3px] pr-2.5 text-ink-1 hover:bg-surface-hover transition-all active:scale-95 shadow-xs"
       >
         <Avatar name={user.name} color={user.avatarColor} size={26} />
         <span className="hidden min-w-0 text-left sm:block">
-          <span className="block truncate text-sm font-semibold leading-tight text-white">{user.name}</span>
-          <span className="block truncate text-2xs text-slate-300">
+          <span className="block truncate text-sm font-semibold leading-tight text-ink-1">{user.name}</span>
+          <span className="block truncate text-2xs text-ink-3">
             {ROLE_LABEL[user.role as Role]}
           </span>
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuLabel>
-          <span className="block font-semibold text-white text-sm">{user.name}</span>
-          <span className="block text-xs text-slate-300">{user.email}</span>
+          <span className="block font-semibold text-ink-1 text-sm">{user.name}</span>
+          <span className="block text-xs text-ink-3">{user.email}</span>
           {user.departmentName && (
-            <span className="mt-1 block text-2xs text-slate-400">
+            <span className="mt-1 block text-2xs text-ink-3">
               {user.collegeName} › {user.departmentName}
             </span>
           )}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <div className="px-1 py-0.5">
+          <ThemeToggle variant="menu-item" />
+        </div>
         <DropdownMenuSeparator />
         {user.role === 'STUDENT' && (
           <DropdownMenuItem asChild>

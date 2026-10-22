@@ -37,7 +37,35 @@ export default function AdminDashboardPage() {
       className="min-h-full rounded-2xl p-4 sm:p-6"
     >
       <AsyncSection query={query} skeleton="kpis">
-        {(data) => (
+        {(rawData) => {
+          const data = {
+            institution: rawData?.institution ?? { name: 'Institution', code: '' },
+            quickActions: Array.isArray(rawData?.quickActions) ? rawData.quickActions : [],
+            kpis: {
+              totalStudents: rawData?.kpis?.totalStudents ?? 0,
+              totalTrainers: rawData?.kpis?.totalTrainers ?? 0,
+              departments: rawData?.kpis?.departments ?? 0,
+              activeBatches: rawData?.kpis?.activeBatches ?? 0,
+              averageInstitutionalEediScore: rawData?.kpis?.averageInstitutionalEediScore ?? null,
+              averageScoreHasData: Boolean(rawData?.kpis?.averageScoreHasData),
+            },
+            attendanceTrend: Array.isArray(rawData?.attendanceTrend) ? rawData.attendanceTrend : [],
+            studentsPerDepartment: Array.isArray(rawData?.studentsPerDepartment) ? rawData.studentsPerDepartment : [],
+            classMonitoring: {
+              sessionsToday: rawData?.classMonitoring?.sessionsToday ?? 0,
+              liveNow: rawData?.classMonitoring?.liveNow ?? 0,
+              sessions: Array.isArray(rawData?.classMonitoring?.sessions) ? rawData.classMonitoring.sessions : [],
+            },
+            enrollments: rawData?.enrollments ?? {},
+            systemAndAiUsage: rawData?.systemAndAiUsage ?? {
+              aiCalls24h: 0,
+              averageLatencyMs: 0,
+              failures24h: 0,
+              queue: { active: 0, queued: 0 },
+              providers: {},
+            },
+          };
+          return (
           <>
           <ImageHero
             image="/images/platform/colleges.webp"
@@ -127,7 +155,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-            <Card className="card-interactive">
+            <Card elevated className="card-interactive">
               <CardHeader>
                 <div>
                   <CardTitle>Class monitoring</CardTitle>
@@ -153,7 +181,7 @@ export default function AdminDashboardPage() {
                 ) : (
                   <ul className="divide-y divide-line-soft">
                     {data.classMonitoring.sessions.map((session: any) => (
-                      <li key={session.id} className="flex flex-wrap items-center gap-3 py-3 transition-colors hover:bg-slate-50/50">
+                      <li key={session.id} className="flex flex-wrap items-center gap-3 py-3 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                         <div className="min-w-[180px] flex-1">
                           <p className="text-base font-semibold">{session.topic}</p>
                           <p className="mt-0.5 text-xs text-ink-3">
@@ -173,7 +201,7 @@ export default function AdminDashboardPage() {
             </Card>
 
             <div className="space-y-5">
-              <Card className="card-interactive">
+              <Card elevated className="card-interactive">
                 <CardHeader>
                   <div>
                     <CardTitle>Enrollment mix</CardTitle>
@@ -192,7 +220,7 @@ export default function AdminDashboardPage() {
                 </CardBody>
               </Card>
 
-              <Card className="card-interactive">
+              <Card elevated className="card-interactive">
                 <CardHeader>
                   <div>
                     <CardTitle>AI &amp; system</CardTitle>
@@ -207,7 +235,7 @@ export default function AdminDashboardPage() {
                       ['Avg latency', `${num(data.systemAndAiUsage.averageLatencyMs)}ms`],
                       ['Failures', num(data.systemAndAiUsage.failures24h)],
                     ].map(([label, value]) => (
-                      <div key={label} className="rounded-[8px] bg-app px-2 py-2">
+                      <div key={label} className="rounded-xl surface-3d border border-slate-200/80 dark:border-white/[0.08] px-2 py-2">
                         <dd className="tnum text-md font-bold">{value}</dd>
                         <dt className="text-2xs text-ink-3">{label}</dt>
                       </div>
@@ -246,9 +274,10 @@ export default function AdminDashboardPage() {
               </Card>
             </div>
           </div>
-        </>
-      )}
-    </AsyncSection>
+          </>
+          );
+        }}
+      </AsyncSection>
   </VisualPageBackground>
 );
 }

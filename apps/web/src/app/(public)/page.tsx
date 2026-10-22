@@ -28,6 +28,8 @@ import {
   GlassCard,
   StatCounter,
 } from '@/components/ui/motion-elements';
+import { TiltCard } from '@/components/ui/TiltCard';
+import { DepthCard, DepthLayer } from '@/components/ui/DepthCard';
 import { ProgressBar } from '@/components/shared/progress-bits';
 import { useApi } from '@/hooks/useApi';
 import { formatDate } from '@/lib/format';
@@ -50,6 +52,7 @@ interface Stats {
   courses: number;
   practiceSessionsScored: number;
   certificatesIssued: number;
+  evaluationsCompleted?: number;
   averageReadinessScore: number;
   source: string;
 }
@@ -78,16 +81,16 @@ export default function HomePage() {
     <>
       <WinnersCreekIntro />
       {/* ------------------------------------------------------------------ hero */}
-      <section className="relative text-white">
+      <section className="relative text-ink-1">
         <div className="relative mx-auto grid max-w-[1180px] gap-10 px-5 py-16 sm:py-20 lg:grid-cols-[1.15fr_.85fr] lg:py-24 items-center">
           <div>
             <Badge tone="amber" className="bg-amber-50/95 font-medium px-3 py-1 shadow-sm">
-              Runs alongside your academic LMS
+             An Integrated Digital Learning Ecosystem
             </Badge>
-            <h1 className="mt-5 max-w-[660px] font-serif heading-hero text-white">
+            <h1 className="mt-5 max-w-[660px] font-serif heading-hero text-slate-900 dark:text-white">
               {data?.tagline ?? 'Learn, Practise and Build the Skills Required for Your Career.'}
             </h1>
-            <p className="mt-5 max-w-[560px] text-base sm:text-lg leading-relaxed text-white/80 font-normal">
+            <p className="mt-5 max-w-[560px] text-base sm:text-lg leading-relaxed text-slate-600 dark:text-white/80 font-normal">
               {data?.description ??
                 'A college-focused soft-skills, personality development and employability platform.'}
             </p>
@@ -96,14 +99,14 @@ export default function HomePage() {
               {(data?.philosophy ?? ['Practise', 'Assess', 'Improve', 'Become Employable']).map(
                 (step, index, all) => (
                   <li key={step} className="flex items-center gap-2">
-                    <span className="flex items-center gap-2.5 rounded-full border border-white/20 bg-white/[0.08] px-4 py-1.5 text-sm font-semibold backdrop-blur-md shadow-sm transition-all hover:bg-white/[0.14] hover:border-white/35">
+                    <span className="flex items-center gap-2.5 rounded-full border border-slate-200 bg-white/70 text-slate-800 dark:border-white/20 dark:bg-white/[0.08] dark:text-white px-4 py-1.5 text-sm font-semibold backdrop-blur-md shadow-sm transition-all hover:bg-white hover:border-slate-300 dark:hover:bg-white/[0.14] dark:hover:border-white/35">
                       <span className="flex size-5 items-center justify-center rounded-full bg-amber text-xs font-bold text-navy-950">
                         {index + 1}
                       </span>
                       {step}
                     </span>
                     {index < all.length - 1 && (
-                      <ArrowRight className="size-4 text-white/40" aria-hidden />
+                      <ArrowRight className="size-4 text-slate-400 dark:text-white/40" aria-hidden />
                     )}
                   </li>
                 ),
@@ -123,45 +126,50 @@ export default function HomePage() {
                 href="/courses"
                 variant="glass"
                 size="lg"
-                className="border border-white/25 bg-white/[0.08] hover:bg-white/15"
+                className="border border-slate-300 bg-white/70 text-slate-900 hover:bg-white dark:border-white/25 dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/15"
               >
                 Browse programs
               </InteractiveArrowButton>
             </div>
 
-            <p className="mt-7 flex items-center gap-2 text-xs font-medium text-white/60">
+            <p className="mt-7 flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-white/60">
               <ShieldCheck className="size-4 text-amber" aria-hidden />
               Institution-scoped: you only ever see your own college and department.
             </p>
           </div>
 
-          {/* Role entry points — modern glass card */}
+          {/* Role entry points — 3D depth-layered portal card */}
           <div className="relative self-start">
-            <GlassCard glow className="p-6 border-white/20 bg-slate-900/60 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <p className="text-xs font-bold uppercase tracking-wider text-amber">
-                  Sign in to your portal
-                </p>
-                <span className="inline-flex size-2 rounded-full bg-emerald-400 animate-pulse" />
-              </div>
-              <div className="mt-4 grid gap-2.5">
+            <DepthCard glare maxAngle={3.5} className="p-6 border-slate-200/80 bg-white/90 text-slate-900 dark:border-white/20 dark:bg-slate-900/75 dark:text-white shadow-2xl backdrop-blur-xl">
+              <DepthLayer z={16}>
+                <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 dark:border-white/10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber">
+                    Sign in to your portal
+                  </p>
+                  <span className="flex items-center gap-1.5 text-2xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex size-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Live System
+                  </span>
+                </div>
+              </DepthLayer>
+              <div className="mt-4 grid gap-3">
                 {(data?.roleAccess ?? []).map((entry) => (
-                  <Link
-                    key={entry.role}
-                    href={user ? entry.href : `/login?role=${entry.role}`}
-                    className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-sm font-medium text-white transition-all duration-200 hover:border-indigo-400/50 hover:bg-white/[0.14] hover:shadow-lg active:scale-[0.98]"
-                  >
-                    <span className="font-semibold">{entry.label}</span>
-                    <ArrowRight className="size-4 text-white/50 transition-transform duration-200 group-hover:translate-x-1.5 group-hover:text-amber" aria-hidden />
-                  </Link>
+                  <DepthLayer key={entry.role} z={22}>
+                    <Link
+                      href={user ? entry.href : `/login?role=${entry.role}`}
+                      className="group flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 hover:border-indigo-400 hover:bg-white hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:hover:border-indigo-400/50 dark:hover:bg-white/[0.14] dark:hover:shadow-lg transition-all duration-200 active:scale-[0.98] px-4 py-3.5 text-sm font-medium"
+                    >
+                      <span className="font-semibold">{entry.label}</span>
+                      <ArrowRight className="size-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-1.5 group-hover:text-amber dark:text-white/50" aria-hidden />
+                    </Link>
+                  </DepthLayer>
                 ))}
                 {overview.initialLoading &&
                   Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="h-12 animate-pulse rounded-xl bg-white/[0.07]" />
+                    <div key={index} className="h-12 animate-pulse rounded-xl bg-slate-200/60 dark:bg-white/[0.07]" />
                   ))}
               </div>
-              
-            </GlassCard>
+            </DepthCard>
           </div>
         </div>
 
@@ -173,7 +181,8 @@ export default function HomePage() {
               { label: 'Trainers', value: stats.data ? stats.data.trainers : null, suffix: '' },
               { label: 'Institutions', value: stats.data ? stats.data.institutions : null, suffix: '' },
               { label: 'Programs', value: stats.data ? stats.data.courses : null, suffix: '' },
-              { label: 'Certificates', value: stats.data ? stats.data.certificatesIssued : null, suffix: '' },
+              { label: 'Completed Evals', value: stats.data ? (stats.data.evaluationsCompleted ?? stats.data.practiceSessionsScored ?? 0) : null, suffix: '' },
+              { label: 'Practice Scored', value: stats.data ? (stats.data.practiceSessionsScored ?? stats.data.evaluationsCompleted ?? 0) : null, suffix: '' },
               {
                 label: 'Avg. readiness',
                 value: stats.data ? stats.data.averageReadinessScore : null,
@@ -192,10 +201,7 @@ export default function HomePage() {
             ))}
           </dl>
           <div className="mx-auto max-w-[1180px] px-5 pb-5">
-            <p className="inline-flex items-center gap-1.5 text-2xs font-medium text-white/45">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Counted live from the platform database — not marketing figures.
-            </p>
+           
           </div>
         </div>
       </section>
@@ -242,20 +248,20 @@ export default function HomePage() {
           {(data?.pillars ?? []).map((pillar) => {
             const Icon = iconFor(pillar.icon);
             return (
-              <Card key={pillar.code} className="card-interactive group transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-card-hover">
+              <TiltCard key={pillar.code} maxAngle={3} glare className="surface-3d shadow-3d-card hover:shadow-3d-hover transition-all duration-300">
                 <CardBody className="p-6">
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo group-hover:bg-indigo group-hover:text-white transition-all duration-200">
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200">
                     <Icon className="size-5" aria-hidden />
                   </span>
                   <h3 className="mt-4 heading-card text-ink-1 group-hover:text-indigo-600 transition-colors">{pillar.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink-2">{pillar.body}</p>
                 </CardBody>
-              </Card>
+              </TiltCard>
             );
           })}
           {overview.initialLoading &&
             Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="h-[156px] animate-pulse bg-white/60" />
+              <Card key={index} className="h-[156px] animate-pulse bg-white/60 dark:bg-slate-800/60" />
             ))}
         </div>
       </SectionReveal>
@@ -282,11 +288,11 @@ export default function HomePage() {
           {(courses.data ?? []).map((course) => {
             const Icon = iconFor(course.icon);
             return (
-              <Link key={course.id} href={`/courses/${course.slug}`} className="group">
-                <Card className="h-full card-interactive transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-card-hover">
+              <Link key={course.id} href={`/courses/${course.slug}`} className="group block h-full">
+                <TiltCard maxAngle={3} glare className="h-full surface-3d shadow-3d-card hover:shadow-3d-hover transition-all duration-300">
                   <CardBody className="flex h-full flex-col p-6">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="flex size-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo group-hover:bg-indigo group-hover:text-white transition-all duration-200">
+                      <span className="flex size-11 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200">
                         <Icon className="size-5" aria-hidden />
                       </span>
                       <Badge tone="neutral">{course.difficulty}</Badge>
@@ -306,13 +312,13 @@ export default function HomePage() {
                       <span>{course.stage}</span>
                     </div>
                   </CardBody>
-                </Card>
+                </TiltCard>
               </Link>
             );
           })}
           {courses.initialLoading &&
             Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="h-[200px] animate-pulse bg-white/60" />
+              <Card key={index} className="h-[200px] animate-pulse bg-white/60 dark:bg-slate-800/60" />
             ))}
         </div>
       </SectionReveal>
@@ -323,10 +329,10 @@ export default function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="max-w-[680px]">
               <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
                   <BookOpen className="size-4" />
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                   Digital Library
                 </span>
               </div>
@@ -334,7 +340,7 @@ export default function HomePage() {
                 Explore Winners Creek eBooks
               </h2>
               <p className="mt-2 text-base sm:text-lg leading-relaxed text-ink-2">
-                Discover curated handbooks, placement playbooks, and technical references published by our community.
+                Discover curated handbooks, career playbooks, and professional references published by our community.
               </p>
             </div>
             <Button asChild variant="secondary" size="sm" className="font-medium">
@@ -348,8 +354,8 @@ export default function HomePage() {
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {(ebooks.data ?? []).map((book: any) => (
               <Link key={book.id} href={`/ebooks/${book.id}`} className="group">
-                <Card className="h-full card-interactive flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-card-hover">
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                <Card elevated className="h-full surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover flex flex-col overflow-hidden transition-all duration-300">
+                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
                     {book.coverUrl ? (
                       <img
                         src={book.coverUrl}
@@ -357,9 +363,9 @@ export default function HomePage() {
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center p-6 text-center text-white">
-                        <BookOpen className="size-10 text-indigo-400 mb-2" />
-                        <span className="text-xs font-semibold uppercase tracking-wider text-indigo-300">
+                      <div className="flex flex-col items-center justify-center p-6 text-center text-slate-800 dark:text-white">
+                        <BookOpen className="size-10 text-indigo-500 dark:text-indigo-400 mb-2" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
                           {book.category}
                         </span>
                         <p className="mt-2 text-sm font-bold line-clamp-3">{book.title}</p>
@@ -379,7 +385,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <CardBody className="flex flex-1 flex-col p-4">
-                    <span className="text-2xs font-bold uppercase tracking-wider text-indigo-600">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                       {book.category}
                     </span>
                     <h3 className="mt-1 text-sm font-bold text-ink-1 line-clamp-2 group-hover:text-indigo-600 transition-colors">
@@ -402,7 +408,7 @@ export default function HomePage() {
             ))}
             {ebooks.initialLoading &&
               Array.from({ length: 4 }).map((_, index) => (
-                <Card key={index} className="h-[320px] animate-pulse bg-white/60" />
+                <Card key={index} className="h-[320px] animate-pulse bg-white/60 dark:bg-slate-800/60" />
               ))}
           </div>
         </SectionReveal>
@@ -421,7 +427,7 @@ export default function HomePage() {
         </div>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {(trainers.data ?? []).slice(0, 8).map((trainer) => (
-            <Card key={trainer.id} className="card-interactive group transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-card-hover">
+            <Card elevated key={trainer.id} className="surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover group transition-all duration-300">
               <CardBody className="p-5">
                 <Avatar name={trainer.name} color={trainer.avatarColor} size={44} />
                 <h3 className="mt-3.5 text-base font-semibold text-ink-1 group-hover:text-indigo-600 transition-colors">{trainer.name}</h3>

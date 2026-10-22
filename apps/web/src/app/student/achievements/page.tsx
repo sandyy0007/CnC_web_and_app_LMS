@@ -121,65 +121,6 @@ export default function AchievementsPage() {
               );
             })}
           </div>
-
-          <h2 className="mb-3 mt-8 text-md font-semibold">Certificates</h2>
-          {data.certificates.length === 0 ? (
-            <Card>
-              <CardBody className="py-8 text-center text-base text-ink-2">
-                No certificate record has been opened for you yet.
-              </CardBody>
-            </Card>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {data.certificates.map((certificate: any) => (
-                <Card key={certificate.id}>
-                  <CardHeader>
-                    <div>
-                      <CardTitle>{certificate.templateName}</CardTitle>
-                      <CardSubtitle>
-                        {certificate.batchName}
-                        {certificate.issuedAt ? ` · issued ${formatDate(certificate.issuedAt)}` : ''}
-                      </CardSubtitle>
-                    </div>
-                    <StatusBadge status={certificate.status} />
-                  </CardHeader>
-                  <CardBody>
-                    <dl className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <dt className="text-xs text-ink-3">Attendance</dt>
-                        <dd className="tnum text-md font-semibold">
-                          {pct(certificate.attendancePct, 1)}
-                          <span className="ml-1 text-xs font-normal text-ink-3">
-                            (needs {pct(certificate.criteria?.minAttendance, 0)})
-                          </span>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">Average score</dt>
-                        <dd className="tnum text-md font-semibold">
-                          {num(certificate.avgScore, 1)}
-                          <span className="ml-1 text-xs font-normal text-ink-3">
-                            (needs {num(certificate.criteria?.minAvgScore, 0)})
-                          </span>
-                        </dd>
-                      </div>
-                    </dl>
-                    {certificate.reason && (
-                      <p className="mt-3.5 flex items-start gap-2 rounded-[10px] bg-amber-50 px-3.5 py-2.5 text-sm text-amber-dark">
-                        <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                        {certificate.reason}
-                      </p>
-                    )}
-                    {certificate.certificateNo && (
-                      <p className="mt-3 text-xs text-ink-3">
-                        Certificate no. {certificate.certificateNo}
-                      </p>
-                    )}
-                  </CardBody>
-                </Card>
-              ))}
-            </div>
-          )}
         </>
       )}
     </AsyncSection>

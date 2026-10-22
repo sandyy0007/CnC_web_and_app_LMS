@@ -17,6 +17,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.authz.audit import write_audit
 from app.authz.context import ScopeContext
+from app.core.config import settings
 from app.core.errors import Conflict, ScopeForbidden, ValidationError
 from app.db.mongo import get_db, serialize
 
@@ -50,6 +51,17 @@ class Page:
 
 def escape_regex(value: str) -> str:
     return re.escape(value.strip())
+
+
+def _clean_doc(val: Any) -> Any:
+    import uuid
+    if isinstance(val, uuid.UUID):
+        return str(val)
+    if isinstance(val, dict):
+        return {k: _clean_doc(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_clean_doc(v) for v in val]
+    return val
 
 
 class ScopedRepository:
@@ -102,7 +114,7 @@ class ScopedRepository:
         merged = {**base, **(extra or {})}
         if self.soft_delete:
             merged.setdefault("deletedAt", None)
-        return merged
+        return _clean_doc(merged)
 
     def _sort(self, sort_by: str | None, sort_dir: str | None) -> list[tuple[str, int]]:
         if sort_by:
@@ -173,14 +185,104 @@ class ScopedRepository:
         self, resource_id: Any, *, projection: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Scope check 5. Out-of-scope is indistinguishable from non-existent."""
+        res_str = str(resource_id)
+        if settings.USE_POSTGRES:
+            from app.db.postgres import get_pg_connection
+            import uuid
+            is_uuid = False
+            try:
+                u_id = uuid.UUID(res_str)
+                is_uuid = True
+            except (ValueError, TypeError):
+                is_uuid = False
+
+            if is_uuid:
+                async with get_pg_connection() as conn:
+                    if self.collection == "departments":
+                        row = await conn.fetchrow(
+                            "SELECT id, name, code, institution_id FROM departments WHERE id = $1 AND deleted_at IS NULL",
+                            u_id,
+                        )
+                        if row:
+                            return {
+                                "_id": str(row["id"]),
+                                "id": str(row["id"]),
+                                "name": row["name"],
+                                "code": row["code"],
+                                "collegeId": str(row["institution_id"]),
+                            }
+                    elif self.collection == "batches":
+                        row = await conn.fetchrow(
+                            "SELECT id, name, code, capacity, institution_id, department_id, semester, academic_year, status FROM batches WHERE id = $1 AND deleted_at IS NULL",
+                            u_id,
+                        )
+                        if row:
+                            return {
+                                "_id": str(row["id"]),
+                                "id": str(row["id"]),
+                                "name": row["name"],
+                                "code": row["code"],
+                                "capacity": row["capacity"],
+                                "collegeId": str(row["institution_id"]),
+                                "departmentId": str(row["department_id"]),
+                                "semester": row["semester"],
+                                "academicYear": row["academic_year"],
+                                "status": row["status"],
+                            }
+                    elif self.collection in ("colleges", "institutions"):
+                        row = await conn.fetchrow(
+                            "SELECT id, name, code FROM institutions WHERE id = $1 AND deleted_at IS NULL",
+                            u_id,
+                        )
+                        if row:
+                            return {
+                                "_id": str(row["id"]),
+                                "id": str(row["id"]),
+                                "name": row["name"],
+                                "code": row["code"],
+                            }
+                    elif self.collection == "users":
+                        row = await conn.fetchrow(
+                            "SELECT id, email, name, role, institution_id, department_id, phone, status FROM users WHERE id = $1 AND deleted_at IS NULL",
+                            u_id,
+                        )
+                        if row:
+                            return {
+                                "_id": str(row["id"]),
+                                "id": str(row["id"]),
+                                "email": row["email"],
+                                "name": row["name"],
+                                "role": row["role"],
+                                "collegeId": str(row["institution_id"]) if row["institution_id"] else None,
+                                "departmentId": str(row["department_id"]) if row["department_id"] else None,
+                                "status": row["status"],
+                            }
+
+        # Fallback to Mongo/Mock collection
         try:
-            oid = ObjectId(str(resource_id))
-        except Exception as exc:
-            raise ValidationError("Not a valid identifier") from exc
-        doc = await self.col.find_one(self.scope_filter({"_id": oid}), projection)
-        if not doc:
-            raise ScopeForbidden()
-        return doc
+            oid = ObjectId(res_str)
+            doc = await self.col.find_one(self.scope_filter({"_id": oid}), projection)
+            if doc:
+                return doc
+        except Exception:
+            pass
+
+        # Try string _id or id
+        try:
+            doc = await self.col.find_one(self.scope_filter({"$or": [{"_id": res_str}, {"id": res_str}]}), projection)
+            if doc:
+                return doc
+        except Exception:
+            pass
+
+        if not ObjectId.is_valid(res_str):
+            try:
+                import uuid
+                uuid.UUID(res_str)
+            except Exception as exc:
+                raise ValidationError("Not a valid identifier") from exc
+
+        raise ScopeForbidden()
 
     async def count(self, filters: dict[str, Any] | None = None) -> int:
         return await self.col.count_documents(self.scope_filter(filters))
@@ -203,7 +305,7 @@ class ScopedRepository:
         audit_entity: str | None = None,
         conflict_message: str | None = None,
     ) -> dict[str, Any]:
-        doc = {**self.ctx.stamp(), **data}
+        doc = _clean_doc({**self.ctx.stamp(), **data})
         # `setdefault`, not an override: some documents (e.g. assessment version snapshots)
         # carry a meaningful `version` of their own.
         doc.setdefault("deletedAt", None)
@@ -237,7 +339,7 @@ class ScopedRepository:
         if expected_version is not None and before.get("version", 1) != expected_version:
             # Optimistic locking: the second writer is told, not silently overwritten (SRS §9).
             raise Conflict("This record was changed by someone else — reload and try again")
-        update: dict[str, Any] = {"$set": {**patch, **self.ctx.touch()}, "$inc": {"version": 1}}
+        update: dict[str, Any] = {"$set": _clean_doc({**patch, **self.ctx.touch()}), "$inc": {"version": 1}}
         if unset:
             update["$unset"] = {field: "" for field in unset}
         await self.col.update_one({"_id": before["_id"]}, update)
@@ -260,13 +362,13 @@ class ScopedRepository:
         await self.col.update_one(
             {"_id": before["_id"]},
             {
-                "$set": {
+                "$set": _clean_doc({
                     "deletedAt": utcnow(),
                     "deletedBy": self.ctx.user_id,
                     "deleteReason": reason,
                     "status": "archived",
                     **self.ctx.touch(),
-                },
+                }),
                 "$inc": {"version": 1},
             },
         )

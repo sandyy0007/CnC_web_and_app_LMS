@@ -154,13 +154,20 @@ tests and a quick look around, but be aware:
 
 ## Demo accounts
 
+All demo accounts use the password **`Eedi@2026`**.
 
+| Role | Sign in with | Lands on |
+|---|---|---|
+| Student | `alex.johnson@eedi.com` | `/student/dashboard` |
+| Trainer | `r.bose@abcengg.edu` | `/trainer/dashboard` |
+| HOD | `priya.kulkarni@abcengg.edu` | `/hod/dashboard` |
+| Institution admin | `rishabh.kumawat@abcengg.edu` | `/admin/dashboard` |
+| Super admin | `superadmin@eedilms.app` | `/super-admin` |
 
 A second HOD (`priya.kumawat@abcengg.edu`, AI/Data Science) and a second trainer
 (`aids.trainer1@abcengg.edu`) exist specifically so cross-department isolation can be tried by hand.
 
 Login accepts an email address **or** an institution ID, so `CSE21B101` works for Alex Johnson too.
-
 With `EMAIL_PROVIDER=console`, verification codes and reset links are printed to the API log. In
 development (`ALLOW_DEV_ENDPOINTS=true`) `GET /api/v1/auth/dev/otp/{email}` returns the latest code;
 that endpoint is refused whenever dev endpoints are disabled, and always in production.
@@ -369,6 +376,5 @@ Parent exist in the authentication and authorization model now — their routes 
 role is enforced server-side, their scope rules are written — and each has a portal page that states
 plainly what it will do and what data that role will be able to see, rather than showing a mock
 dashboard. Building those screens is Phase 2.
-#   C n C _ w e b _ a n d _ a p p _ L M S 
- 
- 
+# CnC_web_and_app_LMS
+

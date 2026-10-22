@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, ArrowLeft, GraduationCap, Save, UserPlus } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calendar, Edit3, GraduationCap, Save, Trash2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import * as React from 'react';
@@ -36,7 +36,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useApi } from '@/hooks/useApi';
 import { ApiError, api } from '@/lib/api';
-import { num, pct } from '@/lib/format';
+import { cn } from '@/lib/cn';
+import { formatDate, num, pct } from '@/lib/format';
+
+const WEEKDAY_NAMES = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
  * Admin batch management: capacity, the roster, and who teaches it. Assignments are refused
@@ -60,6 +63,7 @@ export default function AdminBatchDetailPage() {
     select: (raw) => ({ items: raw.items }),
   });
   const modules = useApi<any[]>('/admin/training-modules');
+  const assignedTrainers = useApi<any[]>(`/admin/batches/${params.batchId}/trainers`);
 
   const [selectedStudents, setSelectedStudents] = React.useState<string[]>([]);
   const [selectedTrainers, setSelectedTrainers] = React.useState<string[]>([]);
@@ -68,6 +72,14 @@ export default function AdminBatchDetailPage() {
   const [pending, setPending] = React.useState(false);
   const [rejected, setRejected] = React.useState<any[]>([]);
   const [editing, setEditing] = React.useState(false);
+
+  // Trainer Assignment Schedule Form State
+  const [assignStartDate, setAssignStartDate] = React.useState('');
+  const [assignEndDate, setAssignEndDate] = React.useState('');
+  const [assignWeekdays, setAssignWeekdays] = React.useState<number[]>([1, 2, 3, 4, 5]);
+  const [assignNotes, setAssignNotes] = React.useState('');
+  const [editingSchedule, setEditingSchedule] = React.useState<any>(null);
+  const [unassigningId, setUnassigningId] = React.useState<string | null>(null);
 
   async function assignStudents() {
     setPending(true);
@@ -100,17 +112,42 @@ export default function AdminBatchDetailPage() {
       const response = await api.post(`/admin/batches/${params.batchId}/trainers`, {
         trainerUserIds: selectedTrainers,
         trainingModuleId: moduleId || undefined,
+        startDate: assignStartDate || undefined,
+        endDate: assignEndDate || undefined,
+        weekdays: assignWeekdays.length > 0 ? assignWeekdays : [1, 2, 3, 4, 5, 6, 7],
+        status: 'ACTIVE',
+        notes: assignNotes || undefined,
+        scheduleReference: assignNotes || undefined,
       });
       toast.success(
-        `${response.data.assigned.length} trainer(s) assigned — their live sessions were invalidated so the new scope takes effect`,
+        `${response.data.assigned.length} trainer(s) assigned with configured schedule`,
       );
       setRejected(response.data.rejected ?? []);
       setSelectedTrainers([]);
+      setAssignNotes('');
       batches.refetch();
+      assignedTrainers.refetch();
     } catch (caught) {
       toast.error((caught as ApiError).message);
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleUnassign(trainerUserId: string, trainerName: string) {
+    if (!window.confirm(`Are you sure you want to unassign ${trainerName} from this batch? Active sessions will be revoked.`)) {
+      return;
+    }
+    setUnassigningId(trainerUserId);
+    try {
+      await api.delete(`/admin/batches/${params.batchId}/trainers/${trainerUserId}`);
+      toast.success(`${trainerName} unassigned from batch`);
+      assignedTrainers.refetch();
+      batches.refetch();
+    } catch (caught) {
+      toast.error((caught as ApiError).message);
+    } finally {
+      setUnassigningId(null);
     }
   }
 
@@ -302,13 +339,104 @@ export default function AdminBatchDetailPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="trainers">
+              <TabsContent value="trainers" className="space-y-6">
+                {/* Currently Assigned Trainers Card */}
                 <Card>
                   <CardHeader>
                     <div>
-                      <CardTitle>Assign trainers</CardTitle>
+                      <CardTitle>Currently assigned trainers ({assignedTrainers.data?.length ?? 0})</CardTitle>
                       <CardSubtitle>
-                        Assigning re-scopes the trainer and ends their live sessions
+                        Trainers authorized to conduct classes, mark attendance, and evaluate this batch
+                      </CardSubtitle>
+                    </div>
+                    <Badge tone={assignedTrainers.data?.length ? 'success' : 'amber'}>
+                      {assignedTrainers.data?.length ? `${assignedTrainers.data.length} Active` : 'Unassigned'}
+                    </Badge>
+                  </CardHeader>
+                  <CardBody>
+                    {assignedTrainers.loading ? (
+                      <p className="py-6 text-center text-sm text-ink-3">Loading assigned trainers...</p>
+                    ) : !assignedTrainers.data || assignedTrainers.data.length === 0 ? (
+                      <div className="rounded-[10px] border border-dashed border-line p-8 text-center">
+                        <GraduationCap className="mx-auto size-8 text-ink-3" aria-hidden />
+                        <p className="mt-2 text-base font-semibold text-ink-1">No trainers assigned yet</p>
+                        <p className="mt-1 text-sm text-ink-2">
+                          Use the form below to assign trainers and configure their schedule for this batch.
+                        </p>
+                      </div>
+                    ) : (
+                      <ul className="divide-y divide-line-soft rounded-[10px] border border-line">
+                        {assignedTrainers.data.map((item: any) => (
+                          <li key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base font-semibold text-ink-1">{item.trainerName}</span>
+                                <StatusBadge status={item.status} />
+                                {item.designation && (
+                                  <span className="text-xs text-ink-3">· {item.designation}</span>
+                                )}
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
+                                <span>{item.trainerEmail}</span>
+                                {item.departmentName && <span>Dept: {item.departmentName}</span>}
+                                {(item.startDate || item.endDate) && (
+                                  <span className="flex items-center gap-1 font-medium text-ink-1">
+                                    <Calendar className="size-3 text-ink-3" aria-hidden />
+                                    {item.startDate ? formatDate(item.startDate) : 'Start'} – {item.endDate ? formatDate(item.endDate) : 'Ongoing'}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-medium text-ink-3">Days:</span>
+                                {(item.weekdays || []).map((w: number) => (
+                                  <span
+                                    key={w}
+                                    className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-xs font-semibold text-indigo-400"
+                                  >
+                                    {WEEKDAY_NAMES[w] || `Day ${w}`}
+                                  </span>
+                                ))}
+                                {item.notes && (
+                                  <span className="ml-2 rounded bg-panel-2 px-2 py-0.5 text-xs italic text-ink-2">
+                                    &ldquo;{item.notes}&rdquo;
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 sm:self-center">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setEditingSchedule(item)}
+                              >
+                                <Edit3 className="size-3.5" aria-hidden />
+                                Edit schedule
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                loading={unassigningId === item.trainerUserId}
+                                onClick={() => handleUnassign(item.trainerUserId, item.trainerName)}
+                                className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                              >
+                                <Trash2 className="size-3.5" aria-hidden />
+                                Unassign
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardBody>
+                </Card>
+
+                {/* Assign New Trainers Card */}
+                <Card>
+                  <CardHeader>
+                    <div>
+                      <CardTitle>Assign trainers & schedule</CardTitle>
+                      <CardSubtitle>
+                        Configure effective dates, weekdays, and schedule reference
                       </CardSubtitle>
                     </div>
                     <Button
@@ -318,10 +446,103 @@ export default function AdminBatchDetailPage() {
                       disabled={selectedTrainers.length === 0}
                       onClick={assignTrainers}
                     >
-                      Assign {selectedTrainers.length || ''}
+                      Assign {selectedTrainers.length || ''} trainer(s)
                     </Button>
                   </CardHeader>
-                  <CardBody>
+                  <CardBody className="space-y-4">
+                    {/* Schedule Configuration Controls */}
+                    <div className="space-y-4 rounded-lg border border-line bg-panel-1 p-4">
+                      <h4 className="text-sm font-semibold text-ink-1">Schedule & validity window</h4>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Field label="Effective start date" htmlFor="new-start">
+                          <Input
+                            id="new-start"
+                            type="date"
+                            value={assignStartDate}
+                            onChange={(e) => setAssignStartDate(e.target.value)}
+                          />
+                        </Field>
+                        <Field label="Effective end date" htmlFor="new-end">
+                          <Input
+                            id="new-end"
+                            type="date"
+                            value={assignEndDate}
+                            onChange={(e) => setAssignEndDate(e.target.value)}
+                          />
+                        </Field>
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-ink-1">
+                          Applicable weekdays
+                        </label>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {[
+                            { day: 1, label: 'Mon' },
+                            { day: 2, label: 'Tue' },
+                            { day: 3, label: 'Wed' },
+                            { day: 4, label: 'Thu' },
+                            { day: 5, label: 'Fri' },
+                            { day: 6, label: 'Sat' },
+                            { day: 7, label: 'Sun' },
+                          ].map(({ day, label }) => {
+                            const active = assignWeekdays.includes(day);
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() =>
+                                  setAssignWeekdays((curr) =>
+                                    curr.includes(day)
+                                      ? curr.filter((d) => d !== day)
+                                      : [...curr, day].sort()
+                                  )
+                                }
+                                className={cn(
+                                  'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors border',
+                                  active
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                    : 'bg-panel text-ink-2 border-line hover:border-line-soft'
+                                )}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                          <div className="ml-2 flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="text-xs text-indigo-400 hover:underline"
+                              onClick={() => setAssignWeekdays([1, 2, 3, 4, 5])}
+                            >
+                              Mon–Fri
+                            </button>
+                            <span className="text-xs text-ink-3">·</span>
+                            <button
+                              type="button"
+                              className="text-xs text-indigo-400 hover:underline"
+                              onClick={() => setAssignWeekdays([1, 2, 3, 4, 5, 6, 7])}
+                            >
+                              All Days
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Field
+                        label="Schedule notes / session reference"
+                        htmlFor="new-notes"
+                        hint="e.g. Morning Theory 09:00 - 11:00 AM, Lab 204"
+                      >
+                        <Input
+                          id="new-notes"
+                          value={assignNotes}
+                          onChange={(e) => setAssignNotes(e.target.value)}
+                          placeholder="e.g. Mon/Wed/Fri Slot A"
+                        />
+                      </Field>
+                    </div>
+
                     <div className="max-w-[280px]">
                       <label htmlFor="module" className="mb-1.5 block text-sm font-semibold">
                         Module (optional)
@@ -340,35 +561,56 @@ export default function AdminBatchDetailPage() {
                       </Select>
                     </div>
 
-                    <ul className="scroll-thin mt-4 max-h-[340px] divide-y divide-line-soft overflow-y-auto rounded-[10px] border border-line">
-                      {(trainers.data?.items ?? []).map((trainer: any) => (
-                        <li key={trainer.id} className="flex items-center gap-3 px-3.5 py-2.5">
-                          <Checkbox
-                            aria-label={`Select ${trainer.name}`}
-                            checked={selectedTrainers.includes(trainer.id)}
-                            onCheckedChange={(value) =>
-                              setSelectedTrainers((current) =>
-                                value
-                                  ? [...current, trainer.id]
-                                  : current.filter((id) => id !== trainer.id),
-                              )
-                            }
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-base font-semibold">{trainer.name}</span>
-                            <span className="block text-xs text-ink-3">
-                              {trainer.departmentName} · {trainer.designation ?? ''}
+                    <label className="mb-1 block text-sm font-semibold text-ink-1">
+                      Select trainer(s) to assign
+                    </label>
+                    <ul className="scroll-thin max-h-[300px] divide-y divide-line-soft overflow-y-auto rounded-[10px] border border-line">
+                      {(trainers.data?.items ?? []).map((trainer: any) => {
+                        const isAssigned = (assignedTrainers.data ?? []).some(
+                          (at: any) => at.trainerUserId === trainer.id
+                        );
+                        return (
+                          <li
+                            key={trainer.id}
+                            className={cn(
+                              'flex items-center gap-3 px-3.5 py-2.5 transition-colors',
+                              isAssigned ? 'bg-panel-1/50 opacity-75' : ''
+                            )}
+                          >
+                            <Checkbox
+                              aria-label={`Select ${trainer.name}`}
+                              checked={selectedTrainers.includes(trainer.id)}
+                              onCheckedChange={(value) =>
+                                setSelectedTrainers((current) =>
+                                  value
+                                    ? [...current, trainer.id]
+                                    : current.filter((id) => id !== trainer.id)
+                                )
+                              }
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-center gap-2">
+                                <span className="block text-base font-semibold">{trainer.name}</span>
+                                {isAssigned && (
+                                  <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-400">
+                                    Already Assigned
+                                  </span>
+                                )}
+                              </span>
+                              <span className="block text-xs text-ink-3">
+                                {trainer.departmentName} · {trainer.designation ?? ''} · {trainer.email}
+                              </span>
                             </span>
-                          </span>
-                          <span className="flex flex-wrap gap-1">
-                            {(trainer.modules ?? []).map((module: string) => (
-                              <Badge key={module} tone="indigo">
-                                {module}
-                              </Badge>
-                            ))}
-                          </span>
-                        </li>
-                      ))}
+                            <span className="flex flex-wrap gap-1">
+                              {(trainer.modules ?? []).map((module: string) => (
+                                <Badge key={module} tone="indigo">
+                                  {module}
+                                </Badge>
+                              ))}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </CardBody>
                 </Card>
@@ -380,6 +622,17 @@ export default function AdminBatchDetailPage() {
               open={editing}
               onOpenChange={setEditing}
               onDone={batches.refetch}
+            />
+
+            <EditScheduleDialog
+              batch={batch}
+              assignment={editingSchedule}
+              open={Boolean(editingSchedule)}
+              onOpenChange={(open) => !open && setEditingSchedule(null)}
+              onDone={() => {
+                assignedTrainers.refetch();
+                batches.refetch();
+              }}
             />
           </>
         )
@@ -488,3 +741,176 @@ function EditBatchDialog({
     </Dialog>
   );
 }
+
+function EditScheduleDialog({
+  batch,
+  assignment,
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  batch: any;
+  assignment: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDone: () => void;
+}) {
+  const [startDate, setStartDate] = React.useState(assignment?.startDate ?? '');
+  const [endDate, setEndDate] = React.useState(assignment?.endDate ?? '');
+  const [weekdays, setWeekdays] = React.useState<number[]>(assignment?.weekdays ?? [1, 2, 3, 4, 5]);
+  const [status, setStatus] = React.useState(assignment?.status ?? 'ACTIVE');
+  const [notes, setNotes] = React.useState(assignment?.notes ?? '');
+  const [pending, setPending] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open || !assignment) return;
+    setStartDate(assignment.startDate ?? '');
+    setEndDate(assignment.endDate ?? '');
+    setWeekdays(assignment.weekdays ?? [1, 2, 3, 4, 5]);
+    setStatus(assignment.status ?? 'ACTIVE');
+    setNotes(assignment.notes ?? '');
+  }, [open, assignment]);
+
+  function toggleWeekday(day: number) {
+    setWeekdays((current) =>
+      current.includes(day) ? current.filter((d) => d !== day) : [...current, day].sort()
+    );
+  }
+
+  async function submit() {
+    setPending(true);
+    try {
+      await api.patch(`/admin/batches/${batch.id}/trainers/${assignment.trainerUserId}`, {
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        weekdays: weekdays.length > 0 ? weekdays : [1, 2, 3, 4, 5, 6, 7],
+        status,
+        notes,
+        scheduleReference: notes,
+      });
+      toast.success('Trainer schedule updated');
+      onOpenChange(false);
+      onDone();
+    } catch (caught) {
+      toast.error((caught as ApiError).message);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Schedule: {assignment?.trainerName}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Start date" htmlFor="sched-start">
+              <Input
+                id="sched-start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </Field>
+            <Field label="End date" htmlFor="sched-end">
+              <Input
+                id="sched-end"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ink-1">
+              Applicable weekdays
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { day: 1, label: 'Mon' },
+                { day: 2, label: 'Tue' },
+                { day: 3, label: 'Wed' },
+                { day: 4, label: 'Thu' },
+                { day: 5, label: 'Fri' },
+                { day: 6, label: 'Sat' },
+                { day: 7, label: 'Sun' },
+              ].map(({ day, label }) => {
+                const active = weekdays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleWeekday(day)}
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors border',
+                      active
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-panel text-ink-2 border-line hover:border-line-soft'
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                className="text-xs text-indigo-400 hover:underline"
+                onClick={() => setWeekdays([1, 2, 3, 4, 5])}
+              >
+                Mon–Fri
+              </button>
+              <span className="text-xs text-ink-3">·</span>
+              <button
+                type="button"
+                className="text-xs text-indigo-400 hover:underline"
+                onClick={() => setWeekdays([1, 2, 3, 4, 5, 6, 7])}
+              >
+                All Days
+              </button>
+            </div>
+          </div>
+
+          <Field label="Assignment status" htmlFor="sched-status">
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="sched-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                <SelectItem value="SUSPENDED">SUSPENDED</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field
+            label="Schedule notes / session reference"
+            htmlFor="sched-notes"
+            hint="e.g. Morning Theory 09:00 - 11:00 AM, Lab 204"
+          >
+            <Input
+              id="sched-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Mon/Wed/Fri Slot A"
+            />
+          </Field>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={pending} onClick={submit}>
+            Save schedule
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

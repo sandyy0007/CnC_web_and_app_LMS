@@ -10,12 +10,12 @@ export default function ParentPortal() {
       purpose="A read-only view of one linked participant's training progress, so a guardian conversation can be based on the same facts the trainer sees."
       planned={[
         'Attendance and readiness trend for the linked participant',
-        'Certificate eligibility and what is still missing',
+        'Performance breakdown across employability parameters',
         'Notices from the programme office and the participant’s trainers',
       ]}
       dataAccess={[
         'Only the participant(s) explicitly linked to your account — the link is checked on every request',
-        'Progress, attendance and certificate state; read-only throughout',
+        'Progress and attendance records; read-only throughout',
         'Never other participants, and never a participant’s practice recordings',
       ]}
     />

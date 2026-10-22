@@ -15,6 +15,7 @@ import time
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import UUID
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
@@ -199,6 +200,73 @@ async def dashboard(ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
 
 @router.get("/batches")
 async def batches(ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        trainer_uuid = UUID(str(ctx.user_id))
+        async with get_pg_connection() as conn:
+            inst_uuid = None
+            if ctx.college_id:
+                try:
+                    inst_uuid = UUID(str(ctx.college_id))
+                except Exception:
+                    pass
+            if not inst_uuid:
+                inst_uuid = await conn.fetchval(
+                    "SELECT institution_id FROM users WHERE id = $1", trainer_uuid
+                )
+
+            query = """
+                SELECT 
+                    b.id, b.name, b.code, b.status, b.semester, b.academic_year, b.department_id, d.name as department_name,
+                    (SELECT COUNT(*) FROM student_profiles sp WHERE sp.batch_id = b.id) as student_count,
+                    COALESCE((
+                        SELECT ROUND(AVG(CASE WHEN ar.status = 'PRESENT' THEN 100.0 ELSE 0.0 END)::numeric, 1)
+                        FROM training_sessions ts
+                        JOIN attendance_records ar ON ar.session_id = ts.id
+                        WHERE ts.batch_id = b.id
+                    ), 0.0) as attendance_percent,
+                    (
+                        SELECT ROUND(AVG(ev.eedi_score)::numeric, 1)
+                        FROM enrollments e
+                        JOIN eedi_evaluations ev ON ev.participant_user_id = e.participant_user_id AND ev.course_id = e.course_id
+                        WHERE e.batch_id = b.id AND ev.status = 'COMPLETED'
+                    ) as avg_score
+                FROM batches b
+                JOIN batch_trainers bt ON bt.batch_id = b.id
+                LEFT JOIN departments d ON d.id = b.department_id
+                WHERE bt.trainer_user_id = $1
+                  AND ($2::uuid IS NULL OR b.institution_id = $2)
+                  AND (bt.status IS NULL OR bt.status = 'ACTIVE')
+                  AND (bt.start_date IS NULL OR bt.start_date <= CURRENT_DATE)
+                  AND (bt.end_date IS NULL OR bt.end_date >= CURRENT_DATE)
+                  AND b.status = 'ACTIVE'
+                  AND b.deleted_at IS NULL
+                ORDER BY b.name ASC
+            """
+            rows = await conn.fetch(query, trainer_uuid, inst_uuid)
+            return {
+                "success": True,
+                "data": [
+                    {
+                        "id": str(r["id"]),
+                        "name": r["name"],
+                        "code": r["code"],
+                        "status": str(r["status"]).lower(),
+                        "semester": r["semester"],
+                        "semesterNumber": r["semester"],
+                        "academicYear": r["academic_year"],
+                        "departmentId": str(r["department_id"]) if r["department_id"] else None,
+                        "departmentName": r["department_name"],
+                        "studentCount": int(r["student_count"] or 0),
+                        "participantCount": int(r["student_count"] or 0),
+                        "attendancePercent": float(r["attendance_percent"] or 0.0),
+                        "averageScore": float(r["avg_score"]) if r["avg_score"] is not None else None,
+                    }
+                    for r in rows
+                ]
+            }
+
     rows = await BatchRepo(ctx).find_all(limit=100)
     if not rows:
         return {"success": True, "data": []}
@@ -232,6 +300,96 @@ async def batch_students(
     ctx: ScopeContext = TrainerCtx,
 ) -> dict[str, Any]:
     resolved = await require_trainer_batch_scope(ctx, batch_id)
+    if settings.USE_POSTGRES and len(str(resolved)) == 36:
+        from uuid import UUID
+        from app.db.postgres import get_pg_connection
+        b_uuid = UUID(str(resolved))
+        async with get_pg_connection() as conn:
+            search_str = search if isinstance(search, str) and search.strip() else None
+            search_clause = ""
+            params: list[Any] = [b_uuid]
+            if search_str:
+                params.append(f"%{search_str}%")
+                search_clause = " AND (u.name ILIKE $2 OR sp.roll_number ILIKE $2 OR u.email ILIKE $2)"
+
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM users u
+                JOIN student_profiles sp ON sp.user_id = u.id
+                WHERE sp.batch_id = $1 AND u.deleted_at IS NULL{search_clause}
+            """
+            total = await conn.fetchval(count_query, *params)
+
+            page_num = page if isinstance(page, int) else int(getattr(page, "default", 1) or 1)
+            size_num = pageSize if isinstance(pageSize, int) else int(getattr(pageSize, "default", 25) or 25)
+            offset = (page_num - 1) * size_num
+            query = f"""
+                SELECT 
+                    u.id as user_id, u.name, u.email, sp.roll_number, sp.batch_id, sp.avatar_url,
+                    COALESCE((
+                        SELECT COUNT(*) FROM attendance_records ar
+                        JOIN training_sessions ts ON ts.id = ar.session_id
+                        WHERE ar.participant_user_id = u.id AND ts.batch_id = $1
+                    ), 0) as sessions_total,
+                    COALESCE((
+                        SELECT COUNT(*) FROM attendance_records ar
+                        JOIN training_sessions ts ON ts.id = ar.session_id
+                        WHERE ar.participant_user_id = u.id AND ts.batch_id = $1 AND ar.status = 'PRESENT'
+                    ), 0) as sessions_attended,
+                    COALESCE((
+                        SELECT ROUND(AVG(CASE WHEN ar.status = 'PRESENT' THEN 100.0 ELSE 0.0 END)::numeric, 1)
+                        FROM attendance_records ar
+                        JOIN training_sessions ts ON ts.id = ar.session_id
+                        WHERE ar.participant_user_id = u.id AND ts.batch_id = $1
+                    ), 0.0) as attendance_percent,
+                    (
+                        SELECT ROUND(ev.eedi_score::numeric, 1)
+                        FROM enrollments e
+                        JOIN eedi_evaluations ev ON ev.participant_user_id = e.participant_user_id AND ev.course_id = e.course_id
+                        WHERE e.participant_user_id = u.id AND e.batch_id = $1 AND ev.status = 'COMPLETED'
+                        ORDER BY ev.updated_at DESC LIMIT 1
+                    ) as readiness_score
+                FROM users u
+                JOIN student_profiles sp ON sp.user_id = u.id
+                WHERE sp.batch_id = $1 AND u.deleted_at IS NULL{search_clause}
+                ORDER BY u.name ASC
+                LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+            """
+            fetch_params = list(params) + [size_num, offset]
+            rows = await conn.fetch(query, *fetch_params)
+
+            items = []
+            for r in rows:
+                items.append({
+                    "id": str(r["user_id"]),
+                    "userId": str(r["user_id"]),
+                    "name": r["name"],
+                    "email": r["email"],
+                    "rollNumber": r["roll_number"] or "N/A",
+                    "batchId": str(r["batch_id"]),
+                    "avatarUrl": r["avatar_url"],
+                    "sessionsAttended": int(r["sessions_attended"]),
+                    "sessionsTotal": int(r["sessions_total"]),
+                    "attendancePercent": float(r["attendance_percent"]),
+                    "readinessScore": float(r["readiness_score"]) if r["readiness_score"] is not None else None,
+                    "focusPillar": None,
+                })
+
+            pages = (total + size_num - 1) // size_num if total else 0
+            return {
+                "success": True,
+                "items": items,
+                "pagination": {
+                    "total": total,
+                    "page": page_num,
+                    "pageSize": size_num,
+                    "pages": pages,
+                    "totalPages": pages,
+                    "hasNext": page_num < pages,
+                    "hasPrev": page_num > 1,
+                }
+            }
+
     page_result = await StudentProfileRepo(ctx).list(
         filters={"batchId": resolved}, search=search, page=page, page_size=pageSize
     )
@@ -273,6 +431,103 @@ async def students(
     pageSize: int = Query(25, ge=1, le=100),
     ctx: ScopeContext = TrainerCtx,
 ) -> dict[str, Any]:
+    if settings.USE_POSTGRES and ctx.user_id:
+        from uuid import UUID
+        from app.db.postgres import get_pg_connection
+        trainer_uuid = UUID(str(ctx.user_id))
+        async with get_pg_connection() as conn:
+            batch_uuid = None
+            batch_id_str = batchId if isinstance(batchId, str) and len(batchId) == 36 else None
+            if batch_id_str:
+                await require_trainer_batch_scope(ctx, batch_id_str)
+                batch_uuid = UUID(batch_id_str)
+
+            params: list[Any] = [trainer_uuid]
+            batch_filter = "sp.batch_id IN (SELECT batch_id FROM batch_trainers WHERE trainer_user_id = $1)"
+            if batch_uuid:
+                params.append(batch_uuid)
+                batch_filter = f"sp.batch_id = ${len(params)}"
+
+            search_clause = ""
+            search_str = search if isinstance(search, str) and search.strip() else None
+            if search_str:
+                params.append(f"%{search_str}%")
+                search_clause = f" AND (u.name ILIKE ${len(params)} OR sp.roll_number ILIKE ${len(params)} OR u.email ILIKE ${len(params)})"
+
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM users u
+                JOIN student_profiles sp ON sp.user_id = u.id
+                WHERE {batch_filter} AND u.deleted_at IS NULL{search_clause}
+            """
+            total = await conn.fetchval(count_query, *params)
+            page_num = page if isinstance(page, int) else int(getattr(page, "default", 1) or 1)
+            size_num = pageSize if isinstance(pageSize, int) else int(getattr(pageSize, "default", 25) or 25)
+            offset = (page_num - 1) * size_num
+            query = f"""
+                SELECT 
+                    u.id as user_id, u.name, u.email, sp.roll_number, sp.batch_id, sp.avatar_url,
+                    b.name as batch_name, b.code as batch_code,
+                    COALESCE((
+                        SELECT ROUND(AVG(CASE WHEN ar.status = 'PRESENT' THEN 100.0 ELSE 0.0 END)::numeric, 1)
+                        FROM attendance_records ar
+                        JOIN training_sessions ts ON ts.id = ar.session_id
+                        WHERE ar.participant_user_id = u.id AND ts.batch_id = sp.batch_id
+                    ), 0.0) as attendance_percent,
+                    (
+                        SELECT ROUND(ev.eedi_score::numeric, 1)
+                        FROM enrollments e
+                        JOIN eedi_evaluations ev ON ev.participant_user_id = e.participant_user_id AND ev.course_id = e.course_id
+                        WHERE e.participant_user_id = u.id AND e.batch_id = sp.batch_id AND ev.status = 'COMPLETED'
+                        ORDER BY ev.updated_at DESC LIMIT 1
+                    ) as readiness_score
+                FROM users u
+                JOIN student_profiles sp ON sp.user_id = u.id
+                LEFT JOIN batches b ON b.id = sp.batch_id
+                WHERE {batch_filter} AND u.deleted_at IS NULL{search_clause}
+                ORDER BY u.name ASC
+                LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+            """
+            fetch_params = list(params) + [size_num, offset]
+            rows = await conn.fetch(query, *fetch_params)
+
+            weak_flag = weakOnly if isinstance(weakOnly, bool) else bool(getattr(weakOnly, "default", False))
+            items = []
+            for r in rows:
+                score = float(r["readiness_score"]) if r["readiness_score"] is not None else None
+                is_weak = score is not None and score < settings.WEAK_STUDENT_THRESHOLD
+                if weak_flag and not is_weak:
+                    continue
+                items.append({
+                    "id": str(r["user_id"]),
+                    "userId": str(r["user_id"]),
+                    "name": r["name"],
+                    "email": r["email"],
+                    "rollNumber": r["roll_number"] or "N/A",
+                    "batchId": str(r["batch_id"]),
+                    "batchName": r["batch_name"],
+                    "batchCode": r["batch_code"],
+                    "avatarUrl": r["avatar_url"],
+                    "attendancePercent": float(r["attendance_percent"]),
+                    "readinessScore": score,
+                    "focusPillar": None,
+                    "weak": is_weak,
+                })
+
+            pages = (total + size_num - 1) // size_num if total else 0
+            return {
+                "success": True,
+                "items": items,
+                "pagination": {
+                    "total": total,
+                    "page": page_num,
+                    "pageSize": size_num,
+                    "pages": pages,
+                    "hasNext": page_num < pages,
+                    "hasPrev": page_num > 1,
+                }
+            }
+
     filters: dict[str, Any] = {}
     if batchId:
         filters["batchId"] = await require_trainer_batch_scope(ctx, batchId)
@@ -312,6 +567,81 @@ async def students(
 @router.get("/students/{student_id}")
 async def student_detail(student_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
     resolved = await require_student_in_scope(ctx, student_id)
+    if settings.USE_POSTGRES and len(str(resolved)) == 36:
+        from uuid import UUID
+        from app.db.postgres import get_pg_connection
+        s_uuid = UUID(str(resolved))
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow("""
+                SELECT u.id as user_id, u.name, u.email, u.phone, sp.roll_number, sp.batch_id, sp.avatar_url,
+                       b.name as batch_name, b.code as batch_code, b.semester as batch_semester,
+                       d.name as department_name, inst.name as institution_name,
+                       COALESCE((
+                           SELECT ROUND(AVG(CASE WHEN ar.status = 'PRESENT' THEN 100.0 ELSE 0.0 END)::numeric, 1)
+                           FROM attendance_records ar
+                           JOIN training_sessions ts ON ts.id = ar.session_id
+                           WHERE ar.participant_user_id = u.id AND ts.batch_id = sp.batch_id
+                       ), 0.0) as attendance_percent,
+                       COALESCE((
+                           SELECT COUNT(*) FROM attendance_records ar
+                           JOIN training_sessions ts ON ts.id = ar.session_id
+                           WHERE ar.participant_user_id = u.id AND ts.batch_id = sp.batch_id AND ar.status = 'PRESENT'
+                       ), 0) as attendance_present,
+                       COALESCE((
+                           SELECT COUNT(*) FROM attendance_records ar
+                           JOIN training_sessions ts ON ts.id = ar.session_id
+                           WHERE ar.participant_user_id = u.id AND ts.batch_id = sp.batch_id
+                       ), 0) as attendance_total,
+                       (
+                           SELECT ROUND(ev.eedi_score::numeric, 1)
+                           FROM enrollments e
+                           JOIN eedi_evaluations ev ON ev.participant_user_id = e.participant_user_id AND ev.course_id = e.course_id
+                           WHERE e.participant_user_id = u.id AND e.batch_id = sp.batch_id AND ev.status = 'COMPLETED'
+                           ORDER BY ev.updated_at DESC LIMIT 1
+                       ) as readiness_score
+                FROM users u
+                JOIN student_profiles sp ON sp.user_id = u.id
+                LEFT JOIN batches b ON b.id = sp.batch_id
+                LEFT JOIN departments d ON d.id = u.department_id
+                LEFT JOIN institutions inst ON inst.id = u.institution_id
+                WHERE u.id = $1 AND u.deleted_at IS NULL
+            """, s_uuid)
+            if not row:
+                raise NotFound("Participant not found")
+            return {
+                "success": True,
+                "data": {
+                    "profile": {
+                        "id": str(row["user_id"]),
+                        "userId": str(row["user_id"]),
+                        "name": row["name"],
+                        "email": row["email"],
+                        "phone": row["phone"],
+                        "rollNumber": row["roll_number"] or "N/A",
+                        "batchId": str(row["batch_id"]) if row["batch_id"] else None,
+                        "batchName": row["batch_name"],
+                        "batchCode": row["batch_code"],
+                        "semester": row["batch_semester"],
+                        "departmentName": row["department_name"] or "General",
+                        "institutionName": row["institution_name"] or "Institution",
+                        "avatarUrl": row["avatar_url"],
+                    },
+                    "attendance": {
+                        "percentage": float(row["attendance_percent"]),
+                        "present": int(row["attendance_present"]),
+                        "total": int(row["attendance_total"]),
+                    },
+                    "assessments": [],
+                    "eediScore": {"finalScore": float(row["readiness_score"])} if row["readiness_score"] is not None else {},
+                    "pillars": [
+                        {"code": code, "label": label, "score": None}
+                        for code, label in PILLARS
+                    ],
+                    "aiScores": [],
+                    "feedback": [],
+                },
+            }
+
     profile = await StudentProfileRepo(ctx).find_one({"userId": resolved})
     if not profile:
         raise NotFound("Participant not found")
@@ -406,6 +736,65 @@ async def sessions(
     pageSize: int = Query(25, ge=1, le=100),
     ctx: ScopeContext = TrainerCtx,
 ) -> dict[str, Any]:
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        tr_uuid = UUID(str(ctx.user_id))
+        b_uuid = None
+        if batchId:
+            resolved = await require_trainer_batch_scope(ctx, batchId)
+            try:
+                b_uuid = UUID(str(resolved))
+            except Exception:
+                pass
+
+        async with get_pg_connection() as conn:
+            conds = ["ts.trainer_user_id = $1"]
+            params: list[Any] = [tr_uuid]
+            if b_uuid:
+                params.append(b_uuid)
+                conds.append(f"ts.batch_id = ${len(params)}")
+
+            where_clause = " AND ".join(conds)
+            total = await conn.fetchval(f"SELECT count(*) FROM training_sessions ts WHERE {where_clause}", *params) or 0
+            offset = (page - 1) * pageSize
+            query_sql = f"""
+                SELECT ts.id, ts.institution_id, ts.department_id, ts.batch_id, ts.trainer_user_id,
+                       ts.topic, ts.room, ts.session_date, ts.status, ts.created_at, b.name as batch_name,
+                       (SELECT count(*) FROM attendance_records ar WHERE ar.session_id = ts.id) as attendance_count
+                FROM training_sessions ts
+                LEFT JOIN batches b ON ts.batch_id = b.id
+                WHERE {where_clause}
+                ORDER BY ts.session_date DESC, ts.created_at DESC
+                LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+            """
+            rows = await conn.fetch(query_sql, *params, pageSize, offset)
+            items = [
+                {
+                    "id": str(r["id"]),
+                    "_id": str(r["id"]),
+                    "batchId": str(r["batch_id"]),
+                    "batchName": r["batch_name"],
+                    "topic": r["topic"],
+                    "room": r["room"],
+                    "date": r["session_date"].isoformat() if r["session_date"] else None,
+                    "status": r["status"],
+                    "attendanceMarkedAt": r["created_at"].isoformat() if r["attendance_count"] > 0 and r["created_at"] else None,
+                }
+                for r in rows
+            ]
+            return {
+                "success": True,
+                "items": items,
+                "pagination": {
+                    "page": page,
+                    "pageSize": pageSize,
+                    "total": total,
+                    "totalPages": max(1, (total + pageSize - 1) // pageSize),
+                    "hasNext": page * pageSize < total,
+                }
+            }
+
     filters: dict[str, Any] = {}
     if batchId:
         filters["batchId"] = await require_trainer_batch_scope(ctx, batchId)
@@ -415,9 +804,170 @@ async def sessions(
     return {"success": True, **page_result.to_response()}
 
 
+@router.post("/sessions", status_code=status.HTTP_201_CREATED)
+async def create_session(payload: dict[str, Any], ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    batch_id = payload.get("batchId")
+    if not batch_id:
+        raise ValidationError("batchId is required")
+    resolved_batch = await require_trainer_batch_scope(ctx, batch_id)
+
+    topic = payload.get("topic") or "General Training Session"
+    room = payload.get("room") or "Room 101"
+    raw_date = payload.get("sessionDate") or payload.get("date")
+    from datetime import date as _dt_date
+    if isinstance(raw_date, str) and raw_date:
+        try:
+            d_val = datetime.strptime(raw_date[:10], "%Y-%m-%d").date()
+        except Exception:
+            d_val = datetime.now(timezone.utc).date()
+    elif isinstance(raw_date, _dt_date):
+        d_val = raw_date
+    else:
+        d_val = datetime.now(timezone.utc).date()
+
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        import uuid
+        s_uuid = uuid.uuid4()
+        b_uuid = UUID(str(resolved_batch))
+        async with get_pg_connection() as conn:
+            batch = await conn.fetchrow("SELECT institution_id, department_id, name FROM batches WHERE id = $1", b_uuid)
+            if not batch:
+                raise NotFound("Batch not found")
+
+            # Enforce trainer assignment schedule: date window and applicable weekdays
+            bt = await conn.fetchrow(
+                "SELECT start_date, end_date, weekdays FROM batch_trainers WHERE batch_id = $1 AND trainer_user_id = $2",
+                b_uuid, UUID(str(ctx.user_id))
+            )
+            if bt:
+                if bt["start_date"] and d_val < bt["start_date"]:
+                    raise ValidationError(f"Session date {d_val} is before the assignment start date ({bt['start_date']}).")
+                if bt["end_date"] and d_val > bt["end_date"]:
+                    raise ValidationError(f"Session date {d_val} is after the assignment end date ({bt['end_date']}).")
+                if bt["weekdays"] and len(bt["weekdays"]) > 0:
+                    iso_day = d_val.isoweekday()
+                    if iso_day not in bt["weekdays"]:
+                        raise ValidationError(f"Trainer is not scheduled to conduct sessions on {d_val.strftime('%A')}.")
+
+            from datetime import time as _dt_time
+            raw_starts = payload.get("startsAt")
+            raw_ends = payload.get("endsAt")
+            if raw_starts:
+                try:
+                    starts_at = datetime.fromisoformat(str(raw_starts).replace("Z", "+00:00"))
+                    if starts_at.tzinfo is None:
+                        starts_at = starts_at.replace(tzinfo=timezone.utc)
+                    else:
+                        starts_at = starts_at.astimezone(timezone.utc)
+                except Exception:
+                    starts_at = datetime.combine(d_val, _dt_time(9, 0, 0, tzinfo=timezone.utc))
+            else:
+                starts_at = datetime.combine(d_val, _dt_time(9, 0, 0, tzinfo=timezone.utc))
+
+            if raw_ends:
+                try:
+                    ends_at = datetime.fromisoformat(str(raw_ends).replace("Z", "+00:00"))
+                    if ends_at.tzinfo is None:
+                        ends_at = ends_at.replace(tzinfo=timezone.utc)
+                    else:
+                        ends_at = ends_at.astimezone(timezone.utc)
+                except Exception:
+                    ends_at = datetime.combine(d_val, _dt_time(10, 30, 0, tzinfo=timezone.utc))
+            else:
+                ends_at = datetime.combine(d_val, _dt_time(10, 30, 0, tzinfo=timezone.utc))
+
+            # Enforce time-window validity
+            if ends_at <= starts_at:
+                raise ValidationError("Session endsAt must be strictly after startsAt.")
+
+            duration_minutes = (ends_at - starts_at).total_seconds() / 60
+            if duration_minutes < 15:
+                raise ValidationError("Session duration must be at least 15 minutes.")
+            if duration_minutes > 480:
+                raise ValidationError("Session duration cannot exceed 8 hours.")
+
+            await conn.execute(
+                """
+                INSERT INTO training_sessions (id, institution_id, department_id, batch_id, trainer_user_id, topic, room, session_date, starts_at, ends_at, status, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'SCHEDULED', NOW(), NOW())
+                """,
+                s_uuid, batch["institution_id"], batch["department_id"], b_uuid, UUID(str(ctx.user_id)),
+                topic, room, d_val, starts_at, ends_at,
+            )
+            return {
+                "success": True,
+                "message": "Training session created",
+                "data": {
+                    "id": str(s_uuid),
+                    "_id": str(s_uuid),
+                    "batchId": str(b_uuid),
+                    "batchName": batch["name"],
+                    "topic": topic,
+                    "room": room,
+                    "date": d_val.isoformat(),
+                    "status": "SCHEDULED",
+                }
+            }
+
+    session_doc = {
+        "collegeId": ctx.college_id,
+        "departmentId": ctx.department_id,
+        "batchId": resolved_batch,
+        "trainerUserId": ctx.user_id,
+        "topic": topic,
+        "room": room,
+        "date": session_date,
+        "status": "scheduled",
+        "createdAt": _now(),
+        "updatedAt": _now(),
+    }
+    res = await get_db().training_sessions.insert_one(session_doc)
+    session_doc["_id"] = res.inserted_id
+    return {"success": True, "message": "Training session created", "data": serialize(session_doc)}
+
+
 @router.get("/sessions/{session_id}/attendance")
 async def session_attendance(session_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
     session = await require_trainer_session_scope(ctx, session_id)
+
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        b_uuid = UUID(str(session.get("batchId")))
+        s_uuid = UUID(str(session.get("id") or session.get("_id")))
+        async with get_pg_connection() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT sp.user_id, u.name, sp.roll_number, ar.status, ar.remarks
+                FROM student_profiles sp
+                JOIN users u ON sp.user_id = u.id
+                LEFT JOIN attendance_records ar ON ar.participant_user_id = sp.user_id AND ar.session_id = $1
+                WHERE sp.batch_id = $2
+                ORDER BY sp.roll_number ASC
+                """,
+                s_uuid, b_uuid
+            )
+            return {
+                "success": True,
+                "data": {
+                    "session": serialize(session),
+                    "alreadyMarked": any(r["status"] is not None for r in rows),
+                    "roster": [
+                        {
+                            "studentUserId": str(r["user_id"]),
+                            "name": r["name"],
+                            "rollNumber": r["roll_number"],
+                            "status": (r["status"] or "").lower() if r["status"] else None,
+                            "remark": r["remarks"],
+                        }
+                        for r in rows
+                    ],
+                    "statuses": ["present", "absent", "late", "excused"],
+                },
+            }
+
     roster = await StudentProfileRepo(ctx).find_all(
         {"batchId": session.get("batchId")},
         projection={"userId": 1, "name": 1, "rollNumber": 1},
@@ -456,6 +1006,50 @@ async def mark_attendance(
 ) -> dict[str, Any]:
     """Attendance can only be marked on the trainer's own session, never in the future."""
     session = await require_trainer_session_scope(ctx, payload.trainingSessionId)
+
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        s_uuid = UUID(str(session.get("id") or session.get("_id")))
+        tr_uuid = UUID(str(ctx.user_id))
+        written = 0
+        async with get_pg_connection() as conn:
+            for entry in payload.entries:
+                st_uuid = UUID(str(entry.studentUserId))
+                st_status = entry.status.upper() if entry.status else "PRESENT"
+                if st_status not in ("PRESENT", "ABSENT", "LATE", "EXCUSED"):
+                    st_status = "PRESENT"
+                
+                existing_ar = await conn.fetchrow(
+                    "SELECT id FROM attendance_records WHERE session_id = $1 AND participant_user_id = $2",
+                    s_uuid, st_uuid
+                )
+                if existing_ar:
+                    await conn.execute(
+                        """
+                        UPDATE attendance_records
+                        SET status = $1::attendance_status_enum, remarks = $2, marked_by = $3, marked_at = NOW()
+                        WHERE id = $4
+                        """,
+                        st_status, entry.remark, tr_uuid, existing_ar["id"]
+                    )
+                else:
+                    await conn.execute(
+                        """
+                        INSERT INTO attendance_records (id, session_id, participant_user_id, status, remarks, marked_by, marked_at, created_at)
+                        VALUES (gen_random_uuid(), $1, $2, $3::attendance_status_enum, $4, $5, NOW(), NOW())
+                        """,
+                        s_uuid, st_uuid, st_status, entry.remark, tr_uuid
+                    )
+                written += 1
+
+            await conn.execute("UPDATE training_sessions SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1", s_uuid)
+
+        return {
+            "success": True,
+            "message": f"Attendance saved for {written} participant(s)",
+            "data": {"written": written, "rejected": []},
+        }
 
     session_date = session.get("date")
     session_date = as_utc(session_date)
@@ -1729,6 +2323,9 @@ async def trainer_mark_chat_read(conv_id: str, ctx: ScopeContext = TrainerCtx) -
 # --------------------------------------------------------------------------- Games
 @router.get("/games")
 async def trainer_list_games(ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.routers.gamification import trainer_list_games as pg_trainer_list_games
+        return await pg_trainer_list_games(ctx=ctx)
     games = await get_db().game_definitions.find({"published": True}).to_list(100)
     assigned = await get_db().game_assignments.find({"trainerUserId": ctx.user_id}).to_list(100)
     assigned_codes = {a["gameCode"] for a in assigned}
@@ -1751,55 +2348,20 @@ async def trainer_list_games(ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
 
 @router.get("/games/analytics")
 async def trainer_game_analytics(ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
-    attempts = await get_db().game_attempts.find({"collegeId": ctx.college_id}).limit(500).to_list(500)
-    total_attempts = len(attempts)
-    total_xp = sum(a.get("xpEarned", 0) for a in attempts)
-    avg_score = round(sum(a.get("score", 0) for a in attempts) / total_attempts, 1) if total_attempts else 0.0
-
-    by_category: dict[str, list[float]] = {}
-    for a in attempts:
-        cat = a.get("category", "General")
-        by_category.setdefault(cat, []).append(a.get("score", 0))
-
-    cat_stats = [
-        {"category": cat, "averageScore": round(sum(scores)/len(scores), 1), "attempts": len(scores)}
-        for cat, scores in by_category.items()
-    ]
-
-    # Weak skill areas: categories where avg score < 70
-    weak_areas = [c["category"] for c in cat_stats if c["averageScore"] < 70]
-
+    from app.repositories.game_repo import GameRepository
+    analytics = await GameRepository.get_game_analytics(institution_id=ctx.college_id)
     return {
         "success": True,
-        "data": {
-            "totalAttempts": total_attempts,
-            "totalXpEarned": total_xp,
-            "averageScore": avg_score,
-            "categoryPerformance": cat_stats,
-            "weakAreas": weak_areas or ["Problem Solving", "Grammar under pressure"],
-        },
+        "data": analytics,
     }
 
 
 @router.post("/games/assign")
 async def trainer_assign_game(payload: dict[str, Any], ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
-    game_code = payload.get("gameCode")
-    batch_id = ObjectId(payload["batchId"]) if payload.get("batchId") else None
-    if not game_code:
-        raise ValidationError("gameCode is required.")
-
-    now = _now()
-    doc = {
-        "trainerUserId": ctx.user_id,
-        "collegeId": ctx.college_id,
-        "batchId": batch_id,
-        "gameCode": game_code,
-        "deadline": payload.get("deadline"),
-        "note": payload.get("note", "Assigned challenge"),
-        "createdAt": now,
-    }
-    await get_db().game_assignments.insert_one(doc)
-    return {"success": True, "message": f"Game {game_code} assigned to batch."}
+    from app.routers.gamification import trainer_assign_game as gamification_assign_game
+    from app.routers.gamification import GameAssignmentRequest
+    req = GameAssignmentRequest(**payload)
+    return await gamification_assign_game(payload=req, ctx=ctx)
 
 
 # --------------------------------------------------------------------------- Payments
@@ -1823,4 +2385,293 @@ async def trainer_list_payments(ctx: ScopeContext = TrainerCtx) -> dict[str, Any
         for p in payments
     ]
     return {"success": True, "data": out}
+
+
+# --------------------------------------------------------------------------- Trainer Assigned Courses (Phase 6, 7, 8)
+@router.get("/courses")
+async def list_trainer_courses(ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    """Lists courses assigned to the current trainer with enrollment and session metrics."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        courses = await LearningContentRepository.get_trainer_assigned_courses(ctx.user_id)
+        out = []
+        for c in courses:
+            out.append({
+                "id": str(c["id"]),
+                "title": c["title"],
+                "slug": c["slug"],
+                "code": c["code"],
+                "description": c["description"],
+                "category": c["category"],
+                "deliveryMode": c["delivery_mode"],
+                "durationHours": c["duration_hours"],
+                "fee": float(c["fee"]) if c["fee"] is not None else 0.0,
+                "status": c.get("status") or ("PUBLISHED" if c["published"] else "DRAFT"),
+                "trialDurationDays": c.get("trial_duration_days") or 3,
+                "trialEnabled": c.get("trial_enabled", True),
+                "batchCount": c.get("batch_count", 0),
+                "totalStudents": c.get("total_students", 0),
+                "paidStudents": c.get("paid_students", 0),
+                "activeTrials": c.get("active_trials", 0),
+            })
+        return {"success": True, "data": out}
+    return {"success": True, "data": []}
+
+
+@router.get("/courses/{course_id}/sessions")
+async def list_trainer_course_sessions(course_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    """Lists live class sessions with meeting links for an assigned course."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        is_assigned = await LearningContentRepository.is_trainer_assigned_to_course(ctx.user_id, course_id)
+        if not is_assigned:
+            from app.core.errors import ScopeForbidden
+            raise ScopeForbidden("You are not assigned as a trainer for this course.")
+        sessions = await LearningContentRepository.get_course_sessions(course_id, published_only=False)
+        out = []
+        for s in sessions:
+            out.append({
+                "id": str(s["id"]),
+                "courseId": str(s["course_id"]),
+                "batchId": str(s["batch_id"]) if s.get("batch_id") else None,
+                "batchName": s.get("batch_name"),
+                "topic": s["topic"],
+                "date": str(s.get("session_date") or s.get("date") or "") if (s.get("session_date") or s.get("date")) else None,
+                "startTime": s["starts_at"].strftime("%H:%M") if s.get("starts_at") else None,
+                "endTime": s["ends_at"].strftime("%H:%M") if s.get("ends_at") else None,
+                "meetingLink": s.get("meeting_link"),
+                "meetingPassword": s.get("meeting_password"),
+                "isPublished": s.get("is_published", True),
+            })
+        return {"success": True, "data": out}
+    return {"success": True, "data": []}
+
+
+@router.post("/courses/{course_id}/sessions")
+async def create_trainer_course_session(
+    course_id: str, payload: dict[str, Any], ctx: ScopeContext = TrainerCtx
+) -> dict[str, Any]:
+    """Schedules a new class session with meeting link for an assigned course."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        is_assigned = await LearningContentRepository.is_trainer_assigned_to_course(ctx.user_id, course_id)
+        if not is_assigned:
+            from app.core.errors import ScopeForbidden
+            raise ScopeForbidden("You are not assigned as a trainer for this course.")
+
+        topic = payload.get("topic")
+        meeting_link = payload.get("meetingLink") or payload.get("meeting_link")
+        if not topic or not meeting_link:
+            raise ValidationError("Topic and meetingLink are required.")
+
+        import datetime as dt
+        raw_date = payload.get("date")
+        session_date = dt.date.fromisoformat(raw_date) if raw_date else dt.date.today()
+
+        raw_start = payload.get("startTime") or payload.get("start_time")
+        start_time = dt.time.fromisoformat(raw_start) if raw_start else dt.time(10, 0)
+
+        raw_end = payload.get("endTime") or payload.get("end_time")
+        end_time = dt.time.fromisoformat(raw_end) if raw_end else dt.time(11, 0)
+
+        created = await LearningContentRepository.create_course_session(
+            course_id=course_id,
+            topic=topic,
+            session_date=session_date,
+            start_time=start_time,
+            end_time=end_time,
+            meeting_link=meeting_link,
+            meeting_password=payload.get("meetingPassword") or payload.get("meeting_password"),
+            batch_id=payload.get("batchId") or payload.get("batch_id"),
+            is_published=payload.get("isPublished", True),
+        )
+        return {
+            "success": True,
+            "message": "Session scheduled successfully with meeting link.",
+            "data": {
+                "id": str(created["id"]),
+                "courseId": str(created["course_id"]),
+                "topic": created["topic"],
+                "meetingLink": created["meeting_link"],
+                "date": str(created["date"]),
+                "isPublished": created["is_published"],
+            }
+        }
+    return {"success": False, "message": "Postgres mode required."}
+
+
+@router.get("/courses/{course_id}/materials")
+async def list_trainer_course_materials(course_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    """Lists class notes, documents, and slides for an assigned course."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        is_assigned = await LearningContentRepository.is_trainer_assigned_to_course(ctx.user_id, course_id)
+        if not is_assigned:
+            from app.core.errors import ScopeForbidden
+            raise ScopeForbidden("You are not assigned as a trainer for this course.")
+        materials = await LearningContentRepository.get_course_materials(course_id, published_only=False)
+        out = []
+        for m in materials:
+            out.append({
+                "id": str(m["id"]),
+                "courseId": str(m["course_id"]),
+                "title": m["title"],
+                "description": m.get("description"),
+                "materialType": m["material_type"],
+                "fileUrl": m["file_url"],
+                "fileSizeBytes": m.get("file_size_bytes", 0),
+                "published": m["published"],
+                "createdAt": m["created_at"].isoformat() if m.get("created_at") else None,
+                "trainerName": m.get("trainer_name"),
+            })
+        return {"success": True, "data": out}
+    return {"success": True, "data": []}
+
+
+@router.post("/courses/{course_id}/materials")
+async def create_trainer_course_material(
+    course_id: str, payload: dict[str, Any], ctx: ScopeContext = TrainerCtx
+) -> dict[str, Any]:
+    """Uploads/publishes course materials (notes, slides, documents)."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        is_assigned = await LearningContentRepository.is_trainer_assigned_to_course(ctx.user_id, course_id)
+        if not is_assigned:
+            from app.core.errors import ScopeForbidden
+            raise ScopeForbidden("You are not assigned as a trainer for this course.")
+
+        title = payload.get("title")
+        file_url = payload.get("fileUrl") or payload.get("file_url")
+        if not title or not file_url:
+            raise ValidationError("Title and fileUrl are required.")
+
+        mat = await LearningContentRepository.create_course_material(
+            course_id=course_id,
+            trainer_user_id=ctx.user_id,
+            title=title,
+            file_url=file_url,
+            description=payload.get("description"),
+            material_type=(payload.get("materialType") or payload.get("material_type") or "DOCUMENT").upper(),
+            file_size_bytes=int(payload.get("fileSizeBytes") or 0),
+            session_id=payload.get("sessionId") or payload.get("session_id"),
+            batch_id=payload.get("batchId") or payload.get("batch_id"),
+            published=payload.get("published", True),
+        )
+        return {
+            "success": True,
+            "message": "Class material published successfully.",
+            "data": {
+                "id": str(mat["id"]),
+                "title": mat["title"],
+                "fileUrl": mat["file_url"],
+                "materialType": mat["material_type"],
+                "published": mat["published"],
+            }
+        }
+    return {"success": False, "message": "Postgres mode required."}
+
+
+@router.delete("/materials/{material_id}")
+async def delete_trainer_material(material_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    """Deletes class material owned by the trainer."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        deleted = await LearningContentRepository.delete_course_material(material_id, trainer_user_id=ctx.user_id)
+        if not deleted:
+            raise NotFound("Material not found or unauthorized.")
+        return {"success": True, "message": "Material removed successfully."}
+    return {"success": False}
+
+
+@router.get("/courses/{course_id}/recordings")
+async def list_trainer_course_recordings(course_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    """Lists class recordings for an assigned course."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        is_assigned = await LearningContentRepository.is_trainer_assigned_to_course(ctx.user_id, course_id)
+        if not is_assigned:
+            from app.core.errors import ScopeForbidden
+            raise ScopeForbidden("You are not assigned as a trainer for this course.")
+        recs = await LearningContentRepository.get_course_recordings(course_id, published_only=False)
+        out = []
+        for r in recs:
+            out.append({
+                "id": str(r["id"]),
+                "courseId": str(r["course_id"]),
+                "title": r["title"],
+                "recordingUrl": r["recording_url"],
+                "durationSeconds": r.get("duration_seconds", 0),
+                "status": r["status"],
+                "createdAt": r["created_at"].isoformat() if r.get("created_at") else None,
+                "trainerName": r.get("trainer_name"),
+            })
+        return {"success": True, "data": out}
+    return {"success": True, "data": []}
+
+
+@router.post("/courses/{course_id}/recordings")
+async def create_trainer_course_recording(
+    course_id: str, payload: dict[str, Any], ctx: ScopeContext = TrainerCtx
+) -> dict[str, Any]:
+    """Publishes a session recording for an assigned course."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        is_assigned = await LearningContentRepository.is_trainer_assigned_to_course(ctx.user_id, course_id)
+        if not is_assigned:
+            from app.core.errors import ScopeForbidden
+            raise ScopeForbidden("You are not assigned as a trainer for this course.")
+
+        title = payload.get("title")
+        rec_url = payload.get("recordingUrl") or payload.get("recording_url")
+        if not title or not rec_url:
+            raise ValidationError("Title and recordingUrl are required.")
+
+        rec = await LearningContentRepository.create_course_recording(
+            course_id=course_id,
+            trainer_user_id=ctx.user_id,
+            title=title,
+            recording_url=rec_url,
+            duration_seconds=int(payload.get("durationSeconds") or 0),
+            session_id=payload.get("sessionId") or payload.get("session_id"),
+            batch_id=payload.get("batchId") or payload.get("batch_id"),
+            status=payload.get("status", "PUBLISHED"),
+        )
+        return {
+            "success": True,
+            "message": "Class recording published successfully.",
+            "data": {
+                "id": str(rec["id"]),
+                "title": rec["title"],
+                "recordingUrl": rec["recording_url"],
+                "status": rec["status"],
+            }
+        }
+    return {"success": False, "message": "Postgres mode required."}
+
+
+@router.patch("/recordings/{recording_id}")
+async def update_trainer_recording(
+    recording_id: str, payload: dict[str, Any], ctx: ScopeContext = TrainerCtx
+) -> dict[str, Any]:
+    """Updates recording details."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        updated = await LearningContentRepository.update_course_recording(recording_id, payload)
+        if not updated:
+            raise NotFound("Recording not found.")
+        return {"success": True, "message": "Recording updated.", "data": {"id": str(updated["id"])}}
+    return {"success": False}
+
+
+@router.delete("/recordings/{recording_id}")
+async def delete_trainer_recording(recording_id: str, ctx: ScopeContext = TrainerCtx) -> dict[str, Any]:
+    """Deletes recording owned by the trainer."""
+    if settings.USE_POSTGRES and ctx.user_id:
+        from app.repositories.learning_content_repo import LearningContentRepository
+        deleted = await LearningContentRepository.delete_course_recording(recording_id, trainer_user_id=ctx.user_id)
+        if not deleted:
+            raise NotFound("Recording not found or unauthorized.")
+        return {"success": True, "message": "Recording removed."}
+    return {"success": False}
+
 

@@ -17,8 +17,13 @@ CREATE, UPDATE, DELETE, EXPORT, LOGIN, LOGOUT, ISSUE = (
 )
 
 
+import uuid
+
+
 def _clean(value: Any) -> Any:
-    """Never let a secret reach the audit trail."""
+    """Never let a secret reach the audit trail, and serialize UUIDs to string for Mongo."""
+    if isinstance(value, uuid.UUID):
+        return str(value)
     redact = {"password", "passwordHash", "otp", "token", "refreshToken", "secret"}
     if isinstance(value, dict):
         return {k: ("[redacted]" if k in redact else _clean(v)) for k, v in value.items()}
@@ -40,7 +45,7 @@ async def write_audit(
     department_id: ObjectId | None = None,
     actor_label: str | None = None,
 ) -> None:
-    doc = {
+    doc = _clean({
         "actorId": ctx.user_id if ctx else None,
         "actorLabel": actor_label or (ctx.actor_label if ctx else "system"),
         "actorRole": str(ctx.role) if ctx else "SYSTEM",
@@ -55,7 +60,7 @@ async def write_audit(
         "requestId": ctx.request_id if ctx else None,
         "ip": ctx.ip if ctx else None,
         "at": datetime.now(timezone.utc),
-    }
+    })
     try:
         await get_db().audit_logs.insert_one(doc)
     except Exception as exc:  # pragma: no cover - trail must never break the request
@@ -94,7 +99,7 @@ async def write_security_event(
             college_id = owner.get("collegeId")
             department_id = department_id or owner.get("departmentId")
 
-    doc = {
+    doc = _clean({
         "kind": kind,
         "userId": user_id,
         "collegeId": college_id,
@@ -105,7 +110,7 @@ async def write_security_event(
         "path": path,
         "metadata": _clean(metadata or {}),
         "at": datetime.now(timezone.utc),
-    }
+    })
     try:
         await get_db().security_events.insert_one(doc)
     except Exception as exc:  # pragma: no cover

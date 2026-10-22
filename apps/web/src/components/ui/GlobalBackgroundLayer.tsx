@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import * as React from 'react';
 import { cn } from '@/lib/cn';
+import { useTheme } from '@/lib/theme/ThemeContext';
 
 export interface BackgroundConfig {
   image?: string;
@@ -55,10 +56,10 @@ function getDefaultImageForPath(pathname: string): {
     }
     if (pathname.includes('/games')) {
       return {
-        image: '/images/backgrounds/games.webp',
+        image: 'none',
         imageAlt: 'Interactive Gamification & Skill Arena',
         variant: 'dark',
-        orbTone: 'purple',
+        orbTone: 'indigo',
       };
     }
     if (pathname.includes('/payments')) {
@@ -401,10 +402,11 @@ export function useGlobalBackground() {
  * - Ambient subtle cyber tech grid + radiant atmospheric orbs
  */
 export function GlobalBackgroundLayer({ config }: { config: BackgroundConfig }) {
+  const { theme } = useTheme();
   const {
     image = '/images/hero-ai.webp',
     imageAlt = 'Winners Creek Environment',
-    variant = 'dark',
+    variant,
     blur = 6,
     overlayOpacity,
     withGrid = true,
@@ -412,6 +414,7 @@ export function GlobalBackgroundLayer({ config }: { config: BackgroundConfig }) 
     orbTone = 'indigo',
   } = config;
 
+  const activeVariant = theme;
   const safeBlur = Math.min(Math.max(blur, 4), 10);
 
   return (
@@ -420,58 +423,65 @@ export function GlobalBackgroundLayer({ config }: { config: BackgroundConfig }) 
       className="pointer-events-none fixed inset-0 z-0 h-screen w-screen overflow-hidden select-none"
     >
       {/* 1. Real Image Layer — Full-Bleed Fixed Viewport */}
-      <div className="absolute inset-0 h-full w-full">
-        <Image
-          src={image}
-          alt={imageAlt}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center transition-all duration-700 ease-out"
-          style={{
-            filter: `blur(${safeBlur}px)`,
-            transform: 'scale(1.05)',
-          }}
+      {image && image !== 'none' ? (
+        <div className="absolute inset-0 h-full w-full">
+          <Image
+            src={image}
+            alt={imageAlt}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center transition-all duration-700 ease-out"
+            style={{
+              filter: `blur(${safeBlur}px)`,
+              transform: 'scale(1.05)',
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          className="absolute inset-0 transition-colors duration-500 bg-[#F4F6F8] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(226,232,240,0.6),rgba(244,246,248,1))] dark:bg-slate-950 dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(30,41,59,0.5),rgba(2,6,23,1))]"
         />
-      </div>
+      )}
 
       {/* 2. Global Readability Overlay Layer */}
       <div
-        className={cn(
-          'absolute inset-0 transition-colors duration-500',
-          variant === 'dark'
-            ? 'bg-gradient-to-b from-slate-950/80 via-slate-950/75 to-slate-950/90'
-            : 'bg-gradient-to-b from-white/85 via-slate-50/80 to-white/95',
-        )}
+        className="absolute inset-0 transition-colors duration-500 bg-gradient-to-b from-slate-100/90 via-[#F4F6F8]/88 to-[#F4F6F8]/95 dark:from-slate-950/80 dark:via-slate-950/75 dark:to-slate-950/90"
         style={overlayOpacity !== undefined ? { opacity: overlayOpacity } : undefined}
       />
 
-      {/* 3. Decorative Cyber Tech Grid */}
+      {/* 3. Decorative Subtle Tech Grid */}
       {withGrid && (
         <div
-          className={cn(
-            'absolute inset-0 transition-opacity duration-500',
-            variant === 'dark'
-              ? 'bg-grid-cyber opacity-35'
-              : 'bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-20',
-          )}
+          className="absolute inset-0 transition-opacity duration-500 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-15 dark:bg-grid-cyber dark:opacity-15"
         />
       )}
 
       {/* 4. Atmospheric Glowing Orbs */}
-      {withOrbs && (
+      {withOrbs && image !== 'none' && (
         <div className="absolute inset-0 overflow-hidden">
           <div
             className={cn(
-              'absolute -top-32 -right-32 size-[460px] rounded-full blur-[140px] transition-colors duration-700 opacity-25',
+              'absolute -top-32 -right-32 size-[460px] rounded-full blur-[140px] transition-colors duration-700',
+              activeVariant === 'dark' ? 'opacity-25' : 'opacity-10',
               orbTone === 'indigo' && 'bg-indigo-500',
               orbTone === 'cyan' && 'bg-cyan-500',
               orbTone === 'purple' && 'bg-purple-600',
               orbTone === 'amber' && 'bg-amber-500',
             )}
           />
-          <div className="absolute top-1/2 -left-36 size-[400px] rounded-full bg-blue-600 blur-[130px] opacity-20" />
-          <div className="absolute -bottom-32 right-1/4 size-[440px] rounded-full bg-violet-600 blur-[140px] opacity-20" />
+          <div
+            className={cn(
+              'absolute top-1/2 -left-36 size-[400px] rounded-full bg-blue-600 blur-[130px]',
+              activeVariant === 'dark' ? 'opacity-20' : 'opacity-10',
+            )}
+          />
+          <div
+            className={cn(
+              'absolute -bottom-32 right-1/4 size-[440px] rounded-full bg-violet-600 blur-[140px]',
+              activeVariant === 'dark' ? 'opacity-20' : 'opacity-10',
+            )}
+          />
         </div>
       )}
     </div>

@@ -23,15 +23,15 @@ export default function CoursesPage() {
   return (
     <div className="animate-enter pb-16">
       {/* ------------------------------------------------------------------ hero */}
-      <section className="relative text-white py-12 sm:py-16">
+      <section className="relative py-12 sm:py-16">
         <div className="relative mx-auto max-w-[1180px] px-5">
-          <Badge tone="indigo" className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium px-3 py-1">
+          <Badge tone="indigo">
             Structured Curriculum
           </Badge>
-          <h1 className="mt-4 font-serif heading-hero text-white max-w-[700px]">
+          <h1 className="mt-4 font-serif heading-hero text-ink-1 max-w-[700px]">
             Explore Employability Programs
           </h1>
-          <p className="mt-4 max-w-[620px] text-base sm:text-lg leading-relaxed text-white/80">
+          <p className="mt-4 max-w-[620px] text-base sm:text-lg leading-relaxed text-ink-2">
             Every program is an outcome-driven path: structured modules, real-world practice, and
             objective evaluations that calculate your true readiness score.
           </p>

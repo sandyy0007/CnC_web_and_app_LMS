@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ObjectIdStr = Annotated[str, Field(pattern=r"^[a-fA-F0-9]{24}$")]
+ObjectIdStr = Annotated[str, Field(pattern=r"^[a-fA-F0-9\-]{24,36}$")]
 Str1 = Annotated[str, Field(min_length=1, max_length=200)]
 
 

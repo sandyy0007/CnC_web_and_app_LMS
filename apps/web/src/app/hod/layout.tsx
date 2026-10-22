@@ -14,7 +14,7 @@ export default function HodLayout({ children }: { children: React.ReactNode }) {
   return (
     <PortalPage
       allow="HOD"
-      searchPlaceholder="Search participants, trainers, certificates…"
+      searchPlaceholder="Search participants, trainers, batches…"
       headerSlot={
         scope.data ? (
           <ScopePill

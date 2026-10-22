@@ -5,6 +5,7 @@ Declaring them here keeps the scope rules for each collection in one auditable p
 """
 from __future__ import annotations
 
+from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
 
 from app.repositories.base import ScopedRepository
@@ -252,6 +253,11 @@ class SkillAssessmentDefinitionRepo(ScopedRepository):
     default_sort = ("order", ASCENDING)
     extra_sortable = ("order", "pillar")
 
+    def scope_filter(self, extra=None):
+        merged = super().scope_filter(extra)
+        merged.pop("collegeId", None)
+        return merged
+
 
 class SkillAssessmentRepo(ScopedRepository):
     collection = "skill_assessments"
@@ -306,6 +312,13 @@ class PracticeModeRepo(ScopedRepository):
         return merged
 
 
+def _match_student(uid: Any) -> dict[str, Any]:
+    candidates = [uid, str(uid)]
+    if ObjectId.is_valid(str(uid)):
+        candidates.append(ObjectId(str(uid)))
+    return {"$in": list(set(candidates))}
+
+
 class PracticeSessionRepo(ScopedRepository):
     collection = "practice_sessions"
     default_sort = ("createdAt", DESCENDING)
@@ -316,7 +329,7 @@ class PracticeSessionRepo(ScopedRepository):
 
         merged = super().scope_filter(extra)
         if self.ctx.role is Role.STUDENT:
-            merged.setdefault("studentUserId", self.ctx.user_id)
+            merged.setdefault("studentUserId", _match_student(self.ctx.user_id))
         return merged
 
 
@@ -329,7 +342,7 @@ class RecordingRepo(ScopedRepository):
 
         merged = super().scope_filter(extra)
         if self.ctx.role is Role.STUDENT:
-            merged.setdefault("studentUserId", self.ctx.user_id)
+            merged.setdefault("studentUserId", _match_student(self.ctx.user_id))
         return merged
 
 
@@ -350,7 +363,7 @@ class EediScoreRepo(ScopedRepository):
 
         merged = super().scope_filter(extra)
         if self.ctx.role is Role.STUDENT:
-            merged.setdefault("studentUserId", self.ctx.user_id)
+            merged.setdefault("studentUserId", _match_student(self.ctx.user_id))
         return merged
 
 
@@ -367,6 +380,18 @@ class ExerciseLibraryRepo(PracticeModeRepo):
 class GameDefinitionRepo(PracticeModeRepo):
     collection = "game_definitions"
     search_fields = ("title", "category", "description")
+
+    async def get(self, id: Any) -> dict[str, Any]:
+        try:
+            return await super().get(id)
+        except Exception:
+            code_str = str(id).strip().lower()
+            doc = await self.col.find_one({"code": code_str, "deletedAt": None})
+            if not doc:
+                doc = await self.col.find_one({"_id": str(id), "deletedAt": None})
+            if doc:
+                return doc
+            raise
 
 
 class GameAttemptRepo(EediScoreRepo):
@@ -409,7 +434,19 @@ class QuizAttemptRepo(EediScoreRepo):
 
 class ResumeDocumentRepo(EediScoreRepo):
     collection = "resume_documents"
+    department_bound = False
     default_sort = ("createdAt", DESCENDING)
+
+    def scope_filter(self, extra=None):
+        from app.authz.roles import Role
+        merged = super().scope_filter(extra)
+        if self.ctx.role is Role.STUDENT:
+            uid = self.ctx.user_id
+            candidates = [uid, str(uid)]
+            if ObjectId.is_valid(str(uid)):
+                candidates.append(ObjectId(str(uid)))
+            merged["studentUserId"] = {"$in": list(set(candidates))}
+        return merged
 
 
 class PlacementGoalRepo(EediScoreRepo):

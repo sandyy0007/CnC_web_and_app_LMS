@@ -28,10 +28,46 @@ from app.repositories.evaluation_repo import EvaluationRepository
 from app.repositories.stats_repo import StatsRepository
 
 
-@pytest.fixture(autouse=True)
-def pg_pool_setup():
+import pytest_asyncio
+
+@pytest_asyncio.fixture(autouse=True)
+async def pg_pool_setup():
+    old = settings.USE_POSTGRES
     settings.USE_POSTGRES = True
-    yield
+    async with get_pg_connection() as conn:
+        before_rows = await conn.fetch("SELECT id FROM institutions")
+        existing_inst_ids = {r["id"] for r in before_rows}
+        before_courses = await conn.fetch("SELECT id FROM courses")
+        existing_course_ids = {r["id"] for r in before_courses}
+    try:
+        yield
+    finally:
+        async with get_pg_connection() as conn:
+            after_rows = await conn.fetch("SELECT id FROM institutions")
+            new_inst_ids = [r["id"] for r in after_rows if r["id"] not in existing_inst_ids]
+            for nid in new_inst_ids:
+                await conn.execute("DELETE FROM payments WHERE participant_user_id IN (SELECT id FROM users WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM attendance_records WHERE participant_user_id IN (SELECT id FROM users WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM eedi_evaluations WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM enrollment_periods WHERE enrollment_id IN (SELECT id FROM enrollments WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM enrollments WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM batch_trainers WHERE batch_id IN (SELECT id FROM batches WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM student_profiles WHERE user_id IN (SELECT id FROM users WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM trainer_profiles WHERE user_id IN (SELECT id FROM users WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM users WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM batches WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM departments WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM institutions WHERE id = $1", nid)
+
+            after_courses = await conn.fetch("SELECT id FROM courses")
+            new_course_ids = [r["id"] for r in after_courses if r["id"] not in existing_course_ids]
+            for cid in new_course_ids:
+                await conn.execute("DELETE FROM enrollment_periods WHERE enrollment_id IN (SELECT id FROM enrollments WHERE course_id = $1)", cid)
+                await conn.execute("DELETE FROM payments WHERE course_id = $1", cid)
+                await conn.execute("DELETE FROM eedi_evaluations WHERE course_id = $1", cid)
+                await conn.execute("DELETE FROM enrollments WHERE course_id = $1", cid)
+                await conn.execute("DELETE FROM courses WHERE id = $1", cid)
+        settings.USE_POSTGRES = old
 
 
 @pytest.mark.asyncio

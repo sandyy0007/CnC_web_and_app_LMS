@@ -599,7 +599,10 @@ async def leaderboard(
     # The leaderboard reads across the student's own batch/department — never wider.
     match: dict[str, Any] = {}
     if batch_id:
-        match["batchId"] = ObjectId(str(batch_id))
+        try:
+            match["batchId"] = ObjectId(str(batch_id))
+        except Exception:
+            match["batchId"] = str(batch_id)
     rows = await repo.col.find(
         {**repo.ctx.base_filter(), **match, "deletedAt": None},
         {"studentUserId": 1, "finalScore": 1},
@@ -645,7 +648,10 @@ async def student_rank(ctx: ScopeContext, student_user_id: Any, *, batch_id: Any
     match: dict[str, Any] = {**repo.ctx.base_filter(), "deletedAt": None}
     match.pop("studentUserId", None)
     if batch_id:
-        match["batchId"] = ObjectId(str(batch_id))
+        try:
+            match["batchId"] = ObjectId(str(batch_id))
+        except Exception:
+            match["batchId"] = str(batch_id)
     rows = await repo.col.find(match, {"studentUserId": 1, "finalScore": 1}).to_list(length=5000)
     if not rows:
         return {"rank": None, "outOf": 0}
@@ -659,8 +665,8 @@ async def student_rank(ctx: ScopeContext, student_user_id: Any, *, batch_id: Any
     ).to_list(length=5000)
     xp = {r["_id"]: r["xp"] for r in xp_rows}
     ranked = sorted(rows, key=lambda r: (-(xp.get(r["studentUserId"], 0)), -(r.get("finalScore") or 0)))
-    target = ObjectId(str(student_user_id))
+    target_str = str(student_user_id)
     for index, row in enumerate(ranked, start=1):
-        if row["studentUserId"] == target:
+        if str(row.get("studentUserId")) == target_str:
             return {"rank": index, "outOf": len(ranked)}
     return {"rank": None, "outOf": len(ranked)}

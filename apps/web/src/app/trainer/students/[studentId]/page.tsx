@@ -1,3 +1,5 @@
+'use client';
+
 import { ArrowLeft, ClipboardCheck, FileSpreadsheet, MessageSquarePlus, Sparkles, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -193,17 +195,17 @@ function EvaluateEediDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="border-b border-white/10 pb-3">
-          <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-            <Sparkles className="size-5 text-indigo-400" />
+        <DialogHeader className="border-b border-line pb-3">
+          <DialogTitle className="text-lg font-bold text-ink-1 flex items-center gap-2">
+            <Sparkles className="size-5 text-indigo-500 dark:text-indigo-400" />
             Evaluate EEDI & Generate Report for {studentName}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4 text-xs">
           {/* Pillar Sliders */}
-          <div className="space-y-2 p-3 rounded-2xl border border-white/10 bg-slate-900/50">
-            <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">
+          <div className="space-y-2 p-3 rounded-2xl border border-line bg-surface-muted dark:border-white/10 dark:bg-slate-900/50">
+            <h4 className="font-bold text-ink-1 uppercase tracking-wider text-[11px]">
               Evaluate Core Competency Pillars (50–100)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -215,10 +217,10 @@ function EvaluateEediDialog({
                 { label: 'Career Readiness', val: career, set: setCareer },
                 { label: 'Behaviour & Ethics', val: behav, set: setBehav },
               ].map((p) => (
-                <div key={p.label} className="p-2 rounded-xl bg-slate-950/60 border border-white/6">
-                  <div className="flex justify-between font-semibold text-slate-200">
+                <div key={p.label} className="p-2 rounded-xl bg-card border border-line dark:bg-slate-950/60 dark:border-white/6">
+                  <div className="flex justify-between font-semibold text-ink-1">
                     <span>{p.label}</span>
-                    <span className="text-indigo-400 font-bold">{p.val}</span>
+                    <span className="text-indigo font-bold">{p.val}</span>
                   </div>
                   <input
                     type="range"
@@ -234,54 +236,54 @@ function EvaluateEediDialog({
           </div>
 
           {/* Qualitative Feedback */}
-          <div className="space-y-2.5 p-3 rounded-2xl border border-white/10 bg-slate-900/50">
-            <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">
+          <div className="space-y-2.5 p-3 rounded-2xl border border-line bg-surface-muted dark:border-white/10 dark:bg-slate-900/50">
+            <h4 className="font-bold text-ink-1 uppercase tracking-wider text-[11px]">
               Trainer Feedback & Qualitative Analysis
             </h4>
 
             <div>
-              <label className="block font-semibold text-slate-300">Overall Assessment *</label>
+              <label className="block font-semibold text-ink-2">Overall Assessment *</label>
               <textarea
                 required
                 rows={2}
                 value={overall}
                 onChange={(e) => setOverall(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-input-border bg-input p-2.5 text-xs text-ink-1 focus:border-brand-primary focus:outline-none"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
-                <label className="block font-semibold text-slate-300">Strengths (comma separated)</label>
+                <label className="block font-semibold text-ink-2">Strengths (comma separated)</label>
                 <input
                   type="text"
                   value={strengths}
                   onChange={(e) => setStrengths(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs text-white"
+                  className="mt-1 w-full rounded-xl border border-input-border bg-input px-2.5 py-1.5 text-xs text-ink-1 focus:border-brand-primary focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-300">Weaknesses (comma separated)</label>
+                <label className="block font-semibold text-ink-2">Weaknesses (comma separated)</label>
                 <input
                   type="text"
                   value={weaknesses}
                   onChange={(e) => setWeaknesses(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs text-white"
+                  className="mt-1 w-full rounded-xl border border-input-border bg-input px-2.5 py-1.5 text-xs text-ink-1 focus:border-brand-primary focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-300">Improvements (comma separated)</label>
+                <label className="block font-semibold text-ink-2">Improvements (comma separated)</label>
                 <input
                   type="text"
                   value={improvements}
                   onChange={(e) => setImprovements(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs text-white"
+                  className="mt-1 w-full rounded-xl border border-input-border bg-input px-2.5 py-1.5 text-xs text-ink-1 focus:border-brand-primary focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          <DialogFooter className="border-t border-white/10 pt-3">
+          <DialogFooter className="border-t border-line pt-3">
             <Button variant="secondary" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

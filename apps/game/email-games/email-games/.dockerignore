@@ -1,0 +1,6 @@
+.git
+.venv
+__pycache__
+*.pyc
+eedi_games.db
+tests

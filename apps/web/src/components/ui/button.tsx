@@ -8,29 +8,30 @@ import * as React from 'react';
 import { cn } from '@/lib/cn';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[9px] font-semibold ' +
-    'transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-55 disabled:active:scale-100 ' +
-    '[&_svg]:pointer-events-none [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-semibold ' +
+    'transition-all duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 ' +
+    '[&_svg]:pointer-events-none [&_svg]:shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50',
   {
     variants: {
       variant: {
         primary:
-          'bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-glow border border-indigo-400/30 active:scale-[0.98]',
+          'bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-md hover:shadow-glow border border-indigo-400/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.25)]',
         gradient:
-          'bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-glow hover:shadow-lg hover:brightness-105 border border-white/20',
+          'bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-glow hover:shadow-lg hover:brightness-105 border border-white/20 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.3)]',
         glass:
-          'backdrop-blur-md bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs',
+          'backdrop-blur-xl bg-white/20 dark:bg-white/10 hover:bg-white/30 dark:hover:bg-white/20 text-slate-900 dark:text-white border border-slate-200/60 dark:border-white/20 shadow-xs',
         secondary:
-          'bg-slate-800/80 hover:bg-slate-700/80 text-white border border-white/14 backdrop-blur-md shadow-xs hover:border-white/25',
-        ghost: 'text-slate-300 hover:bg-white/10 hover:text-white',
+          'bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-200 dark:border-white/14 backdrop-blur-md shadow-xs hover:border-slate-300 dark:hover:border-white/25 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]',
+        ghost:
+          'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white',
         danger:
-          'bg-rose-600 text-white hover:bg-rose-500 border border-rose-500/40 hover:shadow-sm shadow-xs',
+          'bg-rose-600 text-white hover:bg-rose-500 border border-rose-500/40 hover:shadow-sm shadow-xs shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]',
         subtle:
-          'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/25',
+          'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/25',
         dark:
-          'bg-slate-950/80 text-white hover:bg-slate-900 border border-white/15 hover:shadow-sm',
+          'bg-slate-950 text-white hover:bg-slate-900 border border-white/15 hover:shadow-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15)]',
         link:
-          'text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-4 p-0 h-auto active:scale-100',
+          'text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 hover:underline underline-offset-4 p-0 h-auto active:scale-100',
       },
       size: {
         sm: 'h-8 px-[11px] text-sm [&_svg]:size-[13px]',

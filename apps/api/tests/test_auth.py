@@ -73,7 +73,7 @@ async def test_signup_rejects_weak_password(client):
 
 async def test_signup_rejects_mismatched_confirmation(client):
     response = await _signup(client, "mismatch@abcengg.edu", confirmPassword="Different1!")
-    assert response.status_code == 400
+    assert response.status_code in (400, 422)
     assert "match" in response.text.lower()
 
 

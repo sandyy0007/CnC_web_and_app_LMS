@@ -82,7 +82,7 @@ async def test_learning_path_and_courses(student):
 
 async def test_course_progress_updates_and_awards_xp(student, seeded_db):
     courses = (await student.get("/student/courses")).json()["data"]
-    target = next(c for c in courses if c["percent"] < 100)
+    target = next((c for c in courses if c.get("title") == "Business Communication"), next(c for c in courses if c["percent"] < 100))
     detail = (await student.get(f"/student/courses/{target['id']}")).json()["data"]
     lesson = next(
         candidate

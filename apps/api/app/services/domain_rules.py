@@ -215,7 +215,7 @@ def can_access_participant(
     # Trainer batch boundary
     if ctx.role is Role.TRAINER:
         part_batch = participant_profile.get("batchId")
-        if part_batch and part_batch not in ctx.batch_ids:
+        if not part_batch or str(part_batch) not in [str(b) for b in (ctx.batch_ids or ())]:
             return False, "Participant is not in any batch assigned to this trainer."
         return True, "Authorized trainer access."
 

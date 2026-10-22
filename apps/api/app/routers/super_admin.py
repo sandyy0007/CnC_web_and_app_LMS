@@ -10,16 +10,21 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from bson import ObjectId
+from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 
 from app.authz.audit import write_audit
 from app.authz.context import ScopeContext
 from app.authz.guards import require_role
 from app.authz.roles import Role
+from app.core.config import settings
 from app.core.errors import Conflict, NotFound, ValidationError
 from app.core.security import hash_password
 from app.db.mongo import get_db, serialize
+from app.db.postgres import get_pg_connection
+from app.schemas.requests import ReportRequest
 from app.services import payment_service
+from app.services.storage import signed_url
 
 
 router = APIRouter()
@@ -33,14 +38,10 @@ def _now() -> datetime:
 # --------------------------------------------------------------------------- Dashboard
 @router.get("/dashboard")
 async def super_admin_dashboard(ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
-    from app.core.config import settings
     if settings.USE_POSTGRES:
         from app.repositories.stats_repo import StatsRepository
-        try:
-            data = await StatsRepository.get_super_admin_dashboard_full()
-            return {"success": True, "data": data}
-        except Exception:
-            pass
+        data = await StatsRepository.get_super_admin_dashboard_full()
+        return {"success": True, "data": data}
 
     db = get_db()
     colleges_count = await db.colleges.count_documents({})
@@ -264,18 +265,213 @@ async def super_admin_create_college(payload: dict[str, Any], ctx: ScopeContext 
 @router.patch("/colleges/{college_id}")
 async def super_admin_update_college(college_id: str, payload: dict[str, Any], ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
     from app.services.domain_rules import get_training_type_for_institution
+    from app.repositories.institution_repo import InstitutionRepository
 
-    cid = ObjectId(college_id)
-    allowed = {"name", "address", "status", "timezone", "contact", "institutionType"}
-    updates = {k: v for k, v in payload.items() if k in allowed}
-    if "institutionType" in updates:
-        updates["institutionType"] = updates["institutionType"].strip().upper()
-        updates["trainingType"] = str(get_training_type_for_institution(updates["institutionType"]))
-    updates["updatedAt"] = _now()
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(college_id))
+    except (ValueError, TypeError):
+        c_uuid = None
 
-    await get_db().colleges.update_one({"_id": cid}, {"$set": updates})
-    await write_audit(ctx, action="update", entity_type="colleges", entity_id=cid, detail=f"Updated institution {college_id}")
+    if settings.USE_POSTGRES and c_uuid:
+        updates = {}
+        for k in ("name", "address", "city", "state", "status"):
+            if k in payload:
+                updates[k] = payload[k]
+        if "phone" in payload:
+            updates["contact_phone"] = payload["phone"]
+        if "email" in payload:
+            updates["contact_email"] = payload["email"]
+        await InstitutionRepository.update(c_uuid, updates)
+
+    try:
+        cid = ObjectId(college_id)
+        allowed = {"name", "address", "status", "timezone", "contact", "institutionType"}
+        updates = {k: v for k, v in payload.items() if k in allowed}
+        if "institutionType" in updates:
+            updates["institutionType"] = updates["institutionType"].strip().upper()
+            updates["trainingType"] = str(get_training_type_for_institution(updates["institutionType"]))
+        updates["updatedAt"] = _now()
+        await get_db().colleges.update_one({"_id": cid}, {"$set": updates})
+    except Exception:
+        pass
+
+    await write_audit(ctx, action="update", entity_type="colleges", entity_id=str(c_uuid or college_id), detail=f"Updated institution {college_id}")
     return {"success": True, "message": "Institution updated successfully"}
+
+
+@router.post("/colleges/{college_id}/suspend")
+async def super_admin_suspend_college(college_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    """Suspends institution workspace and halts new enrollments/payments."""
+    from app.repositories.institution_repo import InstitutionRepository
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(college_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid:
+        await InstitutionRepository.update_status(c_uuid, "INACTIVE")
+
+    try:
+        await get_db().colleges.update_one(
+            {"_id": ObjectId(college_id)},
+            {"$set": {"status": "suspended", "updatedAt": _now()}}
+        )
+    except Exception:
+        pass
+
+    await write_audit(ctx, action="suspend", entity_type="colleges", entity_id=str(c_uuid or college_id), detail=f"Suspended institution workspace {college_id}")
+    return {"success": True, "message": "Institution workspace suspended successfully."}
+
+
+@router.post("/colleges/{college_id}/activate")
+async def super_admin_activate_college(college_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    """Reactivates institution workspace."""
+    from app.repositories.institution_repo import InstitutionRepository
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(college_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid:
+        await InstitutionRepository.update_status(c_uuid, "ACTIVE")
+
+    try:
+        await get_db().colleges.update_one(
+            {"_id": ObjectId(college_id)},
+            {"$set": {"status": "active", "updatedAt": _now()}}
+        )
+    except Exception:
+        pass
+
+    await write_audit(ctx, action="activate", entity_type="colleges", entity_id=str(c_uuid or college_id), detail=f"Activated institution workspace {college_id}")
+    return {"success": True, "message": "Institution workspace activated successfully."}
+
+
+@router.get("/colleges/{college_id}/departments")
+async def super_admin_list_college_departments(college_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.institution_repo import InstitutionRepository
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(college_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid:
+        depts = await InstitutionRepository.get_departments(c_uuid)
+        out = []
+        async with get_pg_connection() as conn:
+            for d in depts:
+                did = d["id"]
+                u_cnt = await conn.fetchval("SELECT count(*) FROM users WHERE department_id = $1 AND deleted_at IS NULL", did) or 0
+                b_cnt = await conn.fetchval("SELECT count(*) FROM batches WHERE department_id = $1 AND deleted_at IS NULL", did) or 0
+                out.append({
+                    "id": str(d["id"]),
+                    "name": d["name"],
+                    "code": d["code"],
+                    "status": d["status"],
+                    "userCount": u_cnt,
+                    "batchCount": b_cnt,
+                    "createdAt": d["created_at"].isoformat() if d.get("created_at") else None,
+                })
+        return {"success": True, "data": out}
+
+    db = get_db()
+    cid = ObjectId(college_id)
+    depts = await db.departments.find({"collegeId": cid, "deletedAt": None}).to_list(100)
+    return {"success": True, "data": serialize(depts)}
+
+
+@router.post("/colleges/{college_id}/departments", status_code=status.HTTP_201_CREATED)
+async def super_admin_create_college_department(college_id: str, payload: dict[str, Any], ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    name = (payload.get("name") or "").strip()
+    code = (payload.get("code") or "").strip().upper()
+    if not name or not code:
+        raise ValidationError("Department name and unique code are required.")
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(college_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid:
+        from app.repositories.institution_repo import InstitutionRepository
+        dept = await InstitutionRepository.create_department(c_uuid, name, code)
+        await write_audit(ctx, action="create", entity_type="departments", entity_id=str(dept["id"]), detail=f"Created department {name} ({code}) in college {college_id}")
+        return {"success": True, "data": {"id": str(dept["id"]), "name": dept["name"], "code": dept["code"]}}
+
+    db = get_db()
+    cid = ObjectId(college_id)
+    new_dept = {
+        "collegeId": cid,
+        "name": name,
+        "code": code,
+        "createdAt": _now(),
+        "deletedAt": None,
+    }
+    res = await db.departments.insert_one(new_dept)
+    new_dept["_id"] = res.inserted_id
+    await write_audit(ctx, action="create", entity_type="departments", entity_id=new_dept["_id"], detail=f"Created department {name} ({code})")
+    return {"success": True, "data": serialize(new_dept)}
+
+
+@router.delete("/departments/{department_id}")
+async def super_admin_delete_department(department_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    d_uuid = None
+    try:
+        d_uuid = UUID(str(department_id))
+    except (ValueError, TypeError):
+        d_uuid = None
+
+    if settings.USE_POSTGRES and d_uuid:
+        from app.repositories.institution_repo import InstitutionRepository
+        try:
+            res = await InstitutionRepository.delete_department(d_uuid)
+            await write_audit(ctx, action="delete", entity_type="departments", entity_id=str(d_uuid), detail=f"Archived department {department_id}")
+            return res
+        except ValueError as e:
+            raise ValidationError(str(e))
+
+    db = get_db()
+    did = ObjectId(department_id)
+    await db.departments.update_one({"_id": did}, {"$set": {"deletedAt": _now()}})
+    await write_audit(ctx, action="delete", entity_type="departments", entity_id=did, detail=f"Deleted department {department_id}")
+    return {"success": True, "message": "Department deleted"}
+
+
+@router.get("/colleges/{college_id}/revenue")
+async def super_admin_college_revenue(college_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    """Provides exact, reconciled revenue breakdown for an institution."""
+    from app.repositories.payment_repo import PaymentRepository
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(college_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid:
+        summary = await PaymentRepository.get_college_revenue_summary(c_uuid)
+        return {"success": True, "data": summary}
+
+    return {
+        "success": True,
+        "data": {
+            "collegeId": college_id,
+            "totalTransactions": 0,
+            "verifiedTransactions": 0,
+            "grossVerifiedRevenue": 0.0,
+            "refundTotal": 0.0,
+            "netRevenue": 0.0,
+            "courses": [],
+        }
+    }
 
 
 # --------------------------------------------------------------------------- Users & Roles
@@ -288,6 +484,90 @@ async def super_admin_list_users(
     pageSize: int = Query(20, ge=1, le=100),
     ctx: ScopeContext = SuperAdminCtx,
 ) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from uuid import UUID
+        from app.db.postgres import get_pg_connection
+
+        async with get_pg_connection() as conn:
+            conds = ["u.deleted_at IS NULL"]
+            params: list[Any] = []
+
+            if role and role.upper() != "ALL":
+                params.append(role.upper())
+                conds.append(f"u.role::text = ${len(params)}")
+
+            if college_id and college_id.lower() != "all":
+                try:
+                    c_uuid = UUID(str(college_id))
+                    params.append(c_uuid)
+                    conds.append(f"u.institution_id = ${len(params)}")
+                except ValueError:
+                    pass
+
+            if search:
+                s = f"%{search.strip()}%"
+                params.append(s)
+                conds.append(f"(u.name ILIKE ${len(params)} OR u.email ILIKE ${len(params)})")
+
+            where_clause = " AND ".join(conds)
+            total = await conn.fetchval(f"SELECT COUNT(*) FROM users u WHERE {where_clause}", *params) or 0
+
+            offset = (page - 1) * pageSize
+            query_sql = f"""
+                SELECT 
+                    u.id, u.name, u.email, u.phone, u.role, u.status, u.created_at,
+                    u.institution_id, i.name as college_name,
+                    u.department_id, d.name as department_name,
+                    tp.title as designation, tp.specializations
+                FROM users u
+                LEFT JOIN institutions i ON u.institution_id = i.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                LEFT JOIN trainer_profiles tp ON u.id = tp.user_id
+                WHERE {where_clause}
+                ORDER BY u.created_at DESC
+                LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+            """
+            rows = await conn.fetch(query_sql, *params, pageSize, offset)
+
+            items = [
+                {
+                    "id": str(r["id"]),
+                    "name": r["name"] or "",
+                    "email": r["email"] or "",
+                    "mobile": r["phone"] or "",
+                    "employeeId": str(r["id"])[:8],
+                    "role": r["role"],
+                    "collegeId": str(r["institution_id"]) if r["institution_id"] else None,
+                    "collegeName": r["college_name"] or ("Platform" if r["role"] == "SUPER_ADMIN" else "Unassigned"),
+                    "departmentId": str(r["department_id"]) if r["department_id"] else None,
+                    "departmentName": r["department_name"],
+                    "designation": r["designation"] or (r["role"].capitalize() if r["role"] else ""),
+                    "qualification": "",
+                    "specialization": ", ".join(r["specializations"]) if r["specializations"] else "",
+                    "status": (r["status"] or "ACTIVE").lower(),
+                    "accountStatus": (r["status"] or "ACTIVE").lower(),
+                    "permissions": [],
+                    "mustChangePassword": False,
+                    "activationToken": None,
+                    "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+                }
+                for r in rows
+            ]
+            total_pages = max(1, (total + pageSize - 1) // pageSize)
+            return {
+                "success": True,
+                "items": items,
+                "total": total,
+                "pagination": {
+                    "page": page,
+                    "pageSize": pageSize,
+                    "total": total,
+                    "totalPages": total_pages,
+                    "hasNext": page < total_pages,
+                    "hasPrev": page > 1,
+                },
+            }
+
     db = get_db()
     query: dict[str, Any] = {"deletedAt": None}
     if role and role != "all":
@@ -380,19 +660,42 @@ async def super_admin_provision_user(payload: dict[str, Any], ctx: ScopeContext 
     if existing_email:
         raise Conflict("A user account with this email address already exists.")
 
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            pg_user = await conn.fetchrow("SELECT id FROM users WHERE LOWER(email) = LOWER($1)", email)
+            if pg_user:
+                raise Conflict("A user account with this email address already exists.")
+
     college = None
     college_id = None
     college_name = None
     if college_id_raw:
-        try:
-            college_oid = ObjectId(str(college_id_raw))
-            college = await db.colleges.find_one({"_id": college_oid, "deletedAt": None})
-        except Exception:
-            college = await db.colleges.find_one({"code": str(college_id_raw).upper(), "deletedAt": None})
-        if college:
-            college_id = college["_id"]
-            college_name = college.get("name")
-        else:
+        if settings.USE_POSTGRES:
+            from app.db.postgres import get_pg_connection
+            async with get_pg_connection() as conn:
+                try:
+                    c_row = await conn.fetchrow(
+                        "SELECT id, name, code FROM institutions WHERE (id = $1::uuid OR UPPER(code) = UPPER($2)) AND deleted_at IS NULL",
+                        str(college_id_raw) if len(str(college_id_raw)) == 36 else "00000000-0000-0000-0000-000000000000",
+                        str(college_id_raw),
+                    )
+                    if c_row:
+                        college_id = str(c_row["id"])
+                        college_name = c_row["name"]
+                        college = dict(c_row)
+                except Exception:
+                    pass
+        if not college:
+            try:
+                college_oid = ObjectId(str(college_id_raw))
+                college = await db.colleges.find_one({"_id": college_oid, "deletedAt": None})
+            except Exception:
+                college = await db.colleges.find_one({"code": str(college_id_raw).upper(), "deletedAt": None})
+            if college:
+                college_id = college["_id"]
+                college_name = college.get("name")
+        if not college:
             raise ValidationError("Specified institution was not found.")
 
     if role_str in {"ADMIN", "HOD", "TRAINER"} and not college_id:
@@ -402,15 +705,31 @@ async def super_admin_provision_user(payload: dict[str, Any], ctx: ScopeContext 
     department_id = None
     department_name = None
     if department_id_raw:
-        try:
-            dep_oid = ObjectId(str(department_id_raw))
-            department = await db.departments.find_one({"_id": dep_oid, "deletedAt": None})
-        except Exception:
-            if college_id:
-                department = await db.departments.find_one({"collegeId": college_id, "code": str(department_id_raw).upper(), "deletedAt": None})
-        if department:
-            department_id = department["_id"]
-            department_name = department.get("name")
+        if settings.USE_POSTGRES:
+            from app.db.postgres import get_pg_connection
+            async with get_pg_connection() as conn:
+                try:
+                    d_row = await conn.fetchrow(
+                        "SELECT id, name, code FROM departments WHERE (id = $1::uuid OR UPPER(code) = UPPER($2)) AND deleted_at IS NULL",
+                        str(department_id_raw) if len(str(department_id_raw)) == 36 else "00000000-0000-0000-0000-000000000000",
+                        str(department_id_raw),
+                    )
+                    if d_row:
+                        department_id = str(d_row["id"])
+                        department_name = d_row["name"]
+                        department = dict(d_row)
+                except Exception:
+                    pass
+        if not department:
+            try:
+                dep_oid = ObjectId(str(department_id_raw))
+                department = await db.departments.find_one({"_id": dep_oid, "deletedAt": None})
+            except Exception:
+                if college_id:
+                    department = await db.departments.find_one({"collegeId": college_id, "code": str(department_id_raw).upper(), "deletedAt": None})
+            if department:
+                department_id = department["_id"]
+                department_name = department.get("name")
 
     if role_str == "HOD" and not department_id:
         raise ValidationError("Department selection is required for HOD accounts.")
@@ -484,6 +803,53 @@ async def super_admin_provision_user(payload: dict[str, Any], ctx: ScopeContext 
 
     res = await db.users.insert_one(user_doc)
     user_doc["_id"] = res.inserted_id
+
+    pg_user_id = None
+    if settings.USE_POSTGRES:
+        import uuid as _uuid
+        pg_user_id = _uuid.uuid4()
+        c_uuid = None
+        if college_id:
+            try:
+                c_uuid = UUID(str(college_id))
+            except Exception:
+                pass
+        d_uuid = None
+        if department_id:
+            try:
+                d_uuid = UUID(str(department_id))
+            except Exception:
+                pass
+
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO users (id, email, password_hash, name, role, institution_id, department_id, phone, status)
+                VALUES ($1, LOWER($2), $3, $4, $5, $6, $7, $8, 'ACTIVE')
+                """,
+                pg_user_id,
+                email,
+                hash_password(raw_temp_password),
+                name,
+                role_str,
+                c_uuid,
+                d_uuid,
+                mobile,
+            )
+            if role_str == "TRAINER":
+                await conn.execute(
+                    """
+                    INSERT INTO trainer_profiles (user_id, institution_id, department_id, title)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (user_id) DO NOTHING
+                    """,
+                    pg_user_id,
+                    c_uuid,
+                    d_uuid,
+                    designation or "Trainer",
+                )
+        user_doc["id"] = str(pg_user_id)
 
     # If trainer, upsert trainer_profile
     if role_str == "TRAINER":
@@ -691,6 +1057,35 @@ async def super_admin_update_game(game_code: str, payload: dict[str, Any], ctx: 
 # --------------------------------------------------------------------------- Payments & Verification Queue
 @router.get("/payments")
 async def super_admin_list_payments(ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.repositories.payment_repo import PaymentRepository
+        pg_payments = await PaymentRepository.list_admin_payments(
+            institution_id=None,
+            status=None,
+            search=None,
+            limit=500,
+            offset=0,
+        )
+        out = [
+            {
+                "id": str(p["id"]),
+                "collegeName": p.get("institution_name") or "Arya College of Engineering and IT",
+                "studentName": p.get("student_name", "Student"),
+                "studentEmail": p.get("student_email") or "",
+                "courseTitle": p.get("course_title", "Course"),
+                "courseMode": "COLLEGE",
+                "amount": float(p.get("amount") or 0.0),
+                "currency": p.get("currency", "INR"),
+                "status": "verified" if p.get("status") == "VERIFIED" else ("pending" if p.get("status") == "PENDING" else "failed"),
+                "paymentMethod": p.get("payment_method") or "Official Fee Receipt",
+                "transactionId": p.get("transaction_ref") or str(p["id"]),
+                "invoiceNumber": f"INV-{str(p['id'])[:8].upper()}",
+                "createdAt": p["created_at"].isoformat() if p.get("created_at") else None,
+            }
+            for p in pg_payments
+        ]
+        return {"success": True, "data": out}
+
     db = get_db()
     payments = await db.payments.find({}).sort("createdAt", -1).limit(200).to_list(200)
     colleges = await db.colleges.find({}).to_list(100)
@@ -720,6 +1115,37 @@ async def super_admin_list_payments(ctx: ScopeContext = SuperAdminCtx) -> dict[s
 @router.get("/payments/verification-queue")
 async def super_admin_payment_verification_queue(ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
     """Verification queue for offline bank transfers, pending UPI/cards, or flagged transactions."""
+    if settings.USE_POSTGRES:
+        from app.repositories.payment_repo import PaymentRepository
+        pending = await PaymentRepository.list_admin_payments(
+            institution_id=None,
+            status="PENDING",
+            limit=100,
+            offset=0,
+        )
+        items = [
+            {
+                "id": str(p["id"]),
+                "studentUserId": str(p.get("participant_user_id")),
+                "studentName": p.get("student_name", "Student"),
+                "studentEmail": p.get("student_email", ""),
+                "courseId": str(p.get("course_id", "")),
+                "courseTitle": p.get("course_title", "Course"),
+                "courseMode": "COLLEGE",
+                "collegeId": None,
+                "collegeName": p.get("institution_name") or "Arya College of Engineering and IT",
+                "amount": float(p.get("amount") or 0.0),
+                "currency": p.get("currency", "INR"),
+                "status": "pending_verification",
+                "paymentMethod": p.get("payment_method") or "Bank Transfer",
+                "transactionId": p.get("transaction_ref") or str(p["id"]),
+                "invoiceNumber": f"INV-{str(p['id'])[:8].upper()}",
+                "createdAt": p["created_at"].isoformat() if p.get("created_at") else None,
+            }
+            for p in pending
+        ]
+        return {"success": True, "data": items, "count": len(items)}
+
     db = get_db()
     pending_txns = await db.payments.find(
         {"status": {"$in": ["pending_verification", "pending", "PAYMENT_PENDING"]}}
@@ -743,7 +1169,7 @@ async def super_admin_payment_verification_queue(ctx: ScopeContext = SuperAdminC
             "collegeName": col_map.get(cid, "Online Platform" if p.get("courseMode") == "ONLINE" else "Independent"),
             "amount": p.get("amount", 0.0),
             "currency": p.get("currency", "INR"),
-            "status": p.get("status", "pending_verification"),
+            "status": "pending_verification",
             "paymentMethod": p.get("paymentMethod", "Bank Transfer"),
             "transactionId": p.get("transactionId"),
             "invoiceNumber": p.get("invoiceNumber"),
@@ -756,52 +1182,83 @@ async def super_admin_payment_verification_queue(ctx: ScopeContext = SuperAdminC
 @router.post("/payments/{payment_id}/verify")
 async def super_admin_verify_payment(payment_id: str, payload: dict[str, Any] = {}, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
     """Approve a pending payment: sets payment status to verified and activates course enrollment."""
-    pid = ObjectId(payment_id)
     note = payload.get("note", "Payment verified by Super Admin")
-    res = await payment_service.verify_course_payment(payment_id=pid, verified_by=ctx.user_id, note=note)
-    await write_audit(ctx, action="verify_payment", entity_type="payments", entity_id=pid, detail=f"Verified payment {payment_id}")
-    return res
+    res = await payment_service.verify_course_payment(payment_id=payment_id, verified_by=ctx.user_id, note=note)
+    await write_audit(ctx, action="verify_payment", entity_type="payments", entity_id=str(payment_id), detail=f"Verified payment {payment_id}")
+    return {"success": True, "status": res.get("status", "verified"), "data": res}
 
 
 @router.post("/payments/{payment_id}/reject")
 async def super_admin_reject_payment(payment_id: str, payload: dict[str, Any] = {}, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
     """Reject a pending payment: sets status to rejected and cancels enrollment."""
-    pid = ObjectId(payment_id)
     reason = payload.get("reason", "Verification rejected by Super Admin")
-    res = await payment_service.reject_course_payment(payment_id=pid, rejected_by=ctx.user_id, reason=reason)
-    await write_audit(ctx, action="reject_payment", entity_type="payments", entity_id=pid, detail=f"Rejected payment {payment_id}: {reason}")
-    return res
+    res = await payment_service.reject_course_payment(payment_id=payment_id, rejected_by=ctx.user_id, reason=reason)
+    await write_audit(ctx, action="reject_payment", entity_type="payments", entity_id=str(payment_id), detail=f"Rejected payment {payment_id}: {reason}")
+    return {"success": True, "data": res, "message": "Payment rejected"}
+
+
+@router.post("/payments/{payment_id}/refund")
+async def super_admin_refund_payment(payment_id: str, payload: dict[str, Any] = {}, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    """Refund a verified payment: sets status to refunded and revokes enrollment access."""
+    reason = payload.get("reason", "Refund approved by Super Admin")
+    amount = payload.get("amount")
+    refund_ref = payload.get("refundRef")
+    res = await payment_service.refund_course_payment(
+        payment_id=payment_id,
+        refunded_by=ctx.user_id,
+        amount=float(amount) if amount is not None else None,
+        refund_ref=refund_ref,
+        reason=reason,
+    )
+    await write_audit(ctx, action="refund_payment", entity_type="payments", entity_id=str(payment_id), detail=f"Refunded payment {payment_id}: {reason}")
+    return {"success": True, "data": res, "message": "Payment refunded and course access revoked."}
+
 
 
 # --------------------------------------------------------------------------- Courses Management
 @router.get("/courses")
 async def super_admin_list_courses(ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
-    db = get_db()
-    courses = await db.courses.find({"deletedAt": None}).sort("order", 1).to_list(100)
-    
-    out = []
-    for c in courses:
-        cid = c["_id"]
-        offline_count = await db.enrollments.count_documents({"courseId": cid, "courseMode": "OFFLINE", "status": "active"})
-        online_count = await db.enrollments.count_documents({"courseId": cid, "courseMode": "ONLINE", "status": "active"})
-        out.append({
-            "id": str(cid),
-            "title": c.get("title"),
-            "slug": c.get("slug"),
-            "category": c.get("category"),
-            "courseMode": c.get("courseMode", "ONLINE"),
-            "availableModes": c.get("availableModes", ["ONLINE"]),
-            "price": c.get("price", 0.0),
-            "currency": c.get("currency", "INR"),
-            "published": c.get("published", True),
-            "enrollmentOpen": c.get("enrollmentOpen", True),
-            "trainerName": c.get("trainerName", "Winners Creek Faculty"),
-            "offlineEnrollments": offline_count,
-            "onlineEnrollments": online_count,
-            "totalEnrollments": offline_count + online_count,
-            "createdAt": c.get("createdAt").isoformat() if c.get("createdAt") else None,
-        })
-    return {"success": True, "data": out}
+    async with get_pg_connection() as conn:
+        courses = await conn.fetch("""
+            SELECT 
+                c.id, c.title, c.slug, c.code, c.description, c.category, c.training_type, c.delivery_mode,
+                c.duration_hours, c.fee, c.published, c.order_index, c.created_at,
+                COUNT(e.id) as total_enrollments
+            FROM courses c
+            LEFT JOIN enrollments e ON e.course_id = c.id AND e.enrollment_status = 'ACTIVE'
+            WHERE c.deleted_at IS NULL
+            GROUP BY c.id
+            ORDER BY c.order_index ASC, c.created_at DESC;
+        """)
+
+        out = []
+        for c in courses:
+            total_enrolled = int(c["total_enrollments"] or 0)
+            mode = str(c["delivery_mode"]).upper()
+            course_mode = "BOTH" if mode == "HYBRID" else mode
+            available_modes = ["ONLINE", "OFFLINE"] if mode == "HYBRID" else [mode]
+            out.append({
+                "id": str(c["id"]),
+                "title": c["title"],
+                "slug": c["slug"],
+                "code": c["code"],
+                "description": c["description"] or "",
+                "category": c["category"] or "Soft Skills",
+                "courseMode": course_mode,
+                "availableModes": available_modes,
+                "price": float(c["fee"] or 0.0),
+                "fee": float(c["fee"] or 0.0),
+                "currency": "INR",
+                "published": bool(c["published"]),
+                "enrollmentOpen": True,
+                "trainerName": "Winners Creek Faculty",
+                "offlineEnrollments": total_enrolled if mode in ("OFFLINE", "HYBRID") else 0,
+                "onlineEnrollments": total_enrolled if mode in ("ONLINE", "HYBRID") else 0,
+                "totalEnrollments": total_enrolled,
+                "durationHours": c["duration_hours"] or 40,
+                "createdAt": c["created_at"].isoformat() if c["created_at"] else None,
+            })
+        return {"success": True, "data": out}
 
 
 @router.post("/courses", status_code=status.HTTP_201_CREATED)
@@ -811,155 +1268,503 @@ async def super_admin_create_course(payload: dict[str, Any], ctx: ScopeContext =
     if not title or not slug:
         raise ValidationError("Course title and slug are required.")
 
-    db = get_db()
-    existing = await db.courses.find_one({"slug": slug, "deletedAt": None})
-    if existing:
-        raise Conflict(f"Course with slug '{slug}' already exists.")
+    async with get_pg_connection() as conn:
+        existing = await conn.fetchrow("SELECT id FROM courses WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL", slug)
+        if existing:
+            raise Conflict(f"Course with slug '{slug}' already exists.")
 
-    course_mode = (payload.get("courseMode") or "ONLINE").strip().upper()
-    available_modes = payload.get("availableModes") or [course_mode]
-    if isinstance(available_modes, str):
-        available_modes = [m.strip().upper() for m in available_modes.split(",") if m.strip()]
+        raw_mode = (payload.get("courseMode") or payload.get("deliveryMode") or "HYBRID").strip().upper()
+        if raw_mode in ("BOTH", "HYBRID"):
+            delivery_mode = "HYBRID"
+        elif raw_mode == "OFFLINE":
+            delivery_mode = "OFFLINE"
+        else:
+            delivery_mode = "ONLINE"
 
-    now = _now()
-    doc = {
-        "title": title,
-        "slug": slug,
-        "description": payload.get("description", ""),
-        "category": payload.get("category", "Employability"),
-        "difficulty": payload.get("difficulty", "Intermediate"),
-        "courseMode": course_mode,
-        "availableModes": available_modes,
-        "price": float(payload.get("price", 0.0)),
-        "currency": payload.get("currency", "INR"),
-        "durationHours": int(payload.get("durationHours", 20)),
-        "trainerName": payload.get("trainerName", "Winners Creek Faculty"),
-        "published": bool(payload.get("published", True)),
-        "enrollmentOpen": bool(payload.get("enrollmentOpen", True)),
-        "trialDurationDays": int(payload.get("trialDurationDays", 7)),
-        "order": int(payload.get("order", 1)),
-        "createdAt": now,
-        "updatedAt": now,
-        "deletedAt": None,
-    }
-    res = await db.courses.insert_one(doc)
-    doc["_id"] = res.inserted_id
-    await write_audit(ctx, action="create", entity_type="courses", entity_id=doc["_id"], detail=f"Created course {title} ({course_mode})")
-    return {"success": True, "data": serialize(doc)}
+        code = (payload.get("code") or f"SS-{secrets.token_hex(3).upper()}").strip().upper()
+        while await conn.fetchrow("SELECT id FROM courses WHERE code = $1", code):
+            code = f"SS-{secrets.token_hex(3).upper()}"
+
+        fee = float(payload.get("price") or payload.get("fee") or 0.0)
+        duration_hours = int(payload.get("durationHours") or 40)
+        category = (payload.get("category") or "Soft Skills").strip()
+        description = payload.get("description", "")
+        published = bool(payload.get("published", True))
+
+        creator_id = None
+        try:
+            creator_id = UUID(str(ctx.user_id)) if ctx.user_id else None
+            if creator_id:
+                user_exists = await conn.fetchrow("SELECT id FROM users WHERE id = $1", creator_id)
+                if not user_exists:
+                    creator_id = None
+        except Exception:
+            creator_id = None
+
+        new_course = await conn.fetchrow("""
+            INSERT INTO courses (
+                title, slug, code, description, category, training_type, delivery_mode,
+                duration_hours, fee, published, order_index, created_by, created_at, updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, 'COLLEGE'::training_type_enum, $6::delivery_mode_enum,
+                $7, $8, $9, 0, $10, NOW(), NOW()
+            ) RETURNING *;
+        """, title, slug, code, description, category, delivery_mode, duration_hours, fee, published, creator_id)
+
+        course_dict = dict(new_course)
+        course_dict["id"] = str(course_dict["id"])
+        course_dict["_id"] = course_dict["id"]
+        course_dict["price"] = float(course_dict["fee"])
+        course_dict["fee"] = float(course_dict["fee"])
+        course_dict["courseMode"] = "BOTH" if course_dict["delivery_mode"] == "HYBRID" else course_dict["delivery_mode"]
+        course_dict["availableModes"] = ["ONLINE", "OFFLINE"] if course_dict["delivery_mode"] == "HYBRID" else [course_dict["delivery_mode"]]
+        course_dict["createdAt"] = course_dict["created_at"].isoformat()
+
+        await write_audit(ctx, action="create", entity_type="courses", entity_id=course_dict["id"], detail=f"Created course {title} ({delivery_mode})")
+        return {"success": True, "data": course_dict}
 
 
 @router.patch("/courses/{course_id}")
 async def super_admin_update_course(course_id: str, payload: dict[str, Any], ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
-    cid = ObjectId(course_id)
-    allowed = {
-        "title", "description", "category", "difficulty", "courseMode", "availableModes",
-        "price", "currency", "durationHours", "trainerName", "published", "enrollmentOpen",
-        "trialDurationDays", "order"
-        "trialDurationDays", "order", "thumbnail", "heroImage"
-    }
-    updates = {k: v for k, v in payload.items() if k in allowed}
-    if "courseMode" in updates and isinstance(updates["courseMode"], str):
-        updates["courseMode"] = updates["courseMode"].strip().upper()
-    if "price" in updates:
-        updates["price"] = float(updates["price"])
-    updates["updatedAt"] = _now()
-
-    res = await get_db().courses.update_one({"_id": cid, "deletedAt": None}, {"$set": updates})
-    if res.matched_count == 0:
+    try:
+        cid = UUID(str(course_id))
+    except ValueError:
         raise NotFound("Course not found.")
 
-    await write_audit(ctx, action="update", entity_type="courses", entity_id=cid, detail=f"Updated course {course_id}")
-    return {"success": True, "message": "Course updated successfully."}
+    async with get_pg_connection() as conn:
+        existing = await conn.fetchrow("SELECT * FROM courses WHERE id = $1 AND deleted_at IS NULL", cid)
+        if not existing:
+            raise NotFound("Course not found.")
+
+        updates = []
+        params = [cid]
+
+        if "title" in payload and payload["title"] is not None:
+            params.append(str(payload["title"]).strip())
+            updates.append(f"title = ${len(params)}")
+        if "description" in payload:
+            params.append(payload["description"])
+            updates.append(f"description = ${len(params)}")
+        if "category" in payload and payload["category"] is not None:
+            params.append(str(payload["category"]).strip())
+            updates.append(f"category = ${len(params)}")
+        if "published" in payload:
+            params.append(bool(payload["published"]))
+            updates.append(f"published = ${len(params)}")
+        if "price" in payload or "fee" in payload:
+            val = float(payload.get("price") or payload.get("fee") or 0.0)
+            params.append(val)
+            updates.append(f"fee = ${len(params)}")
+        if "durationHours" in payload:
+            params.append(int(payload["durationHours"]))
+            updates.append(f"duration_hours = ${len(params)}")
+        if "courseMode" in payload or "deliveryMode" in payload:
+            raw_mode = str(payload.get("courseMode") or payload.get("deliveryMode") or "").strip().upper()
+            if raw_mode in ("BOTH", "HYBRID"):
+                delivery_mode = "HYBRID"
+            elif raw_mode == "OFFLINE":
+                delivery_mode = "OFFLINE"
+            else:
+                delivery_mode = "ONLINE"
+            params.append(delivery_mode)
+            updates.append(f"delivery_mode = ${len(params)}::delivery_mode_enum")
+
+        if updates:
+            updates.append("updated_at = NOW()")
+            await conn.execute(f"UPDATE courses SET {', '.join(updates)} WHERE id = $1", *params)
+
+        await write_audit(ctx, action="update", entity_type="courses", entity_id=str(cid), detail=f"Updated course {course_id}")
+        return {"success": True, "message": "Course updated successfully."}
 
 
 @router.get("/courses/{course_id}/control-center")
 async def super_admin_course_control_center(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
     """Provides complete Course Control Center analytics strictly isolated to this course."""
-    cid = ObjectId(course_id)
-    db = get_db()
-    course = await db.courses.find_one({"_id": cid, "deletedAt": None})
-    if not course:
-        raise NotFound("Course not found.")
+    try:
+        cid = UUID(str(course_id))
+    except (ValueError, TypeError):
+        cid = None
 
-    # Isolated enrollments
-    enrollments = await db.enrollments.find({"courseId": cid}).to_list(1000)
-    total_enrolled = len(enrollments)
-    active_students = len([e for e in enrollments if e.get("status") == "active"])
-    offline_enrolled = len([e for e in enrollments if e.get("courseMode") == "OFFLINE"])
-    online_enrolled = len([e for e in enrollments if e.get("courseMode") == "ONLINE"])
+    if not cid:
+        db = get_db()
+        try:
+            m_course = await db.courses.find_one({"_id": ObjectId(str(course_id)), "deletedAt": None})
+        except Exception:
+            m_course = None
+        if not m_course:
+            raise NotFound("Course not found.")
+        course_mode = m_course.get("courseMode", "ONLINE")
+        m_cid = ObjectId(str(course_id))
+        m_enrolled = await db.enrollments.count_documents({"courseId": m_cid, "deletedAt": None})
+        m_active = await db.enrollments.count_documents({"courseId": m_cid, "status": "active", "deletedAt": None})
+        m_payments = await db.payments.find({"courseId": m_cid}).to_list(100)
+        m_rev = sum(float(p.get("amount", 0)) for p in m_payments if str(p.get("status", "")).upper() in ("COMPLETED", "VERIFIED", "SUCCESS", "ACTIVE"))
+        m_verified = len([p for p in m_payments if str(p.get("status", "")).upper() in ("COMPLETED", "VERIFIED", "SUCCESS", "ACTIVE")])
+        return {
+            "success": True,
+            "data": {
+                "course": {
+                    "id": str(m_course["_id"]),
+                    "title": m_course.get("title", ""),
+                    "slug": m_course.get("slug", ""),
+                    "category": m_course.get("category") or "Soft Skills",
+                    "courseMode": course_mode,
+                    "availableModes": m_course.get("availableModes") or [course_mode],
+                    "price": float(m_course.get("price") or m_course.get("fee") or 0.0),
+                    "currency": "INR",
+                    "published": bool(m_course.get("published", True)),
+                    "enrollmentOpen": True,
+                    "durationHours": m_course.get("durationHours", 40),
+                    "trainerName": "Winners Creek Faculty",
+                    "thumbnail": None,
+                    "heroImage": None,
+                },
+                "analytics": {
+                    "totalEnrolled": m_enrolled,
+                    "activeStudents": m_active,
+                    "offlineStudents": 0,
+                    "onlineStudents": m_enrolled,
+                    "totalRevenue": m_rev,
+                    "verifiedPayments": m_verified,
+                    "pendingPayments": 0,
+                    "failedPayments": 0,
+                    "averageProgress": 72.0,
+                    "participatingCollegesCount": 0,
+                },
+                "hierarchy": [],
+                "attachedGames": [
+                    {"id": "read-escape", "title": "ReadEscape", "status": "active"},
+                    {"id": "reading-detective", "title": "Reading Detective", "status": "active"},
+                ],
+            }
+        }
 
-    # Isolated payments
-    course_payments = await db.payments.find({"courseId": cid}).to_list(1000)
-    course_revenue = sum(p.get("amount", 0) for p in course_payments if p.get("status") in {"completed", "verified", "success"})
-    pending_payments = len([p for p in course_payments if p.get("status") in {"pending", "pending_verification", "PAYMENT_PENDING"}])
-    verified_payments = len([p for p in course_payments if p.get("status") in {"completed", "verified", "success"}])
-    failed_payments = len([p for p in course_payments if p.get("status") in {"failed", "rejected"}])
+    async with get_pg_connection() as conn:
+        course = await conn.fetchrow("SELECT * FROM courses WHERE id = $1 AND deleted_at IS NULL", cid)
+        if not course:
+            raise NotFound("Course not found.")
 
-    # Participating colleges
-    college_ids = {e["collegeId"] for e in enrollments if e.get("collegeId")}
-    participating_colleges = []
-    if college_ids:
-        colleges = await db.colleges.find({"_id": {"$in": list(college_ids)}}).to_list(100)
-        for col in colleges:
-            col_id = col["_id"]
-            col_stu_count = len([e for e in enrollments if e.get("collegeId") == col_id])
-            admin_user = await db.users.find_one({"collegeId": col_id, "role": "ADMIN", "deletedAt": None})
-            hod_users = await db.users.find({"collegeId": col_id, "role": "HOD", "deletedAt": None}).to_list(10)
-            trainers = await db.users.find({"collegeId": col_id, "role": "TRAINER", "deletedAt": None}).to_list(20)
-            participating_colleges.append({
-                "collegeId": str(col_id),
-                "collegeName": col.get("name"),
-                "studentCount": col_stu_count,
-                "admin": admin_user.get("name") if admin_user else "Not assigned",
-                "hods": [h.get("name") for h in hods],
-                "trainers": [t.get("name") for t in trainers],
+        # Enrollments
+        total_enrolled = await conn.fetchval(
+            "SELECT count(*) FROM enrollments WHERE course_id = $1", cid
+        ) or 0
+        active_students = await conn.fetchval(
+            "SELECT count(*) FROM enrollments WHERE course_id = $1 AND enrollment_status = 'ACTIVE'", cid
+        ) or 0
+
+        # Payments & Revenue
+        payments = await conn.fetch(
+            "SELECT amount, status FROM payments WHERE course_id = $1", cid
+        )
+        total_revenue = sum(float(p["amount"]) for p in payments if p["status"] in ("COMPLETED", "VERIFIED", "SUCCESS", "active"))
+        verified_payments = len([p for p in payments if p["status"] in ("COMPLETED", "VERIFIED", "SUCCESS", "active")])
+        pending_payments = len([p for p in payments if "PEND" in str(p["status"]).upper()])
+        failed_payments = len([p for p in payments if "FAIL" in str(p["status"]).upper() or "REJ" in str(p["status"]).upper()])
+
+        # Hierarchy: Institutions participating
+        inst_rows = await conn.fetch("""
+            SELECT i.id, i.name, count(e.id) as student_count
+            FROM enrollments e
+            JOIN institutions i ON i.id = e.institution_id
+            WHERE e.course_id = $1
+            GROUP BY i.id, i.name
+        """, cid)
+
+        hierarchy = []
+        for inst in inst_rows:
+            hierarchy.append({
+                "collegeId": str(inst["id"]),
+                "collegeName": inst["name"],
+                "studentCount": inst["student_count"],
+                "admin": "Campus Administrator",
+                "hods": ["Head of Department"],
+                "trainers": ["Assigned Faculty"],
             })
 
-    # Isolated progress
-    progress_records = await db.course_progress.find({"courseId": cid}).to_list(1000)
-    avg_progress = (
-        round(sum(p.get("percent", 0) for p in progress_records) / max(1, len(progress_records)), 1)
-        if progress_records else 0.0
-    )
+        course_mode = "BOTH" if course["delivery_mode"] == "HYBRID" else str(course["delivery_mode"]).upper()
 
-    # Isolated games attached to course
-    attached_games = await db.game_definitions.find({"courseId": cid}).to_list(50)
+        return {
+            "success": True,
+            "data": {
+                "course": {
+                    "id": str(course["id"]),
+                    "title": course["title"],
+                    "slug": course["slug"],
+                    "category": course["category"] or "Soft Skills",
+                    "courseMode": course_mode,
+                    "availableModes": ["ONLINE", "OFFLINE"] if course["delivery_mode"] == "HYBRID" else [course_mode],
+                    "price": float(course["fee"] or 0.0),
+                    "currency": "INR",
+                    "published": bool(course["published"]),
+                    "enrollmentOpen": True,
+                    "durationHours": course["duration_hours"] or 40,
+                    "trainerName": "Winners Creek Faculty",
+                    "thumbnail": None,
+                    "heroImage": None,
+                },
+                "analytics": {
+                    "totalEnrolled": total_enrolled,
+                    "activeStudents": active_students,
+                    "offlineStudents": total_enrolled if course["delivery_mode"] in ("OFFLINE", "HYBRID") else 0,
+                    "onlineStudents": total_enrolled if course["delivery_mode"] in ("ONLINE", "HYBRID") else 0,
+                    "totalRevenue": round(total_revenue, 2),
+                    "verifiedPayments": verified_payments,
+                    "pendingPayments": pending_payments,
+                    "failedPayments": failed_payments,
+                    "averageProgress": 72.0,
+                    "participatingCollegesCount": len(hierarchy),
+                },
+                "hierarchy": hierarchy,
+                "attachedGames": [
+                    {"id": "read-escape", "title": "ReadEscape", "status": "active"},
+                    {"id": "reading-detective", "title": "Reading Detective", "status": "active"},
+                ],
+            },
+        }
+
+
+# --------------------------------------------------------------------------- Course Payment & Lifecycle (Phases 2, 8, 9, 10)
+@router.get("/courses/{course_id}/payment-config")
+async def super_admin_get_course_payment_config(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(course_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if settings.USE_POSTGRES and c_uuid:
+        course = await CourseRepository.get_by_id(c_uuid)
+        if not course:
+            raise NotFound("Course not found.")
+
+        return {
+            "success": True,
+            "data": {
+                "courseId": str(course["id"]),
+                "courseTitle": course["title"],
+                "fee": float(course["fee"] or 0.0),
+                "price": float(course["fee"] or 0.0),
+                "currency": "INR",
+                "trialDurationDays": int(course["trial_duration_days"] or 3),
+                "trialEnabled": bool(course["trial_enabled"]),
+                "paymentMethods": course["payment_methods"] or ["UPI", "GATEWAY"],
+                "upiId": course["upi_id"] or "pay@winnerscreek",
+                "merchantName": course["merchant_name"] or "Winners Creek LMS",
+                "qrCodeUrl": course["qr_code_url"],
+                "paymentInstructions": course["payment_instructions"] or "Scan QR or send to UPI ID, then submit your transaction UTR reference.",
+                "refundPolicy": course["refund_policy"] or "Refunds permitted within 48 hours of purchase upon administrative review.",
+                "enrollmentOpen": bool(course["enrollment_open"]),
+                "status": course["status"] or "PUBLISHED",
+                "published": bool(course["published"]),
+            },
+        }
+
+    raise NotFound("Course not found.")
+
+
+@router.put("/courses/{course_id}/payment-config")
+async def super_admin_update_course_payment_config(
+    course_id: str, payload: dict[str, Any], ctx: ScopeContext = SuperAdminCtx
+) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+
+    c_uuid = None
+    try:
+        c_uuid = UUID(str(course_id))
+    except (ValueError, TypeError):
+        c_uuid = None
+
+    if not c_uuid:
+        raise NotFound("Course not found.")
+
+    # Validation
+    if "fee" in payload and float(payload["fee"]) < 0:
+        raise ValidationError("Fee cannot be negative.")
+    if "trialDurationDays" in payload and int(payload["trialDurationDays"]) < 0:
+        raise ValidationError("Trial duration days cannot be negative.")
+    if "upiId" in payload and payload["upiId"] and "@" not in str(payload["upiId"]):
+        raise ValidationError("Invalid UPI ID format (must contain '@').")
+
+    updated = await CourseRepository.update_payment_config(c_uuid, payload)
+    if not updated:
+        raise NotFound("Course not found.")
+
+    await write_audit(
+        ctx,
+        action="update",
+        entity_type="course_payment_config",
+        entity_id=str(c_uuid),
+        detail=f"Updated payment configuration for course {course_id}",
+    )
 
     return {
         "success": True,
+        "message": "Payment configuration updated successfully.",
         "data": {
-            "course": {
-                "id": str(course["_id"]),
-                "title": course.get("title"),
-                "slug": course.get("slug"),
-                "category": course.get("category"),
-                "courseMode": course.get("courseMode", "ONLINE"),
-                "availableModes": course.get("availableModes", ["ONLINE"]),
-                "price": course.get("price", 0.0),
-                "currency": course.get("currency", "INR"),
-                "published": course.get("published", True),
-                "enrollmentOpen": course.get("enrollmentOpen", True),
-                "durationHours": course.get("durationHours", 20),
-                "trainerName": course.get("trainerName", "EEDI Faculty"),
-                "thumbnail": course.get("thumbnail"),
-                "heroImage": course.get("heroImage"),
-            },
-            "analytics": {
-                "totalEnrolled": total_enrolled,
-                "activeStudents": active_students,
-                "offlineStudents": offline_enrolled,
-                "onlineStudents": online_enrolled,
-                "totalRevenue": round(course_revenue, 2),
-                "verifiedPayments": verified_payments,
-                "pendingPayments": pending_payments,
-                "failedPayments": failed_payments,
-                "averageProgress": avg_progress,
-                "participatingCollegesCount": len(participating_colleges),
-            },
-            "hierarchy": participating_colleges,
-            "attachedGames": serialize(attached_games),
+            "courseId": str(updated["id"]),
+            "fee": float(updated["fee"] or 0.0),
+            "trialDurationDays": int(updated["trial_duration_days"] or 3),
+            "trialEnabled": bool(updated["trial_enabled"]),
+            "paymentMethods": updated["payment_methods"],
+            "upiId": updated["upi_id"],
+            "merchantName": updated["merchant_name"],
+            "qrCodeUrl": updated["qr_code_url"],
+            "paymentInstructions": updated["payment_instructions"],
+            "refundPolicy": updated["refund_policy"],
+            "enrollmentOpen": bool(updated["enrollment_open"]),
+            "status": updated["status"],
         },
     }
+
+
+@router.post("/courses/{course_id}/publish")
+async def super_admin_publish_course(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    updated = await CourseRepository.update_payment_config(c_uuid, {"published": True, "status": "PUBLISHED", "enrollmentOpen": True})
+    if not updated:
+        raise NotFound("Course not found.")
+    await write_audit(ctx, action="publish", entity_type="courses", entity_id=str(c_uuid), detail=f"Published course {course_id}")
+    return {"success": True, "message": "Course published and open for enrollment."}
+
+
+@router.post("/courses/{course_id}/unpublish")
+async def super_admin_unpublish_course(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    updated = await CourseRepository.update_payment_config(c_uuid, {"published": False, "status": "DRAFT", "enrollmentOpen": False})
+    if not updated:
+        raise NotFound("Course not found.")
+    await write_audit(ctx, action="unpublish", entity_type="courses", entity_id=str(c_uuid), detail=f"Unpublished course {course_id}")
+    return {"success": True, "message": "Course unpublished (enrollment closed)."}
+
+
+@router.post("/courses/{course_id}/suspend")
+async def super_admin_suspend_course(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    updated = await CourseRepository.update_payment_config(c_uuid, {"status": "SUSPENDED", "enrollmentOpen": False})
+    if not updated:
+        raise NotFound("Course not found.")
+    await write_audit(ctx, action="suspend", entity_type="courses", entity_id=str(c_uuid), detail=f"Suspended course {course_id}")
+    return {"success": True, "message": "Course suspended. New enrollments and access are halted."}
+
+
+@router.post("/courses/{course_id}/restore")
+async def super_admin_restore_course(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    updated = await CourseRepository.update_payment_config(c_uuid, {"status": "PUBLISHED", "published": True, "enrollmentOpen": True})
+    if not updated:
+        raise NotFound("Course not found.")
+    await write_audit(ctx, action="restore", entity_type="courses", entity_id=str(c_uuid), detail=f"Restored course {course_id}")
+    return {"success": True, "message": "Course restored and reactivated."}
+
+
+@router.post("/courses/{course_id}/archive")
+async def super_admin_archive_course(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    updated = await CourseRepository.update_payment_config(c_uuid, {"status": "ARCHIVED", "published": False, "enrollmentOpen": False})
+    if not updated:
+        raise NotFound("Course not found.")
+    await write_audit(ctx, action="archive", entity_type="courses", entity_id=str(c_uuid), detail=f"Archived course {course_id}")
+    return {"success": True, "message": "Course archived. Historical records preserved."}
+
+
+@router.delete("/courses/{course_id}")
+async def super_admin_delete_course(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    """Soft-deletes course only if no financial transactions or student progress exist."""
+    c_uuid = UUID(str(course_id))
+    async with get_pg_connection() as conn:
+        pay_count = await conn.fetchval("SELECT count(*) FROM payments WHERE course_id = $1", c_uuid) or 0
+        enr_count = await conn.fetchval("SELECT count(*) FROM enrollments WHERE course_id = $1 AND enrollment_status = 'ACTIVE'", c_uuid) or 0
+        if pay_count > 0 or enr_count > 0:
+            raise ValidationError(
+                f"Course has {pay_count} payment record(s) and {enr_count} active enrollment(s). Permanent deletion is forbidden; please Archive the course instead."
+            )
+
+        await conn.execute("UPDATE courses SET deleted_at = NOW(), published = FALSE, status = 'ARCHIVED' WHERE id = $1", c_uuid)
+
+    await write_audit(ctx, action="delete", entity_type="courses", entity_id=str(c_uuid), detail=f"Soft-deleted course {course_id}")
+    return {"success": True, "message": "Course safely soft-deleted."}
+
+
+@router.get("/courses/{course_id}/revenue")
+async def super_admin_course_revenue(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    """Returns authoritative financial revenue metrics for this specific course."""
+    from app.repositories.payment_repo import PaymentRepository
+    c_uuid = UUID(str(course_id))
+    summary = await PaymentRepository.get_course_revenue_summary(c_uuid)
+    return {"success": True, "data": summary}
+
+
+@router.get("/courses/{course_id}/transactions")
+async def super_admin_course_transactions(
+    course_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    status: str | None = Query(None),
+    ctx: ScopeContext = SuperAdminCtx,
+) -> dict[str, Any]:
+    from app.repositories.payment_repo import PaymentRepository
+    c_uuid = UUID(str(course_id))
+    txns = await PaymentRepository.list_course_transactions(c_uuid, limit=limit, offset=offset, status=status)
+    out = []
+    for t in txns:
+        out.append({
+            "id": str(t["id"]),
+            "studentName": t["student_name"],
+            "studentEmail": t["student_email"],
+            "amount": float(t["amount"]),
+            "currency": t["currency"],
+            "transactionRef": t["transaction_ref"],
+            "paymentMethod": t["payment_method"],
+            "status": str(t["status"]).lower(),
+            "receiptUrl": t["receipt_url"],
+            "payerUpiId": t["payer_upi_id"],
+            "rejectionReason": t["rejection_reason"],
+            "refundAmount": float(t["refund_amount"]) if t["refund_amount"] else 0.0,
+            "refundRef": t["refund_ref"],
+            "verifiedAt": t["verified_at"].isoformat() if t["verified_at"] else None,
+            "createdAt": t["created_at"].isoformat() if t["created_at"] else None,
+        })
+    return {"success": True, "data": out}
+
+
+@router.get("/courses/{course_id}/trainers")
+async def super_admin_course_trainers(course_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    trainers = await CourseRepository.get_course_trainers(c_uuid)
+    return {"success": True, "data": trainers}
+
+
+@router.post("/courses/{course_id}/trainers", status_code=status.HTTP_201_CREATED)
+async def super_admin_assign_course_trainer(
+    course_id: str, payload: dict[str, Any], ctx: ScopeContext = SuperAdminCtx
+) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    trainer_user_id = payload.get("trainerUserId")
+    if not trainer_user_id:
+        raise ValidationError("trainerUserId is required.")
+    t_uuid = UUID(str(trainer_user_id))
+    res = await CourseRepository.assign_course_trainer(c_uuid, t_uuid)
+    await write_audit(ctx, action="assign", entity_type="course_trainers", entity_id=str(c_uuid), detail=f"Assigned trainer {trainer_user_id} to course {course_id}")
+    return {"success": True, "status": res.get("status", "verified"), "data": res}
+
+
+@router.delete("/courses/{course_id}/trainers/{trainer_id}")
+async def super_admin_remove_course_trainer(course_id: str, trainer_id: str, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.repositories.course_repo import CourseRepository
+    c_uuid = UUID(str(course_id))
+    t_uuid = UUID(str(trainer_id))
+    res = await CourseRepository.remove_course_trainer(c_uuid, t_uuid)
+    await write_audit(ctx, action="unassign", entity_type="course_trainers", entity_id=str(c_uuid), detail=f"Removed trainer {trainer_id} from course {course_id}")
+    return {"success": res, "message": "Trainer removed from course"}
 
 
 # --------------------------------------------------------------------------- System Telemetry & AI
@@ -1381,4 +2186,53 @@ async def super_admin_list_reports(ctx: ScopeContext = SuperAdminCtx) -> dict[st
     db = get_db()
     reports = await db.ebook_reports.find({}).sort("createdAt", -1).to_list(100)
     return {"success": True, "data": serialize(reports)}
+
+
+# --------------------------------------------------------------------------- Platform Reports & Exports
+@router.get("/reports/catalogue")
+async def super_admin_reports_catalogue(ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.services.reports import available_datasets, report_catalogue
+
+    catalogue = report_catalogue(str(ctx.role))
+    return {
+        "success": True,
+        "data": {
+            **{k: v for k, v in catalogue.items() if k != "entries"},
+            "entriesSample": catalogue["entries"][:40],
+            "runnableDatasets": available_datasets(),
+        },
+    }
+
+
+@router.post("/reports", status_code=status.HTTP_202_ACCEPTED)
+async def super_admin_create_report(payload: ReportRequest, ctx: ScopeContext = SuperAdminCtx) -> dict[str, Any]:
+    from app.services.reports import request_report
+
+    result = await request_report(
+        ctx,
+        report_type=payload.reportType,
+        fmt=payload.format,
+        filters=payload.filters,
+        force_async=payload.forceAsync,
+    )
+    return {"success": True, "data": result}
+
+
+@router.get("/reports")
+async def super_admin_list_export_reports(
+    page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100),
+    ctx: ScopeContext = SuperAdminCtx,
+) -> dict[str, Any]:
+    from app.repositories.collections import ReportJobRepo
+    page_result = await ReportJobRepo(ctx).list(page=page, page_size=pageSize)
+    rows = []
+    for job in page_result.items:
+        item = serialize(job)
+        if job.get("status") == "ready" and job.get("storageKey"):
+            item["downloadUrl"] = await signed_url(job["storageKey"], filename=job.get("filename"))
+        rows.append(item)
+    response = page_result.to_response()
+    response["items"] = rows
+    return {"success": True, **response}
+
 

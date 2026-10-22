@@ -264,24 +264,24 @@ export default function StudentEbooksPage() {
                   placeholder="Search books, authors..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-8.5 w-full rounded-[9px] border border-white/15 bg-slate-900/75 pl-8.5 pr-3 text-xs text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
+                  className="h-8.5 w-full rounded-[9px] border border-input-border bg-input pl-8.5 pr-3 text-xs text-ink-1 placeholder:text-ink-3 focus:border-brand-primary focus:outline-none"
                 />
               </div>
             </div>
 
             {/* E-Book Grid */}
             {filtered.length === 0 ? (
-              <div className="rounded-card border border-white/10 bg-slate-900/70 backdrop-blur-xl p-12 text-center">
-                <BookOpen className="mx-auto size-10 text-slate-400" />
-                <p className="mt-3 text-base font-bold text-white">No e-books found</p>
-                <p className="mt-1 text-xs text-slate-300">Try adjusting your search or category filter.</p>
+              <div className="rounded-card border border-line bg-card backdrop-blur-xl p-12 text-center shadow-card dark:border-white/10 dark:bg-slate-900/70">
+                <BookOpen className="mx-auto size-10 text-ink-3" />
+                <p className="mt-3 text-base font-bold text-ink-1">No e-books found</p>
+                <p className="mt-1 text-xs text-ink-3">Try adjusting your search or category filter.</p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((book) => (
                   <Card key={book.id} className="card-interactive flex flex-col justify-between overflow-hidden">
                     <CardBody className="p-4">
-                      <div className="relative mb-3 flex h-36 items-center justify-center rounded-[10px] bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-white/10">
+                      <div className="relative mb-3 flex h-36 items-center justify-center rounded-[10px] bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-line">
                         <BookOpen className="size-12 text-indigo-500 opacity-60" />
                         <button
                           type="button"

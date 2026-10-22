@@ -1,607 +1,1166 @@
-"""Report dataset builders.
+"""Report dataset builders backed by PostgreSQL cnc database.
 
-Each builder runs real scoped queries and returns (columns, rows, title). Registering them here
-means HOD, Trainer and Admin share one implementation per report — the caller's scope decides
-what the rows contain.
+Each builder runs real scoped queries and returns (columns, rows, title).
+Registering them here ensures Super Admin, Admin, HOD, Trainer, and Student
+all access their authorized data with strict tenant and role boundaries.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Any
+import uuid
+from datetime import datetime, date, timedelta, timezone
+from decimal import Decimal
+from typing import Any, Sequence
 
 from bson import ObjectId
 
 from app.authz.context import ScopeContext
+from app.authz.roles import Role
 from app.core.config import settings
-from app.repositories.collections import (
-    AuditLogRepo,
-    CertificateRepo,
-    EnrollmentRepo,
-    PracticeSessionRepo,
-    SkillAssessmentRepo,
-    StudentProfileRepo,
-    TrainerAssignmentRepo,
-    TrainerFeedbackRepo,
-    TrainingSessionRepo,
-    UserRepo,
-)
-from app.services import analytics
+from app.core.errors import ScopeForbidden, ValidationError, NotFound
+from app.db.postgres import get_pg_connection
 from app.services.reports import dataset
-from app.services.scoring import PILLAR_LABELS, band_for
 
 
-def _fmt(value: Any) -> Any:
-    if isinstance(value, datetime):
-        return value.strftime("%d %b %Y %H:%M")
-    if isinstance(value, ObjectId):
-        return str(value)
-    if isinstance(value, bool):
-        return "Yes" if value else "No"
-    if isinstance(value, (list, tuple)):
-        return ", ".join(str(v) for v in value)
-    if isinstance(value, dict):
-        return ", ".join(f"{k}={v}" for k, v in value.items())
-    return value
+def _to_uuid(val: Any) -> uuid.UUID | None:
+    if not val or str(val).lower() in ("all", "none", "null", ""):
+        return None
+    try:
+        return uuid.UUID(str(val))
+    except (ValueError, TypeError):
+        return None
 
 
-def _date_range(filters: dict[str, Any]) -> dict[str, Any]:
-    """`from`/`to` are validated: start must be ≤ end (SRS §12)."""
-    from app.core.errors import ValidationError
+def _fmt(val: Any) -> Any:
+    if val is None:
+        return ""
+    if isinstance(val, (datetime, date)):
+        return val.strftime("%d %b %Y %H:%M") if isinstance(val, datetime) else val.strftime("%d %b %Y")
+    if isinstance(val, (uuid.UUID, ObjectId)):
+        return str(val)
+    if isinstance(val, Decimal):
+        return float(val)
+    if isinstance(val, (list, tuple)):
+        return ", ".join(str(x) for x in val)
+    if isinstance(val, bool):
+        return "Yes" if val else "No"
+    return val
 
-    query: dict[str, Any] = {}
+
+def _parse_dates(filters: dict[str, Any]) -> tuple[date | None, date | None]:
     start = filters.get("from")
     end = filters.get("to")
-    parsed_start = parsed_end = None
+    start_d = end_d = None
     if start:
-        parsed_start = datetime.fromisoformat(str(start)).replace(tzinfo=timezone.utc)
+        try:
+            start_d = datetime.fromisoformat(str(start)).date()
+        except Exception:
+            pass
     if end:
-        parsed_end = datetime.fromisoformat(str(end)).replace(tzinfo=timezone.utc)
-    if parsed_start and parsed_end and parsed_start > parsed_end:
+        try:
+            end_d = datetime.fromisoformat(str(end)).date()
+        except Exception:
+            pass
+    if start_d and end_d and start_d > end_d:
         raise ValidationError("The start date must be on or before the end date")
-    if parsed_start:
-        query["$gte"] = parsed_start
-    if parsed_end:
-        query["$lte"] = parsed_end + timedelta(days=1)
-    return query
+    return start_d, end_d
 
 
-def _scope_filters(filters: dict[str, Any], ctx: ScopeContext) -> dict[str, Any]:
-    """Caller filters are narrowed through the scope context — they can never widen it."""
-    requested = {
-        k: v
-        for k, v in filters.items()
-        if k in ("batchId", "departmentId", "trainingModuleId", "status", "enrollmentType")
-        and v not in (None, "", "all")
-    }
-    return ctx.narrow(**requested)
+async def _resolve_scope(ctx: ScopeContext, filters: dict[str, Any]) -> tuple[uuid.UUID | None, uuid.UUID | None, uuid.UUID | None]:
+    """Resolves (institution_id, department_id, batch_id) applying strict server-side RBAC."""
+    target_inst: uuid.UUID | None = None
+    target_dept: uuid.UUID | None = None
+    target_batch: uuid.UUID | None = _to_uuid(filters.get("batchId"))
+
+    if ctx.role == Role.SUPER_ADMIN:
+        target_inst = _to_uuid(filters.get("collegeId") or filters.get("institutionId"))
+        target_dept = _to_uuid(filters.get("departmentId"))
+    elif ctx.role == Role.ADMIN:
+        target_inst = _to_uuid(ctx.college_id)
+        raw_dept = filters.get("departmentId")
+        if raw_dept and str(raw_dept).lower() != "all":
+            target_dept = _to_uuid(raw_dept)
+            if target_dept and target_inst:
+                async with get_pg_connection() as conn:
+                    exists = await conn.fetchval(
+                        "SELECT id FROM departments WHERE id = $1 AND institution_id = $2",
+                        target_dept, target_inst
+                    )
+                    if not exists:
+                        raise ScopeForbidden("Requested department does not belong to your institution")
+    elif ctx.role == Role.HOD:
+        target_inst = _to_uuid(ctx.college_id)
+        target_dept = _to_uuid(ctx.department_id)
+        raw_dept = filters.get("departmentId")
+        if raw_dept and str(raw_dept).lower() != "all":
+            requested = _to_uuid(raw_dept)
+            if requested and requested != target_dept:
+                raise ScopeForbidden("HOD is strictly isolated to their authorized department")
+    elif ctx.role == Role.TRAINER:
+        target_inst = _to_uuid(ctx.college_id)
+        if target_batch:
+            assigned = [_to_uuid(b) for b in ctx.batch_ids if _to_uuid(b)]
+            async with get_pg_connection() as conn:
+                is_assigned = await conn.fetchval(
+                    "SELECT 1 FROM batch_trainers WHERE batch_id = $1 AND trainer_user_id = $2",
+                    target_batch, _to_uuid(ctx.user_id)
+                )
+            if not is_assigned and target_batch not in assigned:
+                raise ScopeForbidden("Trainer cannot access or export an unassigned batch")
+    elif ctx.role == Role.STUDENT:
+        target_inst = _to_uuid(ctx.college_id)
+        target_dept = _to_uuid(ctx.department_id)
+    else:
+        target_inst = _to_uuid(ctx.college_id)
+
+    return target_inst, target_dept, target_batch
 
 
-# --------------------------------------------------------------------------- attendance
+# --------------------------------------------------------------------------- Attendance
 @dataset("attendance")
 async def attendance_report(ctx: ScopeContext, filters: dict[str, Any]):
-    scoped = _scope_filters(filters, ctx)
-    extra = {k: v for k, v in scoped.items() if k in ("batchId", "trainingModuleId")}
-    date_range = _date_range(filters)
-    if date_range:
-        extra["date"] = date_range
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.attendance_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
+    start_d, end_d = _parse_dates(filters)
 
-    per_student = await analytics.attendance_by(ctx, "studentUserId", filters=extra)
-    profiles = await StudentProfileRepo(ctx).find_all(
-        projection={"userId": 1, "name": 1, "rollNumber": 1, "batchName": 1, "batchId": 1}
-    )
-    stats = {r["key"]: r for r in per_student}
+    conditions = ["1=1"]
+    params: list[Any] = []
 
-    rows: list[list[Any]] = []
-    for profile in sorted(profiles, key=lambda p: str(p.get("rollNumber") or "")):
-        stat = stats.get(profile["userId"], {"percentage": 0, "present": 0, "total": 0})
-        rows.append(
-            [
-                profile.get("rollNumber"),
-                profile.get("name"),
-                profile.get("batchName"),
-                stat["total"],
-                stat["present"],
-                stat["total"] - stat["present"],
-                f"{stat['percentage']}%",
-                "Defaulter" if stat["total"] and stat["percentage"] < settings.ATTENDANCE_DEFAULTER_THRESHOLD else "OK",
-            ]
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"sp.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"sp.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"sp.batch_id = ${len(params)}")
+
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"(sp.batch_id IN (SELECT batch_id FROM batch_trainers WHERE trainer_user_id = ${len(params)}))")
+
+    if ctx.role == Role.STUDENT:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"sp.user_id = ${len(params)}")
+
+    date_where_cte = ""
+    date_join_cond = ""
+    has_date_filter = bool(start_d or end_d)
+    if start_d:
+        params.append(start_d)
+        date_where_cte += f" AND session_date >= ${len(params)}"
+        date_join_cond += f" AND ts.session_date >= ${len(params)}"
+    if end_d:
+        params.append(end_d)
+        date_where_cte += f" AND session_date <= ${len(params)}"
+        date_join_cond += f" AND ts.session_date <= ${len(params)}"
+
+    where_clause = " AND ".join(conditions)
+    having_clause = "HAVING COALESCE(bs.total_sessions, 0) > 0" if has_date_filter else ""
+
+    sql = f"""
+        WITH batch_sess AS (
+            SELECT batch_id, COUNT(id) as total_sessions
+            FROM training_sessions
+            WHERE 1=1 {date_where_cte}
+            GROUP BY batch_id
         )
-    return (
-        ["Roll No.", "Participant", "Batch", "Sessions", "Present", "Absent", "Attendance %", "Flag"],
-        rows,
-        "Session Attendance",
-    )
+        SELECT 
+            sp.roll_number,
+            u.name as student_name,
+            u.email as student_email,
+            d.name as department_name,
+            COALESCE(b.name, 'Unassigned') as batch_name,
+            COALESCE(bs.total_sessions, 0) as sessions_total,
+            COUNT(CASE WHEN ar.status = 'PRESENT' THEN 1 END) as sessions_present,
+            COUNT(CASE WHEN ar.status = 'ABSENT' THEN 1 END) as sessions_absent,
+            COUNT(CASE WHEN ar.status = 'LATE' THEN 1 END) as sessions_late,
+            CASE 
+                WHEN COALESCE(bs.total_sessions, 0) > 0 THEN 
+                    ROUND((COUNT(CASE WHEN ar.status IN ('PRESENT', 'LATE') THEN 1 END)::numeric / bs.total_sessions::numeric) * 100, 1)
+                ELSE 0.0
+            END as attendance_pct
+        FROM student_profiles sp
+        JOIN users u ON u.id = sp.user_id
+        JOIN departments d ON d.id = sp.department_id
+        LEFT JOIN batches b ON b.id = sp.batch_id
+        LEFT JOIN batch_sess bs ON bs.batch_id = b.id
+        LEFT JOIN attendance_records ar ON ar.participant_user_id = u.id
+        LEFT JOIN training_sessions ts ON ts.id = ar.session_id {date_join_cond}
+        WHERE {where_clause}
+        GROUP BY sp.id, sp.roll_number, u.name, u.email, d.name, b.name, bs.total_sessions
+        {having_clause}
+        ORDER BY d.name, b.name, sp.roll_number;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
+    threshold = float(filters.get("threshold") or settings.ATTENDANCE_DEFAULTER_THRESHOLD)
+    rows = []
+    for r in records:
+        pct = float(r["attendance_pct"] or 0)
+        tot = r["sessions_total"]
+        flag = "Defaulter" if tot > 0 and pct < threshold else "Good"
+        rows.append([
+            r["roll_number"],
+            r["student_name"],
+            r["student_email"],
+            r["department_name"],
+            r["batch_name"],
+            tot,
+            r["sessions_present"],
+            r["sessions_absent"],
+            r["sessions_late"],
+            f"{pct}%",
+            flag,
+        ])
+
+    columns = [
+        "Roll No.", "Participant", "Email", "Department", "Batch",
+        "Sessions Total", "Present", "Absent", "Late", "Attendance %", "Status"
+    ]
+    return columns, rows, "Session Attendance"
 
 
+# --------------------------------------------------------------------------- Defaulters
 @dataset("defaulters")
 async def defaulters_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.defaulters_report(ctx, filters)
     threshold = float(filters.get("threshold") or settings.ATTENDANCE_DEFAULTER_THRESHOLD)
-    scoped = _scope_filters(filters, ctx)
-    extra = {k: v for k, v in scoped.items() if k in ("batchId", "trainingModuleId")}
-    date_range = _date_range(filters)
-    if date_range:
-        extra["date"] = date_range
-    flagged = await analytics.attendance_defaulters(ctx, threshold=threshold, filters=extra)
-    rows = [
-        [
-            row["rollNumber"], row["name"], row["batchName"],
-            f"{row['attendancePct']}%", row["sessionsAttended"], row["sessionsTotal"],
-            f"below {threshold}%",
-        ]
-        for row in flagged
+    cols, all_rows, _ = await attendance_report(ctx, filters)
+    defaulters = [
+        [r[0], r[1], r[2], r[3], r[4], r[9], r[6] + r[8], r[5], f"{threshold}%", "Below Threshold"]
+        for r in all_rows
+        if r[5] > 0 and float(str(r[9]).replace("%", "")) < threshold
     ]
-    return (
-        ["Roll No.", "Participant", "Batch", "Attendance %", "Attended", "Total", "Reason"],
-        rows,
-        "Attendance Defaulters",
-    )
+    columns = [
+        "Roll No.", "Participant", "Email", "Department", "Batch",
+        "Attendance %", "Attended (Present+Late)", "Total Sessions", "Threshold %", "Flag"
+    ]
+    return columns, defaulters, "Attendance Defaulters"
 
 
-# --------------------------------------------------------------------------- assessments
+# --------------------------------------------------------------------------- Assessment / EEDI
 @dataset("assessment")
 async def assessment_report(ctx: ScopeContext, filters: dict[str, Any]):
-    scoped = _scope_filters(filters, ctx)
-    extra = {k: v for k, v in scoped.items() if k in ("batchId", "trainingModuleId")}
-    extra["state"] = "submitted"
-    date_range = _date_range(filters)
-    if date_range:
-        extra["createdAt"] = date_range
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.assessment_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
+    start_d, end_d = _parse_dates(filters)
 
-    records = await SkillAssessmentRepo(ctx).find_all(extra, limit=20000)
-    rows: list[list[Any]] = []
-    for record in records:
-        pillars = record.get("pillarScores") or {}
-        rows.append(
-            [
-                record.get("rollNumber"),
-                record.get("studentName"),
-                record.get("batchName"),
-                record.get("trainingModuleName"),
-                record.get("semesterLabel"),
-                record.get("totalScore"),
-                record.get("maxScore", 100),
-                band_for(record.get("totalScore")),
-                _fmt({PILLAR_LABELS.get(k, k): v for k, v in pillars.items()}),
-                record.get("assessedByLabel"),
-                _fmt(record.get("createdAt")),
-                record.get("version", 1),
-            ]
-        )
-    return (
-        ["Roll No.", "Participant", "Batch", "Module", "Semester", "Score", "Max",
-         "Proficiency", "Pillar scores", "Assessed by", "Assessed at", "Version"],
-        rows,
-        "Skill Assessment",
-    )
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"ee.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"ee.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"sp.batch_id = ${len(params)}")
+
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"(ee.trainer_user_id = ${len(params)} OR sp.batch_id IN (SELECT batch_id FROM batch_trainers WHERE trainer_user_id = ${len(params)}))")
+
+    if ctx.role == Role.STUDENT:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"ee.participant_user_id = ${len(params)}")
+
+    if start_d:
+        params.append(start_d)
+        conditions.append(f"ee.submitted_at::date >= ${len(params)}")
+    if end_d:
+        params.append(end_d)
+        conditions.append(f"ee.submitted_at::date <= ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            sp.roll_number,
+            u.name as student_name,
+            u.email as student_email,
+            d.name as department_name,
+            COALESCE(b.name, 'Unassigned') as batch_name,
+            ee.semester,
+            ee.eedi_score,
+            ee.employment_score,
+            COALESCE(tu.name, 'System') as trainer_name,
+            ee.status,
+            ee.submitted_at
+        FROM eedi_evaluations ee
+        JOIN users u ON u.id = ee.participant_user_id
+        JOIN student_profiles sp ON sp.user_id = u.id
+        JOIN departments d ON d.id = ee.department_id
+        LEFT JOIN batches b ON b.id = sp.batch_id
+        LEFT JOIN users tu ON tu.id = ee.trainer_user_id
+        WHERE {where_clause}
+        ORDER BY d.name, b.name, sp.roll_number;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
+    rows = []
+    for r in records:
+        score = float(r["eedi_score"] or 0)
+        if score >= 80:
+            band = "Advanced"
+        elif score >= 60:
+            band = "Proficient"
+        elif score >= 40:
+            band = "Developing"
+        else:
+            band = "Novice"
+
+        rows.append([
+            r["roll_number"],
+            r["student_name"],
+            r["student_email"],
+            r["department_name"],
+            r["batch_name"],
+            r["semester"],
+            score,
+            float(r["employment_score"] or 0),
+            band,
+            r["trainer_name"],
+            str(r["status"]),
+            _fmt(r["submitted_at"]),
+        ])
+
+    columns = [
+        "Roll No.", "Participant", "Email", "Department", "Batch",
+        "Semester", "EEDI Score", "Employment Score", "Proficiency Band",
+        "Evaluator", "Status", "Evaluated At"
+    ]
+    return columns, rows, "Skill Assessment"
 
 
-# --------------------------------------------------------------------------- enrollment
+# --------------------------------------------------------------------------- Enrollment
 @dataset("enrollment")
 async def enrollment_report(ctx: ScopeContext, filters: dict[str, Any]):
-    scoped = _scope_filters(filters, ctx)
-    extra = {k: v for k, v in scoped.items() if k in ("batchId", "status", "enrollmentType")}
-    date_range = _date_range(filters)
-    if date_range:
-        extra["enrolledAt"] = date_range
-    records = await EnrollmentRepo(ctx).find_all(extra, limit=20000, sort=[("enrolledAt", -1)])
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.enrollment_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
+    start_d, end_d = _parse_dates(filters)
+
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"e.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"e.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"e.batch_id = ${len(params)}")
+
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"(e.batch_id IN (SELECT batch_id FROM batch_trainers WHERE trainer_user_id = ${len(params)}))")
+
+    if ctx.role == Role.STUDENT:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"e.participant_user_id = ${len(params)}")
+
+    if start_d:
+        params.append(start_d)
+        conditions.append(f"e.created_at::date >= ${len(params)}")
+    if end_d:
+        params.append(end_d)
+        conditions.append(f"e.created_at::date <= ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            sp.roll_number,
+            u.name as student_name,
+            u.email as student_email,
+            d.name as department_name,
+            COALESCE(b.name, 'Unassigned') as batch_name,
+            c.code as course_code,
+            c.title as course_title,
+            e.current_semester,
+            e.enrollment_status,
+            e.payment_status,
+            e.access_status,
+            e.created_at
+        FROM enrollments e
+        JOIN users u ON u.id = e.participant_user_id
+        JOIN student_profiles sp ON sp.user_id = u.id
+        JOIN departments d ON d.id = e.department_id
+        LEFT JOIN batches b ON b.id = e.batch_id
+        JOIN courses c ON c.id = e.course_id
+        WHERE {where_clause}
+        ORDER BY d.name, b.name, sp.roll_number;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
     rows = [
         [
-            record.get("rollNumber"),
-            record.get("studentName"),
-            record.get("batchName"),
-            record.get("enrollmentType", "").title(),
-            record.get("status", "").replace("_", "-").title(),
-            record.get("enrolledByLabel"),
-            _fmt(record.get("enrolledAt")),
-            str(record.get("previousEnrollmentId") or "—"),
+            r["roll_number"],
+            r["student_name"],
+            r["student_email"],
+            r["department_name"],
+            r["batch_name"],
+            r["course_code"],
+            r["course_title"],
+            r["current_semester"],
+            str(r["enrollment_status"]),
+            str(r["payment_status"]),
+            str(r["access_status"]),
+            _fmt(r["created_at"]),
         ]
-        for record in records
+        for r in records
     ]
-    return (
-        ["Roll No.", "Participant", "Batch", "Type", "Status", "Enrolled by",
-         "Enrolled at", "Previous enrollment"],
-        rows,
-        "Enrollment Records",
-    )
+
+    columns = [
+        "Roll No.", "Participant", "Email", "Department", "Batch",
+        "Course Code", "Course Title", "Semester", "Enrollment Status",
+        "Payment Status", "Access Status", "Enrolled At"
+    ]
+    return columns, rows, "Enrollment Records"
 
 
-# --------------------------------------------------------------------------- certification
-@dataset("certification")
-async def certification_report(ctx: ScopeContext, filters: dict[str, Any]):
-    scoped = _scope_filters(filters, ctx)
-    extra = {k: v for k, v in scoped.items() if k in ("batchId", "status")}
-    records = await CertificateRepo(ctx).find_all(extra, limit=20000)
+# --------------------------------------------------------------------------- Payments
+@dataset("payments")
+async def payments_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        return (["Roll No.", "Participant", "Amount", "Status", "Date"], [], "Student Fee & Platform Payments")
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
+    start_d, end_d = _parse_dates(filters)
+
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"sp.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"sp.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"sp.batch_id = ${len(params)}")
+
+    if ctx.role == Role.STUDENT:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"p.participant_user_id = ${len(params)}")
+
+    if start_d:
+        params.append(start_d)
+        conditions.append(f"p.created_at::date >= ${len(params)}")
+    if end_d:
+        params.append(end_d)
+        conditions.append(f"p.created_at::date <= ${len(params)}")
+
+    status_filter = filters.get("status")
+    if status_filter and status_filter != "all":
+        params.append(status_filter.upper())
+        conditions.append(f"p.status::text = ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            p.transaction_ref,
+            u.name as student_name,
+            COALESCE(sp.roll_number, '—') as roll_number,
+            u.email as student_email,
+            COALESCE(d.name, '—') as department_name,
+            COALESCE(c.code, '—') as course_code,
+            COALESCE(c.title, 'Course Fee') as course_title,
+            p.amount,
+            p.currency,
+            p.payment_method,
+            p.status,
+            COALESCE(tu.name, 'Admin') as verified_by_name,
+            p.created_at
+        FROM payments p
+        JOIN users u ON u.id = p.participant_user_id
+        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+        LEFT JOIN departments d ON d.id = sp.department_id
+        LEFT JOIN courses c ON c.id = p.course_id
+        LEFT JOIN users tu ON tu.id = p.verified_by
+        WHERE {where_clause}
+        ORDER BY p.created_at DESC;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
     rows = [
         [
-            record.get("rollNumber"),
-            record.get("studentName"),
-            record.get("batchName"),
-            f"{record.get('attendancePct', 0)}%",
-            record.get("avgScore"),
-            record.get("status", "").replace("_", " ").title(),
-            _fmt(record.get("eligibilityMet")),
-            record.get("reason") or "—",
-            record.get("certificateNo") or "—",
-            _fmt(record.get("issuedAt")),
+            r["transaction_ref"],
+            r["student_name"],
+            r["roll_number"],
+            r["student_email"],
+            r["department_name"],
+            r["course_code"],
+            r["course_title"],
+            float(r["amount"]),
+            r["currency"],
+            r["payment_method"],
+            str(r["status"]),
+            r["verified_by_name"],
+            _fmt(r["created_at"]),
         ]
-        for record in records
+        for r in records
     ]
-    return (
-        ["Roll No.", "Participant", "Batch", "Attendance", "Avg. score", "Status",
-         "Eligible", "Reason (if not issued)", "Certificate no.", "Issued at"],
-        rows,
-        "Certification Status",
-    )
 
-
-# --------------------------------------------------------------------------- feedback & trainers
-@dataset("feedback")
-async def feedback_report(ctx: ScopeContext, filters: dict[str, Any]):
-    extra: dict[str, Any] = {}
-    date_range = _date_range(filters)
-    if date_range:
-        extra["createdAt"] = date_range
-    records = await TrainerFeedbackRepo(ctx).find_all(extra, limit=20000)
-    rows = [
-        [
-            record.get("studentName"),
-            record.get("rollNumber"),
-            record.get("sessionLabel"),
-            record.get("trainingModuleName"),
-            record.get("trainerName"),
-            record.get("rating"),
-            record.get("feedbackText"),
-            _fmt(record.get("createdAt")),
-        ]
-        for record in records
+    columns = [
+        "Txn ID / Ref", "Student Name", "Roll No.", "Email", "Department",
+        "Course Code", "Course Title", "Amount", "Currency", "Payment Method",
+        "Status", "Verified By", "Date"
     ]
-    return (
-        ["Participant", "Roll No.", "Session", "Module", "Trainer", "Rating", "Remarks", "Recorded at"],
-        rows,
-        "Trainer Feedback",
-    )
+    return columns, rows, "Payments & Revenue Ledger"
 
 
+# --------------------------------------------------------------------------- Trainer Workload
 @dataset("trainer")
 async def trainer_report(ctx: ScopeContext, filters: dict[str, Any]):
-    from app.authz.roles import Role
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.trainer_report(ctx, filters)
+    inst_id, dept_id, _ = await _resolve_scope(ctx, filters)
 
-    trainers = await UserRepo(ctx).find_all(
-        {"role": str(Role.TRAINER)}, projection={"name": 1, "email": 1, "status": 1}, limit=2000
-    )
-    assignments = await TrainerAssignmentRepo(ctx).find_all({"active": True}, limit=5000)
-    sessions = await TrainingSessionRepo(ctx).aggregate(
-        [{"$group": {"_id": "$trainerUserId", "sessions": {"$sum": 1}}}]
-    )
-    session_counts = {row["_id"]: row["sessions"] for row in sessions}
-    feedback = await TrainerFeedbackRepo(ctx).aggregate(
-        [{"$group": {"_id": "$trainerUserId", "avg": {"$avg": "$rating"}, "n": {"$sum": 1}}}]
-    )
-    ratings = {row["_id"]: row for row in feedback}
+    conditions = ["1=1"]
+    params: list[Any] = []
 
-    by_trainer: dict[ObjectId, list[str]] = {}
-    for assignment in assignments:
-        by_trainer.setdefault(assignment["trainerUserId"], []).append(
-            assignment.get("trainingModuleName") or "—"
-        )
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"tp.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"tp.department_id = ${len(params)}")
 
-    rows = []
-    for trainer in trainers:
-        rating = ratings.get(trainer["_id"], {})
-        modules = sorted(set(by_trainer.get(trainer["_id"], [])))
-        conducted = session_counts.get(trainer["_id"], 0)
-        rows.append(
-            [
-                trainer.get("name"),
-                trainer.get("email"),
-                ", ".join(modules) or "—",
-                conducted,
-                round(rating.get("avg", 0), 1) if rating.get("avg") else "—",
-                rating.get("n", 0),
-                f"{round(conducted * 1.5, 1)} hrs/wk" if conducted else "0 hrs/wk",
-                trainer.get("status", "").title(),
-            ]
-        )
-    return (
-        ["Trainer", "Email", "Modules assigned", "Sessions conducted", "Avg. feedback",
-         "Feedback entries", "Workload", "Status"],
-        rows,
-        "Trainer Roster & Workload",
-    )
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"tp.user_id = ${len(params)}")
 
+    where_clause = " AND ".join(conditions)
 
-# --------------------------------------------------------------------------- audit
-@dataset("audit")
-async def audit_report(ctx: ScopeContext, filters: dict[str, Any]):
-    extra: dict[str, Any] = {}
-    date_range = _date_range(filters)
-    if date_range:
-        extra["at"] = date_range
-    for key in ("action", "entityType"):
-        if filters.get(key) and filters[key] != "all":
-            extra[key] = filters[key]
-    records = await AuditLogRepo(ctx).find_all(extra, limit=20000, sort=[("at", -1)])
+    sql = f"""
+        SELECT 
+            u.name as trainer_name,
+            u.email as trainer_email,
+            COALESCE(d.name, '—') as department_name,
+            COALESCE(tp.title, 'Trainer') as title,
+            tp.specializations,
+            tp.rating,
+            u.status as account_status,
+            COUNT(DISTINCT bt.batch_id) as batches_assigned,
+            COUNT(DISTINCT ts.id) as sessions_conducted
+        FROM trainer_profiles tp
+        JOIN users u ON u.id = tp.user_id
+        LEFT JOIN departments d ON d.id = tp.department_id
+        LEFT JOIN batch_trainers bt ON bt.trainer_user_id = u.id
+        LEFT JOIN training_sessions ts ON ts.trainer_user_id = u.id
+        WHERE {where_clause}
+        GROUP BY tp.id, u.name, u.email, d.name, tp.title, tp.specializations, tp.rating, u.status
+        ORDER BY u.name;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
     rows = [
         [
-            _fmt(record.get("at")),
-            record.get("actorLabel"),
-            record.get("actorRole"),
-            record.get("action"),
-            record.get("entityType"),
-            str(record.get("entityId") or "—"),
-            record.get("detail") or "—",
+            r["trainer_name"],
+            r["trainer_email"],
+            r["department_name"],
+            r["title"],
+            _fmt(r["specializations"]),
+            r["batches_assigned"],
+            r["sessions_conducted"],
+            float(r["rating"]) if r["rating"] else "—",
+            str(r["account_status"]).title(),
         ]
-        for record in records
+        for r in records
     ]
-    return (
-        ["Timestamp", "Actor", "Role", "Action", "Entity", "Record ID", "Detail"],
-        rows,
-        "Audit Trail",
-    )
 
-
-# --------------------------------------------------------------------------- learning & practice
-@dataset("learning")
-async def learning_report(ctx: ScopeContext, filters: dict[str, Any]):
-    from app.repositories.collections import CourseProgressRepo, EediScoreRepo
-
-    profiles = await StudentProfileRepo(ctx).find_all(
-        projection={"userId": 1, "name": 1, "rollNumber": 1, "batchName": 1}, limit=20000
-    )
-    ids = [p["userId"] for p in profiles]
-    progress_rows = await CourseProgressRepo(ctx).col.aggregate(
-        [
-            {"$match": {"studentUserId": {"$in": ids}}},
-            {
-                "$group": {
-                    "_id": "$studentUserId",
-                    "avgPercent": {"$avg": "$percent"},
-                    "courses": {"$sum": 1},
-                    "minutes": {"$sum": "$minutesSpent"},
-                }
-            },
-        ]
-    ).to_list(length=20000)
-    progress = {row["_id"]: row for row in progress_rows}
-    scores = {
-        row["studentUserId"]: row
-        for row in await EediScoreRepo(ctx).find_all(
-            {"studentUserId": {"$in": ids}}, projection={"studentUserId": 1, "finalScore": 1}, limit=20000
-        )
-    }
-    rows = []
-    for profile in profiles:
-        row = progress.get(profile["userId"], {})
-        rows.append(
-            [
-                profile.get("rollNumber"),
-                profile.get("name"),
-                profile.get("batchName"),
-                row.get("courses", 0),
-                round(row.get("avgPercent", 0) or 0, 1),
-                round((row.get("minutes", 0) or 0) / 60, 1),
-                scores.get(profile["userId"], {}).get("finalScore") or "—",
-            ]
-        )
-    return (
-        ["Roll No.", "Participant", "Batch", "Courses", "Avg. completion %",
-         "Learning hours", "EEDI readiness"],
-        rows,
-        "Learning Hours & Completion",
-    )
-
-
-@dataset("practice")
-async def practice_report(ctx: ScopeContext, filters: dict[str, Any]):
-    extra: dict[str, Any] = {}
-    date_range = _date_range(filters)
-    if date_range:
-        extra["createdAt"] = date_range
-    sessions = await PracticeSessionRepo(ctx).find_all(extra, limit=20000, sort=[("createdAt", -1)])
-    rows = [
-        [
-            session.get("studentName"),
-            session.get("rollNumber"),
-            session.get("practiceModeTitle"),
-            session.get("kind"),
-            session.get("state"),
-            session.get("attemptNumber"),
-            session.get("overallScore") or "—",
-            _fmt(session.get("createdAt")),
-            _fmt(session.get("completedAt")),
-        ]
-        for session in sessions
+    columns = [
+        "Trainer Name", "Email", "Department", "Title", "Specializations",
+        "Batches Assigned", "Sessions Conducted", "Rating", "Status"
     ]
-    return (
-        ["Participant", "Roll No.", "Practice mode", "Type", "State", "Attempt",
-         "AI score", "Started", "Completed"],
-        rows,
-        "Practice & AI Activity",
-    )
+    return columns, rows, "Trainer Roster & Workload"
 
 
-@dataset("prediction")
-async def prediction_report(ctx: ScopeContext, filters: dict[str, Any]):
-    """At-risk participants derived from attendance + score trend, with the reason stated."""
-    from app.repositories.collections import EediScoreRepo
-
-    attendance = await analytics.student_attendance_map(ctx)
-    profiles = await StudentProfileRepo(ctx).find_all(
-        projection={"userId": 1, "name": 1, "rollNumber": 1, "batchName": 1}, limit=20000
-    )
-    scores = {
-        row["studentUserId"]: row
-        for row in await EediScoreRepo(ctx).find_all(
-            projection={"studentUserId": 1, "finalScore": 1, "delta": 1, "focusPillar": 1}, limit=20000
-        )
-    }
-    rows = []
-    for profile in profiles:
-        att = attendance.get(profile["userId"], {})
-        score = scores.get(profile["userId"], {})
-        reasons = []
-        if att.get("percentage") is not None and att["percentage"] < settings.ATTENDANCE_DEFAULTER_THRESHOLD:
-            reasons.append(f"attendance {att['percentage']}%")
-        if (score.get("finalScore") or 100) < settings.CERTIFICATE_MIN_AVG_SCORE:
-            reasons.append(f"readiness {score.get('finalScore')}")
-        if (score.get("delta") or 0) < -3:
-            reasons.append(f"trend {score.get('delta')}")
-        if not reasons:
-            continue
-        rows.append(
-            [
-                profile.get("rollNumber"),
-                profile.get("name"),
-                profile.get("batchName"),
-                att.get("percentage", 0),
-                score.get("finalScore") or "—",
-                score.get("delta") or "—",
-                PILLAR_LABELS.get(score.get("focusPillar") or "", "—"),
-                "; ".join(reasons),
-                "High" if len(reasons) > 1 else "Medium",
-            ]
-        )
-    rows.sort(key=lambda r: (r[8] != "High", r[3]))
-    return (
-        ["Roll No.", "Participant", "Batch", "Attendance %", "EEDI readiness", "Trend",
-         "Focus pillar", "Risk reason", "Risk level"],
-        rows,
-        "Risk & Prediction",
-    )
-
-
-# --------------------------------------------------------------------------- admin-only
+# --------------------------------------------------------------------------- Users
 @dataset("users")
 async def users_report(ctx: ScopeContext, filters: dict[str, Any]):
-    extra: dict[str, Any] = {}
-    if filters.get("role") and filters["role"] != "all":
-        extra["role"] = str(filters["role"]).upper()
-    if filters.get("status") and filters["status"] != "all":
-        extra["status"] = filters["status"]
-    users = await UserRepo(ctx).find_all(
-        extra,
-        projection={
-            "name": 1, "email": 1, "institutionId": 1, "role": 1, "status": 1,
-            "departmentName": 1, "emailVerified": 1, "lastActiveAt": 1, "createdAt": 1,
-        },
-        limit=50000,
-    )
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.users_report(ctx, filters)
+    inst_id, dept_id, _ = await _resolve_scope(ctx, filters)
+
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"u.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"u.department_id = ${len(params)}")
+
+    role_filter = filters.get("role")
+    if role_filter and role_filter != "all":
+        params.append(role_filter.upper())
+        conditions.append(f"u.role::text = ${len(params)}")
+
+    status_filter = filters.get("status")
+    if status_filter and status_filter != "all":
+        params.append(status_filter.upper())
+        conditions.append(f"u.status::text = ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            u.name,
+            u.email,
+            u.role,
+            COALESCE(d.name, '—') as department_name,
+            COALESCE(inst.name, '—') as institution_name,
+            u.status,
+            COALESCE(u.phone, '—') as phone,
+            u.last_login_at,
+            u.created_at
+        FROM users u
+        LEFT JOIN departments d ON d.id = u.department_id
+        LEFT JOIN institutions inst ON inst.id = u.institution_id
+        WHERE {where_clause}
+        ORDER BY u.role, u.name;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
     rows = [
         [
-            user.get("name"), user.get("email"), user.get("institutionId") or "—",
-            user.get("role"), user.get("departmentName") or "—",
-            user.get("status", "").title(), _fmt(user.get("emailVerified")),
-            _fmt(user.get("lastActiveAt")), _fmt(user.get("createdAt")),
+            r["name"],
+            r["email"],
+            str(r["role"]),
+            r["department_name"],
+            r["institution_name"],
+            str(r["status"]).title(),
+            r["phone"],
+            _fmt(r["last_login_at"]),
+            _fmt(r["created_at"]),
         ]
-        for user in users
+        for r in records
     ]
-    return (
-        ["Name", "Email", "Institution ID", "Role", "Department", "Status",
-         "Verified", "Last active", "Created"],
-        rows,
-        "Users & Roles",
-    )
+
+    columns = [
+        "Name", "Email", "Role", "Department", "Institution",
+        "Status", "Phone", "Last Login", "Created At"
+    ]
+    return columns, rows, "Users & Roles"
 
 
-@dataset("system")
-async def system_report(ctx: ScopeContext, filters: dict[str, Any]):
-    from app.repositories.collections import AiUsageRepo
+# --------------------------------------------------------------------------- Learning
+@dataset("learning")
+async def learning_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.learning_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
 
-    rows_raw = await AiUsageRepo(ctx).aggregate(
-        [
-            {
-                "$group": {
-                    "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$at"}},
-                    "calls": {"$sum": 1},
-                    "tokens": {"$sum": "$tokens"},
-                    "avgLatency": {"$avg": "$latencyMs"},
-                    "failures": {"$sum": {"$cond": ["$failed", 1, 0]}},
-                }
-            },
-            {"$sort": {"_id": -1}},
-        ]
-    )
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"sp.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"sp.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"sp.batch_id = ${len(params)}")
+
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"(sp.batch_id IN (SELECT batch_id FROM batch_trainers WHERE trainer_user_id = ${len(params)}))")
+
+    if ctx.role == Role.STUDENT:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"sp.user_id = ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            sp.roll_number,
+            u.name as student_name,
+            d.name as department_name,
+            COALESCE(b.name, 'Unassigned') as batch_name,
+            COALESCE(sp.academic_year, '—') as academic_year,
+            COUNT(DISTINCT e.course_id) as enrolled_courses,
+            COUNT(DISTINCT CASE WHEN e.access_status = 'ACTIVE' THEN e.course_id END) as active_courses,
+            ee.eedi_score,
+            ee.employment_score
+        FROM student_profiles sp
+        JOIN users u ON u.id = sp.user_id
+        JOIN departments d ON d.id = sp.department_id
+        LEFT JOIN batches b ON b.id = sp.batch_id
+        LEFT JOIN enrollments e ON e.participant_user_id = u.id
+        LEFT JOIN eedi_evaluations ee ON ee.participant_user_id = u.id
+        WHERE {where_clause}
+        GROUP BY sp.id, sp.roll_number, u.name, d.name, b.name, sp.academic_year, ee.eedi_score, ee.employment_score
+        ORDER BY d.name, b.name, sp.roll_number;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
     rows = [
         [
-            row["_id"], row["calls"], row.get("tokens", 0),
-            round(row.get("avgLatency") or 0), row.get("failures", 0),
+            r["roll_number"],
+            r["student_name"],
+            r["department_name"],
+            r["batch_name"],
+            r["academic_year"],
+            r["enrolled_courses"],
+            r["active_courses"],
+            float(r["eedi_score"]) if r["eedi_score"] else "—",
+            float(r["employment_score"]) if r["employment_score"] else "—",
         ]
-        for row in rows_raw
+        for r in records
     ]
-    return (["Date", "AI calls", "Tokens", "Avg latency (ms)", "Failures"], rows, "AI & System Usage")
+
+    columns = [
+        "Roll No.", "Participant", "Department", "Batch", "Academic Year",
+        "Courses Enrolled", "Active Courses", "EEDI Score", "Employment Score"
+    ]
+    return columns, rows, "Learning Hours & Completion"
 
 
-@dataset("placement")
-async def placement_report(ctx: ScopeContext, filters: dict[str, Any]):
-    from app.repositories.collections import EediScoreRepo, PlacementGoalRepo
+# --------------------------------------------------------------------------- Practice / Games
+@dataset("practice")
+async def practice_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.practice_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
 
-    goals = await PlacementGoalRepo(ctx).find_all(limit=20000)
-    profiles = {
-        p["userId"]: p
-        for p in await StudentProfileRepo(ctx).find_all(
-            projection={"userId": 1, "name": 1, "rollNumber": 1, "batchName": 1}, limit=20000
-        )
-    }
-    scores = {
-        s["studentUserId"]: s
-        for s in await EediScoreRepo(ctx).find_all(
-            projection={"studentUserId": 1, "finalScore": 1}, limit=20000
-        )
-    }
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"sp.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"sp.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"sp.batch_id = ${len(params)}")
+
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"(sp.batch_id IN (SELECT batch_id FROM batch_trainers WHERE trainer_user_id = ${len(params)}))")
+
+    if ctx.role == Role.STUDENT:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"ga.participant_user_id = ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            u.name as student_name,
+            COALESCE(sp.roll_number, '—') as roll_number,
+            COALESCE(d.name, '—') as department_name,
+            g.title as game_title,
+            g.category as game_category,
+            ga.raw_score,
+            ga.final_eedi,
+            ga.status,
+            ga.completed_at
+        FROM game_attempts ga
+        JOIN users u ON u.id = ga.participant_user_id
+        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+        LEFT JOIN departments d ON d.id = sp.department_id
+        JOIN games g ON g.id = ga.game_id
+        WHERE {where_clause}
+        ORDER BY ga.completed_at DESC NULLS LAST;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
+    rows = [
+        [
+            r["student_name"],
+            r["roll_number"],
+            r["department_name"],
+            r["game_title"],
+            str(r["game_category"]).title(),
+            r["raw_score"],
+            float(r["final_eedi"]) if r["final_eedi"] else "—",
+            str(r["status"]).title(),
+            _fmt(r["completed_at"]),
+        ]
+        for r in records
+    ]
+
+    columns = [
+        "Participant", "Roll No.", "Department", "Game Title",
+        "Category", "Score", "EEDI Score", "Status", "Completed At"
+    ]
+    return columns, rows, "Practice & AI Activity"
+
+
+# --------------------------------------------------------------------------- Risk & Prediction
+@dataset("prediction")
+async def prediction_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.prediction_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
+
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"sp.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"sp.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"sp.batch_id = ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            sp.roll_number,
+            u.name as student_name,
+            u.email as student_email,
+            d.name as department_name,
+            COALESCE(b.name, 'Unassigned') as batch_name,
+            COUNT(ar.id) as sessions_total,
+            CASE 
+                WHEN COUNT(ar.id) > 0 THEN 
+                    ROUND((COUNT(CASE WHEN ar.status IN ('PRESENT', 'LATE') THEN 1 END)::numeric / COUNT(ar.id)::numeric) * 100, 1)
+                ELSE 0.0
+            END as attendance_pct,
+            ee.eedi_score
+        FROM student_profiles sp
+        JOIN users u ON u.id = sp.user_id
+        JOIN departments d ON d.id = sp.department_id
+        LEFT JOIN batches b ON b.id = sp.batch_id
+        LEFT JOIN attendance_records ar ON ar.participant_user_id = u.id
+        LEFT JOIN eedi_evaluations ee ON ee.participant_user_id = u.id
+        WHERE {where_clause}
+        GROUP BY sp.id, sp.roll_number, u.name, u.email, d.name, b.name, ee.eedi_score
+        HAVING (COUNT(ar.id) > 0 AND (COUNT(CASE WHEN ar.status IN ('PRESENT', 'LATE') THEN 1 END)::numeric / COUNT(ar.id)::numeric) * 100 < 75)
+            OR (ee.eedi_score IS NOT NULL AND ee.eedi_score < 40)
+        ORDER BY attendance_pct ASC, sp.roll_number;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
     rows = []
-    for goal in goals:
-        profile = profiles.get(goal["studentUserId"])
-        if not profile:
-            continue
-        current = scores.get(goal["studentUserId"], {}).get("finalScore")
-        target = goal.get("targetScore")
-        rows.append(
-            [
-                profile.get("rollNumber"), profile.get("name"), profile.get("batchName"),
-                goal.get("targetRole"), target, current or "—",
-                (round(target - current, 1) if target and current else "—"),
-                _fmt(goal.get("targetDate")),
-                "On track" if current and target and current >= target * 0.9 else "Needs work",
-            ]
-        )
-    return (
-        ["Roll No.", "Participant", "Batch", "Target role", "Target score",
-         "Current readiness", "Gap", "Target date", "Status"],
-        rows,
-        "Placement Readiness",
-    )
+    for r in records:
+        att = float(r["attendance_pct"] or 0)
+        score = float(r["eedi_score"]) if r["eedi_score"] else None
+        reasons = []
+        if r["sessions_total"] > 0 and att < 75.0:
+            reasons.append(f"Attendance {att}% (<75%)")
+        if score is not None and score < 40.0:
+            reasons.append(f"EEDI Score {score} (<40)")
+        level = "High" if len(reasons) > 1 else "Medium"
+        rows.append([
+            r["roll_number"],
+            r["student_name"],
+            r["student_email"],
+            r["department_name"],
+            r["batch_name"],
+            r["sessions_total"],
+            f"{att}%",
+            score if score is not None else "—",
+            level,
+            "; ".join(reasons) if reasons else "Watchlist",
+        ])
+
+    columns = [
+        "Roll No.", "Participant", "Email", "Department", "Batch",
+        "Sessions Total", "Attendance %", "EEDI Score", "Risk Level", "Risk Factors"
+    ]
+    return columns, rows, "Risk & Prediction"
 
 
+# --------------------------------------------------------------------------- Student Progress
 @dataset("student_progress")
 async def student_progress_report(ctx: ScopeContext, filters: dict[str, Any]):
-    """A student's own exportable progress report (§9 Progress & Insights → Export report)."""
-    from app.repositories.collections import AiScoreRepo, EediScoreRepo, PracticeSessionRepo
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.student_progress_report(ctx, filters)
+    u_uuid = _to_uuid(ctx.user_id)
+    async with get_pg_connection() as conn:
+        profile = await conn.fetchrow("""
+            SELECT sp.roll_number, u.name, u.email, d.name as dept, COALESCE(b.name, 'Unassigned') as batch, sp.academic_year
+            FROM student_profiles sp
+            JOIN users u ON u.id = sp.user_id
+            JOIN departments d ON d.id = sp.department_id
+            LEFT JOIN batches b ON b.id = sp.batch_id
+            WHERE sp.user_id = $1;
+        """, u_uuid)
 
-    score = await EediScoreRepo(ctx).find_one({"studentUserId": ctx.user_id}) or {}
-    sessions = await PracticeSessionRepo(ctx).find_all(
-        {"studentUserId": ctx.user_id}, limit=500, sort=[("createdAt", -1)]
-    )
-    ai_scores = {
-        s["practiceSessionId"]: s
-        for s in await AiScoreRepo(ctx).find_all({"studentUserId": ctx.user_id}, limit=500)
-    }
-    rows: list[list[Any]] = [
-        ["EEDI readiness score", score.get("finalScore") or "—"],
-        ["Trainer component", score.get("trainerComponent") or "—"],
-        ["AI component", score.get("aiComponent") or "—"],
-        ["Strongest pillar", PILLAR_LABELS.get(score.get("strongestPillar") or "", "—")],
-        ["Focus pillar", PILLAR_LABELS.get(score.get("focusPillar") or "", "—")],
-        ["Practice sessions", len(sessions)],
-        ["Scoring version", score.get("scoringVersion") or settings.SCORING_VERSION],
-        ["", ""],
-        ["Attempt", "Score"],
+        att = await conn.fetchrow("""
+            SELECT 
+                COUNT(id) as total,
+                COUNT(CASE WHEN status = 'PRESENT' THEN 1 END) as present,
+                COUNT(CASE WHEN status = 'LATE' THEN 1 END) as late,
+                COUNT(CASE WHEN status = 'ABSENT' THEN 1 END) as absent
+            FROM attendance_records
+            WHERE participant_user_id = $1;
+        """, u_uuid)
+
+        eval_rec = await conn.fetchrow("""
+            SELECT eedi_score, employment_score, semester, status, submitted_at
+            FROM eedi_evaluations
+            WHERE participant_user_id = $1
+            ORDER BY submitted_at DESC NULLS LAST LIMIT 1;
+        """, u_uuid)
+
+        courses = await conn.fetch("""
+            SELECT c.code, c.title, e.access_status, e.created_at
+            FROM enrollments e
+            JOIN courses c ON c.id = e.course_id
+            WHERE e.participant_user_id = $1
+            ORDER BY e.created_at DESC;
+        """, u_uuid)
+
+        games = await conn.fetch("""
+            SELECT g.title, ga.raw_score, ga.final_eedi, ga.completed_at
+            FROM game_attempts ga
+            JOIN games g ON g.id = ga.game_id
+            WHERE ga.participant_user_id = $1
+            ORDER BY ga.completed_at DESC NULLS LAST LIMIT 10;
+        """, u_uuid)
+
+    tot_sess = att["total"] if att else 0
+    pres = (att["present"] + att["late"]) if att else 0
+    att_pct = round((pres / tot_sess) * 100, 1) if tot_sess > 0 else 0.0
+
+    rows = [
+        ["Profile", "Student Name", profile["name"] if profile else "—"],
+        ["Profile", "Roll Number", profile["roll_number"] if profile else "—"],
+        ["Profile", "Department", profile["dept"] if profile else "—"],
+        ["Profile", "Batch", profile["batch"] if profile else "—"],
+        ["Profile", "Academic Year", profile["academic_year"] if profile else "—"],
+        ["Attendance", "Sessions Attended", f"{pres} / {tot_sess} ({att_pct}%)"],
+        ["Evaluation", "EEDI Readiness Score", float(eval_rec["eedi_score"]) if eval_rec and eval_rec["eedi_score"] else "—"],
+        ["Evaluation", "Employment Score", float(eval_rec["employment_score"]) if eval_rec and eval_rec["employment_score"] else "—"],
+        ["Enrollments", "Total Enrolled Courses", len(courses)],
     ]
-    for session in sessions[:60]:
-        ai = ai_scores.get(session["_id"], {})
-        rows.append(
-            [
-                f"{session.get('practiceModeTitle')} · {_fmt(session.get('createdAt'))}",
-                ai.get("overall") or "—",
-            ]
-        )
-    return (["Metric", "Value"], rows, "My Progress Report")
+    for c in courses:
+        rows.append(["Enrolled Course", f"{c['code']} - {c['title']}", f"Status: {c['access_status']}"])
+    for g in games:
+        rows.append(["Game Activity", g["title"], f"Score: {g['raw_score']} (EEDI: {float(g['final_eedi']) if g['final_eedi'] else '—'})"])
+
+    columns = ["Category", "Metric / Activity", "Value / Details"]
+    return columns, rows, "My Progress Report"
+
+
+# --------------------------------------------------------------------------- Feedback / Sessions
+@dataset("feedback")
+async def feedback_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.feedback_report(ctx, filters)
+    inst_id, dept_id, batch_id = await _resolve_scope(ctx, filters)
+    start_d, end_d = _parse_dates(filters)
+
+    conditions = ["1=1"]
+    params: list[Any] = []
+
+    if inst_id:
+        params.append(inst_id)
+        conditions.append(f"ts.institution_id = ${len(params)}")
+    if dept_id:
+        params.append(dept_id)
+        conditions.append(f"ts.department_id = ${len(params)}")
+    if batch_id:
+        params.append(batch_id)
+        conditions.append(f"ts.batch_id = ${len(params)}")
+
+    if ctx.role == Role.TRAINER:
+        u_uuid = _to_uuid(ctx.user_id)
+        params.append(u_uuid)
+        conditions.append(f"ts.trainer_user_id = ${len(params)}")
+
+    if start_d:
+        params.append(start_d)
+        conditions.append(f"ts.session_date >= ${len(params)}")
+    if end_d:
+        params.append(end_d)
+        conditions.append(f"ts.session_date <= ${len(params)}")
+
+    where_clause = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT 
+            ts.topic as session_topic,
+            ts.session_date,
+            COALESCE(b.name, '—') as batch_name,
+            COALESCE(d.name, '—') as department_name,
+            tu.name as trainer_name,
+            COALESCE(ts.room, '—') as room,
+            ts.status,
+            ts.starts_at,
+            ts.ends_at
+        FROM training_sessions ts
+        JOIN users tu ON tu.id = ts.trainer_user_id
+        JOIN departments d ON d.id = ts.department_id
+        LEFT JOIN batches b ON b.id = ts.batch_id
+        WHERE {where_clause}
+        ORDER BY ts.session_date DESC;
+    """
+
+    async with get_pg_connection() as conn:
+        records = await conn.fetch(sql, *params)
+
+    rows = [
+        [
+            r["session_topic"],
+            _fmt(r["session_date"]),
+            r["batch_name"],
+            r["department_name"],
+            r["trainer_name"],
+            r["room"],
+            str(r["status"]),
+            _fmt(r["starts_at"]),
+            _fmt(r["ends_at"]),
+        ]
+        for r in records
+    ]
+
+    columns = [
+        "Session Topic", "Date", "Batch", "Department",
+        "Trainer", "Room", "Status", "Start Time", "End Time"
+    ]
+    return columns, rows, "Trainer Sessions & Feedback"
+
+
+# --------------------------------------------------------------------------- Certification
+@dataset("certification")
+async def certification_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.certification_report(ctx, filters)
+    cols, all_rows, _ = await attendance_report(ctx, filters)
+    rows = []
+    for r in all_rows:
+        pct = float(str(r[9]).replace("%", "")) if r[9] else 0.0
+        eligible = "Eligible" if pct >= 75.0 and r[5] > 0 else "Not Eligible"
+        rows.append([
+            r[0], r[1], r[2], r[3], r[4], f"{pct}%", eligible,
+            "Criteria met" if eligible == "Eligible" else "Attendance below 75%"
+        ])
+    columns = ["Roll No.", "Participant", "Email", "Department", "Batch", "Attendance %", "Certification Status", "Details"]
+    return columns, rows, "Certification Status"
+
+
+# --------------------------------------------------------------------------- Placement
+@dataset("placement")
+async def placement_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.placement_report(ctx, filters)
+    return await learning_report(ctx, filters)
+
+
+# --------------------------------------------------------------------------- Audit
+@dataset("audit")
+async def audit_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.audit_report(ctx, filters)
+    inst_id, dept_id, _ = await _resolve_scope(ctx, filters)
+    sql = "SELECT id, action, entity_type, entity_id, detail, created_at FROM audit_logs ORDER BY created_at DESC LIMIT 500;"
+    try:
+        async with get_pg_connection() as conn:
+            records = await conn.fetch(sql)
+    except Exception:
+        records = []
+
+    rows = [
+        [
+            _fmt(r["created_at"]),
+            r["action"],
+            r["entity_type"],
+            str(r["entity_id"]),
+            r["detail"] or "—"
+        ]
+        for r in records
+    ]
+    columns = ["Timestamp", "Action", "Entity", "Record ID", "Detail"]
+    return columns, rows, "Audit Trail"
+
+
+# --------------------------------------------------------------------------- System
+@dataset("system")
+async def system_report(ctx: ScopeContext, filters: dict[str, Any]):
+    if not settings.USE_POSTGRES:
+        from app.services import mongo_report_datasets
+        return await mongo_report_datasets.system_report(ctx, filters)
+    async with get_pg_connection() as conn:
+        inst_count = await conn.fetchval("SELECT count(*) FROM institutions")
+        dept_count = await conn.fetchval("SELECT count(*) FROM departments")
+        user_count = await conn.fetchval("SELECT count(*) FROM users")
+        stud_count = await conn.fetchval("SELECT count(*) FROM student_profiles")
+        batch_count = await conn.fetchval("SELECT count(*) FROM batches")
+        sess_count = await conn.fetchval("SELECT count(*) FROM training_sessions")
+        att_count = await conn.fetchval("SELECT count(*) FROM attendance_records")
+        eval_count = await conn.fetchval("SELECT count(*) FROM eedi_evaluations")
+        pay_count = await conn.fetchval("SELECT count(*) FROM payments")
+        pay_rev = await conn.fetchval("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'VERIFIED'")
+
+    rows = [
+        ["Institutions", inst_count, "Active platform institutions"],
+        ["Departments", dept_count, "Active academic departments"],
+        ["Total Users", user_count, "Registered accounts"],
+        ["Students", stud_count, "Enrolled students across institutions"],
+        ["Batches", batch_count, "Configured student cohorts"],
+        ["Training Sessions", sess_count, "Scheduled/completed training sessions"],
+        ["Attendance Marks", att_count, "Total recorded attendance entries"],
+        ["EEDI Evaluations", eval_count, "Completed skill assessments"],
+        ["Verified Payments", pay_count, f"Total INR {float(pay_rev):,.2f}"],
+    ]
+    columns = ["System Metric", "Count / Value", "Description"]
+    return columns, rows, "AI & System Usage"

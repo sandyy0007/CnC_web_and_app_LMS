@@ -7,10 +7,11 @@ import * as React from 'react';
 import { cn } from '@/lib/cn';
 
 const fieldClasses =
-  'w-full rounded-[9px] border border-white/14 bg-slate-900/75 px-3 py-2 text-base text-white ' +
-  'placeholder:text-slate-400 transition-all duration-150 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:outline-none ' +
+  'w-full rounded-[10px] border border-input-border bg-input px-3.5 py-2 text-base text-ink-1 ' +
+  'placeholder:text-ink-3 transition-all duration-200 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none ' +
   'focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ' +
-  'aria-[invalid=true]:border-rose-500 aria-[invalid=true]:focus:ring-rose-500/20 backdrop-blur-md';
+  'aria-[invalid=true]:border-rose-500 aria-[invalid=true]:focus:ring-rose-500/20 backdrop-blur-md ' +
+  'shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)]';
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
@@ -33,7 +34,7 @@ export const Label = React.forwardRef<
 >(({ className, children, required, ...props }, ref) => (
   <LabelPrimitive.Root
     ref={ref}
-    className={cn('mb-1.5 block text-sm font-semibold text-slate-200', className)}
+    className={cn('mb-1.5 block text-sm font-semibold text-ink-1', className)}
     {...props}
   >
     {children}
@@ -80,7 +81,7 @@ export function Field({
         {label}
       </Label>
       {children}
-      {hint && !error && <p className="mt-1.5 text-sm text-slate-300">{hint}</p>}
+      {hint && !error && <p className="mt-1.5 text-sm text-ink-3">{hint}</p>}
       <FieldError id={`${htmlFor}-error`}>{error}</FieldError>
     </div>
   );

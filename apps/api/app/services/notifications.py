@@ -132,6 +132,15 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _safe_obj_id(val: Any) -> Any:
+    if val is None:
+        return None
+    s = str(val)
+    if ObjectId.is_valid(s):
+        return ObjectId(s)
+    return s
+
+
 async def notify(
     *,
     user_id: Any,
@@ -143,19 +152,19 @@ async def notify(
     department_id: Any = None,
     metadata: dict[str, Any] | None = None,
     push: bool = True,
-) -> ObjectId | None:
+) -> Any:
     """Create one in-app notification (and optionally push it)."""
     if user_id is None:
         return None
     document = {
-        "userId": ObjectId(str(user_id)),
+        "userId": _safe_obj_id(user_id),
         "kind": kind,
         "icon": ICON_BY_KIND.get(kind, "bell"),
         "title": title,
         "body": body,
         "href": href,
-        "collegeId": college_id,
-        "departmentId": department_id,
+        "collegeId": str(college_id) if college_id is not None else None,
+        "departmentId": str(department_id) if department_id is not None else None,
         "metadata": metadata or {},
         "read": False,
         "createdAt": _now(),
@@ -184,8 +193,8 @@ async def notify_many(user_ids: Iterable[Any], **kwargs: Any) -> int:
     return count
 
 
-async def _device_tokens(user_id: ObjectId) -> list[str]:
-    user = await get_db().users.find_one({"_id": user_id}, {"deviceTokens": 1, "preferences": 1})
+async def _device_tokens(user_id: Any) -> list[str]:
+    user = await get_db().users.find_one({"_id": _safe_obj_id(user_id)}, {"deviceTokens": 1, "preferences": 1})
     if not user:
         return []
     preferences = user.get("preferences") or {}
@@ -196,7 +205,7 @@ async def _device_tokens(user_id: ObjectId) -> list[str]:
 
 async def register_device_token(user_id: Any, token: str, platform: str = "web") -> None:
     await get_db().users.update_one(
-        {"_id": ObjectId(str(user_id))},
+        {"_id": _safe_obj_id(user_id)},
         {
             "$addToSet": {"deviceTokens": token},
             "$set": {"lastDevicePlatform": platform, "updatedAt": _now()},
@@ -206,13 +215,13 @@ async def register_device_token(user_id: Any, token: str, platform: str = "web")
 
 async def unread_count(user_id: Any) -> int:
     return await get_db().notifications.count_documents(
-        {"userId": ObjectId(str(user_id)), "read": False, "deletedAt": None}
+        {"userId": _safe_obj_id(user_id), "read": False, "deletedAt": None}
     )
 
 
 async def mark_read(user_id: Any, notification_id: Any) -> bool:
     result = await get_db().notifications.update_one(
-        {"_id": ObjectId(str(notification_id)), "userId": ObjectId(str(user_id))},
+        {"_id": _safe_obj_id(notification_id), "userId": _safe_obj_id(user_id)},
         {"$set": {"read": True, "readAt": _now(), "updatedAt": _now()}},
     )
     return result.matched_count > 0
@@ -220,7 +229,7 @@ async def mark_read(user_id: Any, notification_id: Any) -> bool:
 
 async def mark_all_read(user_id: Any) -> int:
     result = await get_db().notifications.update_many(
-        {"userId": ObjectId(str(user_id)), "read": False},
+        {"userId": _safe_obj_id(user_id), "read": False},
         {"$set": {"read": True, "readAt": _now(), "updatedAt": _now()}},
     )
     return result.modified_count

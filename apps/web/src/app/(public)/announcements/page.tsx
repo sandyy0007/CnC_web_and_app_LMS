@@ -43,7 +43,7 @@ export default function AnnouncementsPage() {
               'tactile-press rounded-full border px-3 py-1.5 text-sm font-semibold capitalize transition-all duration-150',
               kind === item
                 ? 'border-indigo bg-indigo text-white shadow-xs'
-                : 'border-white/15 bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white',
+                : 'border-line bg-card text-ink-2 hover:bg-surface-hover hover:text-ink-1 dark:border-white/15 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/20 dark:hover:text-white',
             )}
           >
             {item}

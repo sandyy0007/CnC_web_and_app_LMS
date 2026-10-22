@@ -152,3 +152,60 @@ class InstitutionRepository:
             )
             return dict(row)
 
+    @staticmethod
+    async def update_status(institution_id: UUID | str, status: str) -> dict[str, Any] | None:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                """
+                UPDATE institutions
+                SET status = $2::record_status_enum, updated_at = NOW()
+                WHERE id = $1 AND deleted_at IS NULL
+                RETURNING id, name, code, status, updated_at;
+                """,
+                UUID(str(institution_id)),
+                status.upper(),
+            )
+            return dict(row) if row else None
+
+    @staticmethod
+    async def update(institution_id: UUID | str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        async with get_pg_connection() as conn:
+            set_clauses = []
+            params: list[Any] = [UUID(str(institution_id))]
+            for k in ("name", "address", "city", "state", "contact_email", "contact_phone"):
+                if k in fields:
+                    params.append(fields[k])
+                    set_clauses.append(f"{k} = ${len(params)}")
+            if "status" in fields:
+                params.append(fields["status"].upper())
+                set_clauses.append(f"status = ${len(params)}::record_status_enum")
+
+            if not set_clauses:
+                return await InstitutionRepository.get_by_id(institution_id)
+
+            set_clauses.append("updated_at = NOW()")
+            query = f"""
+                UPDATE institutions
+                SET {', '.join(set_clauses)}
+                WHERE id = $1 AND deleted_at IS NULL
+                RETURNING *;
+            """
+            row = await conn.fetchrow(query, *params)
+            return dict(row) if row else None
+
+    @staticmethod
+    async def delete_department(department_id: UUID | str) -> dict[str, Any]:
+        dept_uuid = UUID(str(department_id))
+        async with get_pg_connection() as conn:
+            # Check dependencies: batches, students, trainers
+            b_count = await conn.fetchval("SELECT count(*) FROM batches WHERE department_id = $1 AND deleted_at IS NULL", dept_uuid) or 0
+            u_count = await conn.fetchval("SELECT count(*) FROM users WHERE department_id = $1 AND deleted_at IS NULL", dept_uuid) or 0
+            if b_count > 0 or u_count > 0:
+                raise ValueError(f"Cannot delete department: {u_count} user(s) and {b_count} batch(es) are associated with it. Please archive or reassign them first.")
+
+            await conn.execute(
+                "UPDATE departments SET deleted_at = NOW(), status = 'ARCHIVED', updated_at = NOW() WHERE id = $1",
+                dept_uuid
+            )
+            return {"success": True, "departmentId": str(dept_uuid), "message": "Department safely archived"}
+

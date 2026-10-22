@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import io
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Sequence
 
@@ -29,6 +30,16 @@ log = get_logger("app.reports")
 FORMATS = ("xlsx", "csv", "pdf")
 
 QUEUED, PROCESSING, READY, FAILED = "queued", "processing", "ready", "failed"
+
+
+def _clean_mongo(val: Any) -> Any:
+    if isinstance(val, (uuid.UUID,)):
+        return str(val)
+    if isinstance(val, dict):
+        return {k: _clean_mongo(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_clean_mongo(v) for v in val]
+    return val
 
 
 def _now() -> datetime:
@@ -51,9 +62,10 @@ class ReportFamily:
     USERS = "users"
     SYSTEM = "system"
     PREDICTION = "prediction"
+    PAYMENTS = "payments"
 
 
-#: The 14 report families referenced by the Admin requirements. The catalogue is generated as
+#: The 15 report families referenced by the Admin requirements. The catalogue is generated as
 #: family × time-grain × entity × signal, which is what produces the 300+ report count without
 #: hand-writing 300 endpoints.
 REPORT_FAMILIES: tuple[dict[str, Any], ...] = (
@@ -144,7 +156,7 @@ def to_xlsx(
     title: str, columns: Sequence[str], rows: Sequence[Sequence[Any]], *, meta: dict[str, Any] | None = None
 ) -> bytes:
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     workbook = Workbook()
@@ -153,6 +165,12 @@ def to_xlsx(
 
     header_fill = PatternFill("solid", fgColor="171340")
     header_font = Font(color="FFFFFF", bold=True, size=10)
+    thin_border = Border(
+        left=Side(style="thin", color="E7E8F2"),
+        right=Side(style="thin", color="E7E8F2"),
+        top=Side(style="thin", color="E7E8F2"),
+        bottom=Side(style="thin", color="E7E8F2"),
+    )
 
     sheet.append(list(columns))
     for index in range(1, len(columns) + 1):
@@ -160,16 +178,27 @@ def to_xlsx(
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(vertical="center", wrap_text=True)
-    sheet.row_dimensions[1].height = 22
+    sheet.row_dimensions[1].height = 24
 
-    for row in rows:
-        sheet.append(["" if v is None else v for v in row])
+    if rows:
+        for row in rows:
+            sheet.append(["" if v is None else v for v in row])
+        for row_idx in range(2, len(rows) + 2):
+            sheet.row_dimensions[row_idx].height = 19
+            for col_idx in range(1, len(columns) + 1):
+                sheet.cell(row=row_idx, column=col_idx).border = thin_border
+    else:
+        empty_msg = "No data available for the selected filters."
+        sheet.append([empty_msg] + ["" for _ in range(len(columns) - 1)])
+        empty_cell = sheet.cell(row=2, column=1)
+        empty_cell.font = Font(italic=True, color="6B6C86", size=10)
+        sheet.row_dimensions[2].height = 22
 
     for index, column in enumerate(columns, start=1):
         width = max(len(str(column)) + 4, 12)
         for row in rows[:400]:
             if index - 1 < len(row):
-                width = max(width, min(46, len(str(row[index - 1])) + 3))
+                width = max(width, min(48, len(str(row[index - 1])) + 3))
         sheet.column_dimensions[get_column_letter(index)].width = width
     sheet.freeze_panes = "A2"
     sheet.auto_filter.ref = sheet.dimensions
@@ -177,10 +206,16 @@ def to_xlsx(
     if meta:
         info = workbook.create_sheet("Report info")
         info.append(["Field", "Value"])
-        info.cell(row=1, column=1).font = Font(bold=True)
-        info.cell(row=1, column=2).font = Font(bold=True)
+        info.cell(row=1, column=1).font = Font(bold=True, color="FFFFFF")
+        info.cell(row=1, column=1).fill = header_fill
+        info.cell(row=1, column=2).font = Font(bold=True, color="FFFFFF")
+        info.cell(row=1, column=2).fill = header_fill
         for key, value in meta.items():
             info.append([key, str(value)])
+        for r in range(2, len(meta) + 2):
+            info.cell(row=r, column=1).font = Font(bold=True, color="171340")
+            info.cell(row=r, column=1).border = thin_border
+            info.cell(row=r, column=2).border = thin_border
         info.column_dimensions["A"].width = 26
         info.column_dimensions["B"].width = 60
 
@@ -315,7 +350,18 @@ def available_datasets() -> list[str]:
 async def build_dataset(
     ctx: ScopeContext, report_type: str, filters: dict[str, Any]
 ) -> tuple[list[str], list[list[Any]], str]:
-    builder = _datasets.get(report_type)
+    rtype = (report_type or "").strip().lower()
+    alias_map = {
+        "enrollments": "enrollment",
+        "attendances": "attendance",
+        "trainer_workload": "trainer",
+        "system_activity": "system",
+        "department_attendance": "attendance",
+        "audit_logs": "audit",
+        "progress": "student_progress",
+    }
+    rtype = alias_map.get(rtype, rtype)
+    builder = _datasets.get(rtype) or _datasets.get(report_type)
     if not builder:
         raise ValidationError(
             f"Unknown report type '{report_type}'. Available: {', '.join(available_datasets())}"
@@ -335,21 +381,33 @@ async def request_report(
     """Create a report job; run it now if small, otherwise queue it."""
     if fmt not in FORMATS:
         raise ValidationError(f"Unsupported format '{fmt}' — choose one of {', '.join(FORMATS)}")
+    
+    rtype = (report_type or "").strip().lower()
+    alias_map = {
+        "enrollments": "enrollment",
+        "attendances": "attendance",
+        "trainer_workload": "trainer",
+        "system_activity": "system",
+        "department_attendance": "attendance",
+        "audit_logs": "audit",
+        "progress": "student_progress",
+    }
+    report_type = alias_map.get(rtype, rtype)
     if report_type not in _datasets:
         raise ValidationError(f"Unknown report type '{report_type}'")
 
-    filters = {k: v for k, v in (filters or {}).items() if v not in (None, "")}
+    filters = {k: _clean_mongo(v) for k, v in (filters or {}).items() if v not in (None, "")}
     db = get_db()
     job = {
         "reportType": report_type,
         "format": fmt,
         "filters": filters,
         "status": QUEUED,
-        "requestedBy": ctx.user_id,
+        "requestedBy": _clean_mongo(ctx.user_id),
         "requestedByLabel": ctx.actor_label,
         "requestedByRole": str(ctx.role),
-        "collegeId": ctx.college_id,
-        "departmentId": ctx.department_id,
+        "collegeId": _clean_mongo(ctx.college_id),
+        "departmentId": _clean_mongo(ctx.department_id),
         "scope": {
             "role": str(ctx.role),
             "collegeId": str(ctx.college_id) if ctx.college_id else None,
@@ -397,7 +455,8 @@ async def request_report(
         }
 
     finished = await _finalise(ctx, job_id, report_type, fmt, filters, columns, rows, title)
-    return {"id": str(job_id), "async": False, **finished}
+    msg = "No data available for the selected filters." if not rows else None
+    return {"id": str(job_id), "async": False, **({"message": msg} if msg else {}), **finished}
 
 
 async def _finalise(
@@ -423,6 +482,8 @@ async def _finalise(
         "Rows": len(rows),
         "Scoring version": settings.SCORING_VERSION,
     }
+    if not rows:
+        meta["Notice"] = "No data available for the selected filters."
     subtitle = f"Generated {meta['Generated at']} · {len(rows)} row(s) · scoped to the requester"
     content, mime = render(
         fmt, title=title, subtitle=subtitle, columns=columns, rows=rows, meta=meta
@@ -440,9 +501,9 @@ async def _finalise(
             "contentType": mime,
             "filename": filename,
             "rowCount": len(rows),
-            "collegeId": ctx.college_id,
-            "departmentId": ctx.department_id,
-            "requestedBy": ctx.user_id,
+            "collegeId": _clean_mongo(ctx.college_id),
+            "departmentId": _clean_mongo(ctx.department_id),
+            "requestedBy": _clean_mongo(ctx.user_id),
             "createdAt": _now(),
             "updatedAt": _now(),
             "deletedAt": None,
@@ -488,7 +549,7 @@ async def download_url_for_export(ctx: ScopeContext, export_id: Any) -> dict[str
 
         raise ScopeForbidden()
     if not ctx.is_platform_wide:
-        if export.get("collegeId") != ctx.college_id:
+        if str(export.get("collegeId") or "") != str(ctx.college_id or ""):
             from app.core.errors import ScopeForbidden
 
             raise ScopeForbidden()
@@ -497,12 +558,12 @@ async def download_url_for_export(ctx: ScopeContext, export_id: Any) -> dict[str
         if (
             ctx.role is Role.HOD
             and export.get("departmentId") is not None
-            and export["departmentId"] != ctx.department_id
+            and str(export["departmentId"]) != str(ctx.department_id)
         ):
             from app.core.errors import ScopeForbidden
 
             raise ScopeForbidden()
-        if ctx.role is Role.TRAINER and export.get("requestedBy") != ctx.user_id:
+        if ctx.role is Role.TRAINER and str(export.get("requestedBy") or "") != str(ctx.user_id or ""):
             from app.core.errors import ScopeForbidden
 
             raise ScopeForbidden()

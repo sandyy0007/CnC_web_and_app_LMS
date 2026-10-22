@@ -272,7 +272,7 @@ export default function PracticeSessionPage() {
                 </div>
               </CardHeader>
               <CardBody>
-                <p className="rounded-[12px] bg-navy-950 p-5 text-md leading-relaxed text-white">
+                <p className="rounded-[12px] border border-line bg-surface-muted p-5 text-md leading-relaxed text-ink-1 dark:border-transparent dark:bg-navy-950 dark:text-white">
                   {questions[index]?.text}
                 </p>
                 {questions[index]?.guidance && (

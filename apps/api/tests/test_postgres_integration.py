@@ -30,11 +30,77 @@ from app.repositories.evaluation_repo import EvaluationRepository
 from app.repositories.stats_repo import StatsRepository
 
 
-@pytest.fixture(autouse=True)
-def pg_pool_setup():
-    """Ensure PostgreSQL is active for tests."""
+import pytest_asyncio
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def pg_pool_setup():
+    """Ensure PostgreSQL is active for tests and tear down any test-created records."""
+    old = settings.USE_POSTGRES
     settings.USE_POSTGRES = True
-    yield
+    async with get_pg_connection() as conn:
+        before_insts = await conn.fetch("SELECT id FROM institutions")
+        existing_inst_ids = {r["id"] for r in before_insts}
+        before_courses = await conn.fetch("SELECT id FROM courses")
+        existing_course_ids = {r["id"] for r in before_courses}
+        before_users = await conn.fetch("SELECT id FROM users")
+        existing_user_ids = {r["id"] for r in before_users}
+    try:
+        yield
+    finally:
+        async with get_pg_connection() as conn:
+            after_insts = await conn.fetch("SELECT id FROM institutions")
+            new_inst_ids = [r["id"] for r in after_insts if r["id"] not in existing_inst_ids]
+            after_courses = await conn.fetch("SELECT id FROM courses")
+            new_course_ids = [r["id"] for r in after_courses if r["id"] not in existing_course_ids]
+            after_users = await conn.fetch("SELECT id FROM users")
+            new_user_ids = [r["id"] for r in after_users if r["id"] not in existing_user_ids]
+
+            # 1. Clean up payments and attendance for test users or test courses
+            if new_user_ids:
+                await conn.execute("DELETE FROM payments WHERE participant_user_id = ANY($1::uuid[]) OR verified_by = ANY($1::uuid[])", new_user_ids)
+                await conn.execute("DELETE FROM attendance_records WHERE participant_user_id = ANY($1::uuid[]) OR marked_by = ANY($1::uuid[])", new_user_ids)
+            for cid in new_course_ids:
+                await conn.execute("DELETE FROM payments WHERE course_id = $1", cid)
+
+            # 2. Clean up evaluations
+            if new_user_ids:
+                await conn.execute("DELETE FROM eedi_evaluations WHERE participant_user_id = ANY($1::uuid[]) OR trainer_user_id = ANY($1::uuid[])", new_user_ids)
+            for nid in new_inst_ids:
+                await conn.execute("DELETE FROM eedi_evaluations WHERE institution_id = $1", nid)
+            for cid in new_course_ids:
+                await conn.execute("DELETE FROM eedi_evaluations WHERE course_id = $1", cid)
+
+            # 3. Clean up enrollment periods and enrollments
+            if new_user_ids:
+                await conn.execute("DELETE FROM enrollment_periods WHERE participant_user_id = ANY($1::uuid[]) OR activated_by = ANY($1::uuid[])", new_user_ids)
+                await conn.execute("DELETE FROM enrollments WHERE participant_user_id = ANY($1::uuid[]) OR activated_by = ANY($1::uuid[])", new_user_ids)
+            for nid in new_inst_ids:
+                await conn.execute("DELETE FROM enrollment_periods WHERE enrollment_id IN (SELECT id FROM enrollments WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM enrollments WHERE institution_id = $1", nid)
+            for cid in new_course_ids:
+                await conn.execute("DELETE FROM enrollment_periods WHERE enrollment_id IN (SELECT id FROM enrollments WHERE course_id = $1)", cid)
+                await conn.execute("DELETE FROM enrollments WHERE course_id = $1", cid)
+
+            # 4. Clean up batch_trainers, profiles, users
+            if new_user_ids:
+                await conn.execute("DELETE FROM batch_trainers WHERE trainer_user_id = ANY($1::uuid[])", new_user_ids)
+                await conn.execute("DELETE FROM student_profiles WHERE user_id = ANY($1::uuid[])", new_user_ids)
+                await conn.execute("DELETE FROM trainer_profiles WHERE user_id = ANY($1::uuid[])", new_user_ids)
+                await conn.execute("DELETE FROM users WHERE id = ANY($1::uuid[])", new_user_ids)
+            for nid in new_inst_ids:
+                await conn.execute("DELETE FROM batch_trainers WHERE batch_id IN (SELECT id FROM batches WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM student_profiles WHERE user_id IN (SELECT id FROM users WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM trainer_profiles WHERE user_id IN (SELECT id FROM users WHERE institution_id = $1)", nid)
+                await conn.execute("DELETE FROM users WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM batches WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM departments WHERE institution_id = $1", nid)
+                await conn.execute("DELETE FROM institutions WHERE id = $1", nid)
+
+            # 5. Clean up courses
+            for cid in new_course_ids:
+                await conn.execute("DELETE FROM courses WHERE id = $1", cid)
+        settings.USE_POSTGRES = old
 
 
 # ---------------------------------------------------------------------------

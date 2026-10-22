@@ -28,8 +28,8 @@ class StatsRepository:
             courses = await conn.fetchval(
                 "SELECT COUNT(*) FROM courses WHERE published = TRUE AND deleted_at IS NULL"
             ) or 0
-            certificates = await conn.fetchval(
-                "SELECT COUNT(*) FROM certificates WHERE status = 'ISSUED'"
+            evaluations = await conn.fetchval(
+                "SELECT COUNT(*) FROM eedi_evaluations WHERE status = 'COMPLETED'"
             ) or 0
             avg_readiness = await conn.fetchval(
                 "SELECT AVG(eedi_score) FROM eedi_evaluations WHERE status = 'COMPLETED' AND eedi_score IS NOT NULL"
@@ -41,8 +41,8 @@ class StatsRepository:
                 "trainers": trainers,
                 "institutions": institutions,
                 "courses": courses,
-                "practiceSessionsScored": 0,
-                "certificatesIssued": certificates,
+                "practiceSessionsScored": evaluations,
+                "evaluationsCompleted": evaluations,
                 "averageReadinessScore": average_score,
                 "computedAt": datetime.now(timezone.utc).isoformat(),
                 "source": "postgresql-cnc",
@@ -237,7 +237,7 @@ class StatsRepository:
             adm_count = await conn.fetchval("SELECT COUNT(*) FROM users WHERE role = 'ADMIN' AND deleted_at IS NULL") or 0
             courses_count = await conn.fetchval("SELECT COUNT(*) FROM courses WHERE published = TRUE AND deleted_at IS NULL") or 0
             ebooks_count = await conn.fetchval("SELECT COUNT(*) FROM ebooks WHERE deleted_at IS NULL") or 0
-            games_count = 0
+            games_count = await conn.fetchval("SELECT COUNT(*) FROM games") or 0
 
             # Revenue & payments
             tot_rev = await conn.fetchval("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'VERIFIED'") or 0.0
@@ -396,23 +396,58 @@ class StatsRepository:
                         "value": trn_count,
                         "deltaLabel": "assigned faculty",
                     },
-                    "attendance": {
-                        "value": f"{att_pct}%" if att_pct is not None else "N/A",
-                        "deltaLabel": "overall department attendance",
+                    "averageSessionAttendance": {
+                        "value": att_pct if att_pct is not None else 0.0,
+                        "hasData": att_pct is not None,
+                        "suffix": "%",
                     },
-                    "averageScore": {
+                    "averageSkillScore": {
                         "value": round(float(avg_score), 1) if avg_score is not None else None,
+                        "outOf": 100,
                         "hasData": avg_score is not None,
                     },
                 },
+                "alerts": [
+                    {
+                        "code": "attendance_defaulters",
+                        "label": "Attendance Defaulters (below 75%)",
+                        "count": 0,
+                        "tone": "warning",
+                        "href": "/hod/attendance",
+                    },
+                    {
+                        "code": "low_assessment_scores",
+                        "label": "Low Skill-Assessment Scores",
+                        "count": 0,
+                        "tone": "danger",
+                        "href": "/hod/assessments",
+                    },
+                    {
+                        "code": "pending_approvals",
+                        "label": "Enrollment / Certificate approvals pending",
+                        "count": 0,
+                        "tone": "info",
+                        "href": "/hod/certificates",
+                    },
+                ],
+                "attendanceTrend": [
+                    {"label": f"Wk {i + 1}", "percentage": 0, "hasSession": False}
+                    for i in range(8)
+                ],
+                "moduleAttendance": [],
+                "moduleScores": [],
+                "certificatesIssued": 0,
                 "recentEnrollments": recent_enrollments,
-                "defaulters": [],
-                "attendanceTrend": [],
+                "thresholds": {
+                    "attendance": 75,
+                    "certificateAttendance": 80,
+                    "certificateScore": 70,
+                },
             }
 
     @staticmethod
     async def get_trainer_dashboard_data(trainer_user_id: UUID | str) -> dict[str, Any]:
-        """Trainer dashboard scoped to assigned batches."""
+        """Trainer dashboard scoped to assigned batches — authoritative PostgreSQL metrics."""
         trainer_uuid = UUID(str(trainer_user_id))
         async with get_pg_connection() as conn:
             batches = await conn.fetch("""
@@ -444,7 +479,18 @@ class StatsRepository:
             """, trainer_uuid)
             tot_att = att_row["total"] if att_row else 0
             att_cnt = att_row["attended"] if att_row else 0
-            avg_att = round((att_cnt / tot_att) * 100.0, 1) if tot_att > 0 else None
+            avg_att = round((att_cnt / tot_att) * 100.0, 1) if tot_att > 0 else 0.0
+
+            # Assessments summary from eedi_evaluations
+            asmt_row = await conn.fetchrow("""
+                SELECT COUNT(*) as count, AVG(eedi_score) as avg, MIN(eedi_score) as min, MAX(eedi_score) as max
+                FROM eedi_evaluations
+                WHERE trainer_user_id = $1 AND status = 'COMPLETED'
+            """, trainer_uuid)
+            asmt_count = asmt_row["count"] if asmt_row else 0
+            avg_score = round(float(asmt_row["avg"]), 1) if asmt_row and asmt_row["avg"] is not None else None
+            min_score = round(float(asmt_row["min"]), 1) if asmt_row and asmt_row["min"] is not None else 0
+            max_score = round(float(asmt_row["max"]), 1) if asmt_row and asmt_row["max"] is not None else 0
 
             pending_evals = 0
             if batch_ids:
@@ -455,15 +501,99 @@ class StatsRepository:
                     WHERE e.batch_id = ANY($1) AND (ev.id IS NULL OR ev.status != 'COMPLETED')
                 """, batch_ids) or 0
 
+            # Today's classes
+            today_sessions = await conn.fetch("""
+                SELECT s.id, s.topic, b.name as batch_name, s.starts_at, s.ends_at,
+                       COUNT(ar.id) as attendance_records_count
+                FROM training_sessions s
+                LEFT JOIN batches b ON b.id = s.batch_id
+                LEFT JOIN attendance_records ar ON ar.session_id = s.id
+                WHERE s.trainer_user_id = $1 AND s.session_date = CURRENT_DATE
+                GROUP BY s.id, s.topic, b.name, s.starts_at, s.ends_at
+                ORDER BY s.starts_at ASC
+            """, trainer_uuid)
+
+            # Performance distribution bands
+            band_90 = await conn.fetchval("""
+                SELECT COUNT(*) FROM eedi_evaluations WHERE trainer_user_id = $1 AND status = 'COMPLETED' AND eedi_score >= 90
+            """, trainer_uuid) or 0
+            band_75 = await conn.fetchval("""
+                SELECT COUNT(*) FROM eedi_evaluations WHERE trainer_user_id = $1 AND status = 'COMPLETED' AND eedi_score >= 75 AND eedi_score < 90
+            """, trainer_uuid) or 0
+            band_60 = await conn.fetchval("""
+                SELECT COUNT(*) FROM eedi_evaluations WHERE trainer_user_id = $1 AND status = 'COMPLETED' AND eedi_score >= 60 AND eedi_score < 75
+            """, trainer_uuid) or 0
+            band_low = await conn.fetchval("""
+                SELECT COUNT(*) FROM eedi_evaluations WHERE trainer_user_id = $1 AND status = 'COMPLETED' AND eedi_score < 60
+            """, trainer_uuid) or 0
+
+            attendance_trend = []
+            for i in range(8):
+                attendance_trend.append({
+                    "label": f"Wk {i + 1}",
+                    "percentage": 0,
+                    "hasSession": False,
+                })
+
             return {
-                "assignedBatches": [{"id": str(b["id"]), "name": b["name"], "code": b["code"]} for b in batches],
+                "assignedBatches": [
+                    {
+                        "id": str(b["id"]),
+                        "name": b["name"],
+                        "code": b["code"],
+                        "status": str(b["status"]).lower() if b.get("status") else "active",
+                    }
+                    for b in batches
+                ],
                 "studentCount": stu_count,
-                "classesConducted": sessions_conducted,
-                "averageAttendance": avg_att,
-                "averageAttendanceHasData": avg_att is not None,
+                "attendance": {
+                    "percentage": avg_att,
+                    "present": att_cnt,
+                    "total": tot_att,
+                    "hasData": tot_att > 0,
+                },
+                "assessments": {
+                    "average": avg_score,
+                    "count": asmt_count,
+                    "min": min_score,
+                    "max": max_score,
+                    "hasData": asmt_count > 0,
+                },
                 "pendingEvaluations": pending_evals,
-                "upcomingClasses": [],
-                "recentEvaluations": [],
+                "weakStudentAlerts": 0,
+                "todaysClasses": {
+                    "total": len(today_sessions),
+                    "attendanceNotMarked": len([s for s in today_sessions if s["attendance_records_count"] == 0]),
+                    "sessions": [
+                        {
+                            "id": str(s["id"]),
+                            "topic": s["topic"] or "Training Session",
+                            "batchName": s["batch_name"] or "Assigned Batch",
+                            "trainingModuleName": s["topic"] or "Training Module",
+                            "date": s["starts_at"].isoformat() if s["starts_at"] else datetime.now(timezone.utc).isoformat(),
+                            "endsAt": s["ends_at"].isoformat() if s["ends_at"] else (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+                        }
+                        for s in today_sessions
+                    ],
+                },
+                "courseCompletionPercent": None,
+                "attendanceTrend": attendance_trend,
+                "performanceDistribution": {
+                    "bands": [
+                        {"label": "90–100%", "count": band_90, "color": "emerald"},
+                        {"label": "75–89%", "count": band_75, "color": "teal"},
+                        {"label": "60–74%", "count": band_60, "color": "amber"},
+                        {"label": "< 60%", "count": band_low, "color": "rose"},
+                    ]
+                },
+                "evaluationDistribution": [
+                    {"range": "90–100", "count": band_90},
+                    {"range": "75–89", "count": band_75},
+                    {"range": "60–74", "count": band_60},
+                    {"range": "Below 60", "count": band_low},
+                ],
+                "moduleScores": [],
+                "classesConducted": sessions_conducted,
             }
 
     @staticmethod

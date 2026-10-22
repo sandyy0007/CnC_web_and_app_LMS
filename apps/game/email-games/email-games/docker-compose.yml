@@ -1,0 +1,13 @@
+services:
+  email-games:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_PATH: /data/eedi_games.db
+    volumes:
+      - email-game-data:/data
+    restart: unless-stopped
+
+volumes:
+  email-game-data:

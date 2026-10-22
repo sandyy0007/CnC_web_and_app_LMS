@@ -10,12 +10,14 @@ import {
   ExternalLink,
   FileText,
   Lock,
+  QrCode,
   Receipt,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
+import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -41,12 +43,13 @@ interface PaymentRecord {
   id: string;
   orderId?: string;
   transactionId?: string;
+  transactionRef?: string;
   courseId?: string;
   courseTitle?: string;
   courseMode?: string;
   amount: number;
   currency: string;
-  status: 'pending' | 'success' | 'completed' | 'verified' | 'failed' | 'refunded' | 'pending_verification';
+  status: 'pending' | 'success' | 'completed' | 'verified' | 'failed' | 'rejected' | 'refunded' | 'pending_verification';
   purpose?: string;
   referenceType?: string;
   referenceId?: string;
@@ -62,6 +65,7 @@ interface CourseTrial {
   startedAt: string;
   expiresAt: string;
   daysRemaining: number;
+  hoursRemaining?: number;
   status: 'active' | 'expired' | 'converted';
   isActive: boolean;
 }
@@ -74,6 +78,7 @@ interface InvoiceData {
   items: Array<{ description: string; amount: number }>;
   total: number;
   status: string;
+  paymentMethod?: string;
 }
 
 export default function StudentPaymentsPage() {
@@ -82,21 +87,38 @@ export default function StudentPaymentsPage() {
 
   const [checkoutModalOpen, setCheckoutModalOpen] = React.useState(false);
   const [selectedTrialToBuy, setSelectedTrialToBuy] = React.useState<CourseTrial | null>(null);
+  const [courseConfig, setCourseConfig] = React.useState<any>(null);
+  const [loadingConfig, setLoadingConfig] = React.useState(false);
+
   const [selectedMode, setSelectedMode] = React.useState<'ONLINE' | 'OFFLINE'>('ONLINE');
+  const [selectedMethod, setSelectedMethod] = React.useState<'UPI' | 'GATEWAY'>('UPI');
+  const [transactionRef, setTransactionRef] = React.useState('');
+  const [payerUpiId, setPayerUpiId] = React.useState('');
   const [checkoutProcessing, setCheckoutProcessing] = React.useState(false);
-  const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
+  const [checkoutSuccessMessage, setCheckoutSuccessMessage] = React.useState<string | null>(null);
 
   // Invoice modal state
   const [invoiceModalOpen, setInvoiceModalOpen] = React.useState(false);
   const [invoiceData, setInvoiceData] = React.useState<InvoiceData | null>(null);
   const [loadingInvoice, setLoadingInvoice] = React.useState(false);
 
-  const payments: PaymentRecord[] =
-    paymentsQuery.data?.payments ?? paymentsQuery.data?.data?.payments ?? paymentsQuery.data ?? [];
-  const trials: CourseTrial[] =
-    trialsQuery.data?.trials ?? trialsQuery.data?.data?.trials ?? trialsQuery.data ?? [];
+  const rawPayments =
+    paymentsQuery.data?.payments ??
+    paymentsQuery.data?.data?.payments ??
+    paymentsQuery.data?.data ??
+    paymentsQuery.data;
+  const payments: PaymentRecord[] = Array.isArray(rawPayments) ? rawPayments : [];
 
-  const successfulPayments = payments.filter((p) => p.status === 'success');
+  const rawTrials =
+    trialsQuery.data?.trials ??
+    trialsQuery.data?.data?.trials ??
+    trialsQuery.data?.data ??
+    trialsQuery.data;
+  const trials: CourseTrial[] = Array.isArray(rawTrials) ? rawTrials : [];
+
+  const successfulPayments = payments.filter(
+    (p) => p.status === 'success' || p.status === 'completed' || p.status === 'verified'
+  );
   const totalSpent = successfulPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
   const activeTrials = trials.filter((t) => t.isActive);
 
@@ -106,7 +128,7 @@ export default function StudentPaymentsPage() {
     setInvoiceModalOpen(true);
     try {
       const res = await api.get<any>(`/student/payments/${paymentId}/invoice`);
-      setInvoiceData(res?.invoice ?? res?.data?.invoice ?? res);
+      setInvoiceData(res?.invoice ?? res?.data?.invoice ?? res?.data ?? res);
     } catch {
       // ignore
     } finally {
@@ -115,38 +137,62 @@ export default function StudentPaymentsPage() {
   };
 
   // Open checkout for a course trial
-  const handleBuyCourse = (trial: CourseTrial) => {
+  const handleBuyCourse = async (trial: CourseTrial) => {
     setSelectedTrialToBuy(trial);
-    setCheckoutSuccess(false);
+    setCheckoutSuccessMessage(null);
+    setTransactionRef('');
+    setPayerUpiId('');
+    setLoadingConfig(true);
     setCheckoutModalOpen(true);
+
+    try {
+      const res = await api.get<any>(`/student/courses/${trial.courseId}`);
+      const course = res.data ?? res;
+      setCourseConfig(course);
+    } catch {
+      setCourseConfig(null);
+    } finally {
+      setLoadingConfig(false);
+    }
   };
 
-  // Perform Mock/Standard Checkout
-  const handleConfirmCheckout = async () => {
+  // Perform Checkout
+  const handleConfirmCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedTrialToBuy) return;
+
+    if (selectedMethod === 'UPI' && !transactionRef.trim()) {
+      toast.error('Please enter your 12-digit UPI UTR reference number.');
+      return;
+    }
+
     setCheckoutProcessing(true);
     try {
       const res = await api.post<any>('/student/payments/checkout', {
         courseId: selectedTrialToBuy.courseId,
         courseMode: selectedMode,
-        amount: 2499,
-        currency: 'INR',
-        purpose: `Full Lifetime Access: ${selectedTrialToBuy.courseName} (${selectedMode})`,
-        referenceType: 'course',
-        referenceId: selectedTrialToBuy.courseId,
+        paymentMethod: selectedMethod,
+        transactionRef: transactionRef.trim() || undefined,
+        payerUpiId: payerUpiId.trim() || undefined,
       });
 
-      // If mock checkout simulates immediate redirect/success
-      setCheckoutSuccess(true);
+      const data = res.data ?? res;
+      if (data.status === 'PENDING') {
+        setCheckoutSuccessMessage(
+          'Payment submitted for verification! Your UTR reference has been recorded. Once verified by the administration, your lifetime course access will be unlocked.'
+        );
+      } else {
+        setCheckoutSuccessMessage(
+          'Payment successful! You now have full lifetime access to this course. Your progress has been preserved.'
+        );
+      }
+
       setTimeout(() => {
-        setCheckoutModalOpen(false);
-        setCheckoutSuccess(false);
-        setSelectedTrialToBuy(null);
         paymentsQuery.refetch();
         trialsQuery.refetch();
       }, 1500);
-    } catch {
-      // error handled
+    } catch (err: any) {
+      toast.error(err.message || 'Payment submission failed.');
     } finally {
       setCheckoutProcessing(false);
     }
@@ -163,293 +209,310 @@ export default function StudentPaymentsPage() {
         <ImageHero
           image="/images/backgrounds/payments.webp"
           imageAlt="Fintech Security and Transaction Ledger"
-          title="Billing, Payments & Subscriptions"
-          subtitle="View your active course trials, verify transactions, and download official tax receipts."
+          title="Billing, Payments &amp; Subscriptions"
+          subtitle="Manage active 3-day course free trials, verify UPI transactions, and download official tax receipts."
           badge={
             <Badge tone="success" className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-200 border-emerald-500/30">
               <ShieldCheck className="size-3.5" />
-              PCI-DSS Encrypted Payments
+              PCI-DSS &amp; UPI Encrypted Payments
             </Badge>
           }
         />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Invested"
-          value={`₹${num(totalSpent)}`}
-          tone="indigo"
-          icon={<CreditCard className="size-4" />}
-          hint="Lifetime course & cert purchases"
-        />
-        <StatCard
-          label="Active 7-Day Trials"
-          value={num(activeTrials.length)}
-          tone={activeTrials.length > 0 ? 'amber' : 'indigo'}
-          icon={<Clock className="size-4" />}
-          hint="Courses currently on free trial"
-        />
-        <StatCard
-          label="Invoices Generated"
-          value={num(successfulPayments.length)}
-          tone="success"
-          icon={<Receipt className="size-4" />}
-          hint="Available for download"
-        />
-        <StatCard
-          label="Payment Gateway"
-          value="Verified Safe"
-          tone="info"
-          icon={<Sparkles className="size-4" />}
-          hint="Mock / Razorpay / Stripe ready"
-        />
-      </div>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Total Invested"
+            value={`₹${num(totalSpent)}`}
+            tone="indigo"
+            icon={<CreditCard className="size-4" />}
+            hint="Settled course purchases"
+          />
+          <StatCard
+            label="Active 3-Day Trials"
+            value={num(activeTrials.length)}
+            tone={activeTrials.length > 0 ? 'amber' : 'indigo'}
+            icon={<Clock className="size-4" />}
+            hint="72-hour server countdown active"
+          />
+          <StatCard
+            label="Invoices Generated"
+            value={num(successfulPayments.length)}
+            tone="success"
+            icon={<Receipt className="size-4" />}
+            hint="Official receipts available"
+          />
+          <StatCard
+            label="Payment Modes"
+            value="UPI &amp; Gateway"
+            tone="info"
+            icon={<Sparkles className="size-4" />}
+            hint="Direct UPI QR / Instant Gateway"
+          />
+        </div>
 
-      {/* Active 7-Day Trials Section */}
-      {trials.length > 0 && (
-        <Card>
-          <CardHeader className="p-5 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="size-4 text-amber-500" />
-                  Your Course Free Trials (7 Days)
-                </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Full curriculum access during your trial period. Upgrade anytime to keep your progress and earn verified certificates.
-                </p>
+        {/* Active 3-Day Free Trials Section */}
+        {trials.length > 0 && (
+          <Card elevated>
+            <CardHeader className="p-5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Clock className="size-4 text-amber-500" />
+                    Your Course Free Trials (3 Days / 72 Hours)
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Full curriculum access during your 72-hour trial. Upgrade anytime to keep your learning progress and unlock all class materials and live sessions.
+                  </p>
+                </div>
+                <Badge tone="amber">
+                  72-Hour Server Clock
+                </Badge>
               </div>
-              <Badge tone="amber">
-                7-Day Server Countdown
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardBody className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {trials.map((trial) => {
-                const isExpiringSoon = trial.isActive && trial.daysRemaining <= 2;
-                return (
-                  <div
-                    key={trial.id}
-                    className={cn(
-                      'p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3',
-                      trial.status === 'converted'
-                        ? 'border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20'
-                        : trial.isActive
-                        ? isExpiringSoon
-                          ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-950/20'
-                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
-                        : 'border-rose-200 bg-rose-50/30 dark:bg-rose-950/10 opacity-75'
-                    )}
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">
-                          {trial.courseName}
-                        </span>
-                        <Badge
-                          tone={
-                            trial.status === 'converted'
-                              ? 'success'
-                              : trial.isActive
-                              ? isExpiringSoon
-                                ? 'amber'
-                                : 'indigo'
-                              : 'danger'
-                          }
-                        >
-                          {trial.status === 'converted'
-                            ? 'Purchased'
-                            : trial.isActive
-                            ? `${trial.daysRemaining} days left`
-                            : 'Trial Expired'}
-                        </Badge>
-                      </div>
-
-                      <div className="mt-2 text-xs text-slate-500 space-y-1">
-                        <p>Started: {formatDate(trial.startedAt)}</p>
-                        <p>Expires: {formatDate(trial.expiresAt)}</p>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <Link
-                        href={`/student/learning/${trial.courseId}`}
-                        className="text-xs text-indigo hover:underline font-medium"
-                      >
-                        Open Course →
-                      </Link>
-
-                      {trial.status !== 'converted' && (
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          onClick={() => handleBuyCourse(trial)}
-                          className="text-xs"
-                        >
-                          {trial.isActive ? 'Unlock Lifetime' : 'Purchase Course'}
-                        </Button>
+            </CardHeader>
+            <CardBody className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trials.map((trial) => {
+                  const isExpiringSoon = trial.isActive && trial.daysRemaining <= 1;
+                  return (
+                    <div
+                      key={trial.id}
+                      className={cn(
+                        'p-4 rounded-xl border surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover transition-all flex flex-col justify-between space-y-3',
+                        trial.status === 'converted'
+                          ? 'border-emerald-200/80 bg-emerald-50/40 dark:bg-emerald-950/20'
+                          : trial.isActive
+                          ? isExpiringSoon
+                            ? 'border-amber-300/80 bg-amber-50/50 dark:bg-amber-950/20'
+                            : 'border-slate-200/80 dark:border-white/[0.08]'
+                          : 'border-rose-200/80 bg-rose-50/30 dark:bg-rose-950/10 opacity-85'
                       )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Transaction History */}
-      <Card>
-        <CardHeader className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <CardTitle className="text-base">Payment & Invoices History</CardTitle>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Complete log of all course enrollments, assessment fees, and certifications
-            </p>
-          </div>
-        </CardHeader>
-        <CardBody className="p-0">
-          {payments.length === 0 ? (
-            <div className="text-center py-12">
-              <Receipt className="size-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-              <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">
-                No payment transactions found
-              </p>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                When you purchase lifetime course access or certifications, your invoices and payment receipts will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-slate-500 uppercase tracking-wider font-semibold">
-                  <tr>
-                    <th className="px-5 py-3">Course / Purpose</th>
-                    <th className="px-5 py-3">Mode</th>
-                    <th className="px-5 py-3">Amount</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Txn ID</th>
-                    <th className="px-5 py-3">Date</th>
-                    <th className="px-5 py-3">Receipt</th>
-                    <th className="px-5 py-3 text-right">Course Access</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {payments.map((p) => {
-                    const isAccessActive =
-                      p.status === 'success' ||
-                      p.status === 'completed' ||
-                      p.status === 'verified';
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                        <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white max-w-xs truncate">
-                          {p.courseTitle || p.purpose || 'Course Enrollment'}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <Badge tone={p.courseMode === 'OFFLINE' ? 'amber' : 'indigo'}>
-                            {p.courseMode === 'OFFLINE' ? 'Offline' : 'Online'}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-100">
-                          ₹{num(p.amount)}
-                        </td>
-                        <td className="px-5 py-3.5">
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">
+                            {trial.courseName}
+                          </span>
                           <Badge
                             tone={
-                              isAccessActive
+                              trial.status === 'converted'
                                 ? 'success'
-                                : p.status === 'pending' || p.status === 'pending_verification'
-                                ? 'amber'
-                                : p.status === 'refunded'
-                                ? 'info'
+                                : trial.isActive
+                                ? isExpiringSoon
+                                  ? 'amber'
+                                  : 'indigo'
                                 : 'danger'
                             }
                           >
-                            {p.status === 'pending_verification'
-                              ? 'Pending Approval'
-                              : p.status}
+                            {trial.status === 'converted'
+                              ? 'Paid & Enrolled'
+                              : trial.isActive
+                              ? `${trial.daysRemaining}d remaining`
+                              : '3-Day Trial Expired'}
                           </Badge>
-                        </td>
-                        <td className="px-5 py-3.5 font-mono text-slate-600 dark:text-slate-300 font-medium">
-                          {p.transactionId || p.orderId || '—'}
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-500">
-                          {formatDate(p.createdAt || p.paidAt)}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          {isAccessActive && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs text-indigo hover:text-indigo/80 p-1 flex items-center gap-1"
-                              onClick={() => handleViewInvoice(p.id)}
-                            >
-                              <FileText className="size-3.5" />
-                              View
-                            </Button>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          {isAccessActive && p.courseId ? (
-                            <Link
-                              href={`/student/learning/${p.courseId}`}
-                              className="inline-flex items-center gap-1 text-xs text-indigo font-semibold hover:underline"
-                            >
-                              Go to Course →
-                            </Link>
-                          ) : p.status === 'pending_verification' ? (
-                            <span className="text-[11px] text-amber-600 font-medium">Awaiting Verification</span>
-                          ) : (
-                            <span className="text-slate-400">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardBody>
-      </Card>
+                        </div>
 
-      {/* Checkout Modal */}
+                        <div className="mt-2 text-xs text-slate-500 space-y-1">
+                          <p>Started: {formatDate(trial.startedAt)}</p>
+                          <p>Expires: {formatDate(trial.expiresAt)}</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <Link
+                          href={`/student/learning/${trial.courseId}`}
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                        >
+                          Open Course →
+                        </Link>
+
+                        {trial.status !== 'converted' && (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => handleBuyCourse(trial)}
+                            className="text-xs"
+                          >
+                            {trial.isActive ? 'Unlock Lifetime Access' : 'Purchase Course'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {/* Transaction History */}
+        <Card elevated>
+          <CardHeader className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Payment &amp; Invoices History</CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Audit ledger of all course enrollments, UPI transactions, and verified tax receipts.
+              </p>
+            </div>
+          </CardHeader>
+          <CardBody className="p-0">
+            {payments.length === 0 ? (
+              <div className="text-center py-12">
+                <Receipt className="size-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">
+                  No payment transactions found
+                </p>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  When you purchase lifetime course access, your invoices and receipts will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-slate-500 uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="px-5 py-3">Course / Purpose</th>
+                      <th className="px-5 py-3">Mode</th>
+                      <th className="px-5 py-3">Amount</th>
+                      <th className="px-5 py-3">Status</th>
+                      <th className="px-5 py-3">UTR / Ref</th>
+                      <th className="px-5 py-3">Date</th>
+                      <th className="px-5 py-3">Receipt</th>
+                      <th className="px-5 py-3 text-right">Access</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {payments.map((p) => {
+                      const isAccessActive =
+                        p.status === 'success' ||
+                        p.status === 'completed' ||
+                        p.status === 'verified';
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                          <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white max-w-xs truncate">
+                            {p.courseTitle || p.purpose || 'Course Enrollment'}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge tone="neutral" className="text-[10px]">
+                              {p.courseMode || 'ONLINE'}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
+                            ₹{num(p.amount)}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge
+                              tone={
+                                isAccessActive
+                                  ? 'success'
+                                  : p.status === 'pending' || p.status === 'pending_verification'
+                                  ? 'amber'
+                                  : p.status === 'refunded'
+                                  ? 'neutral'
+                                  : 'danger'
+                              }
+                            >
+                              {p.status === 'pending_verification' ? 'Pending Review' : p.status.toUpperCase()}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 font-mono text-[11px] text-slate-500">
+                            {p.transactionRef || p.transactionId || '—'}
+                          </td>
+                          <td className="px-5 py-3.5 text-slate-500">
+                            {formatDate(p.createdAt || p.paidAt)}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            {isAccessActive ? (
+                              <button
+                                onClick={() => handleViewInvoice(p.id)}
+                                className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                              >
+                                <Download className="size-3" />
+                                Invoice
+                              </button>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            {p.courseId && isAccessActive ? (
+                              <Link
+                                href={`/student/learning/${p.courseId}`}
+                                className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                              >
+                                View Course →
+                              </Link>
+                            ) : (
+                              <span className="text-slate-400 text-[11px]">
+                                {p.status === 'pending' ? 'Verifying…' : 'Locked'}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Course Checkout Modal with Real UPI and Gateway Options */}
       <Dialog open={checkoutModalOpen} onOpenChange={setCheckoutModalOpen}>
-        <DialogContent>
+        <DialogContent wide>
           <DialogHeader>
-            <DialogTitle>Unlock Full Lifetime Access</DialogTitle>
+            <DialogTitle>Unlock Lifetime Course Access</DialogTitle>
             <DialogDescription>
-              Transition from 7-day trial to permanent course enrollment with verified certificate.
+              Preserve your 3-day free trial progress and gain unlimited lifetime access to all learning content.
             </DialogDescription>
           </DialogHeader>
 
-          {checkoutSuccess ? (
-            <div className="p-8 text-center space-y-3">
-              <CheckCircle2 className="size-12 text-emerald-500 mx-auto animate-bounce" />
+          {checkoutSuccessMessage ? (
+            <div className="p-8 text-center space-y-4">
+              <CheckCircle2 className="size-12 text-emerald-500 mx-auto" />
               <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-                Payment Successful!
+                Payment Received
               </h3>
-              <p className="text-xs text-slate-500">
-                You now have full lifetime access to this program. An official GST invoice has been generated.
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">
+                {checkoutSuccessMessage}
               </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setCheckoutModalOpen(false);
+                  setCheckoutSuccessMessage(null);
+                }}
+              >
+                Close &amp; Return to Payments
+              </Button>
             </div>
           ) : selectedTrialToBuy ? (
-            <div className="p-6 space-y-5">
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="flex justify-between items-center text-sm font-semibold">
-                  <span className="text-slate-800 dark:text-slate-200">{selectedTrialToBuy.courseName}</span>
-                  <span className="text-indigo font-bold">₹2,499</span>
+            <form onSubmit={handleConfirmCheckout} className="p-6 space-y-5">
+              {/* Course Overview Card */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                    {courseConfig?.title || selectedTrialToBuy.courseName}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Payee: {courseConfig?.merchantName || 'Winners Creek LMS'} · Category: {courseConfig?.category || 'Employability'}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500">
-                  Includes all interactive lab lessons, lifetime updates, and verifiable certificate of completion.
-                </p>
+                <div className="text-right">
+                  <span className="text-xs text-slate-400 uppercase tracking-wider block font-semibold">Course Fee</span>
+                  <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">
+                    ₹{num(courseConfig?.fee ?? 2499)}
+                  </span>
+                </div>
               </div>
 
               {/* Mode Selection */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Choose Learning Mode:
+                  Select Learning Mode:
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -462,7 +525,7 @@ export default function StudentPaymentsPage() {
                     }`}
                   >
                     <p className="font-bold">Online Platform</p>
-                    <p className="text-[11px] text-slate-500 font-normal">Self-Paced, Cloud Labs</p>
+                    <p className="text-[11px] text-slate-500 font-normal">Self-Paced, Virtual Classrooms</p>
                   </button>
 
                   <button
@@ -475,24 +538,134 @@ export default function StudentPaymentsPage() {
                     }`}
                   >
                     <p className="font-bold">Campus Cohort</p>
-                    <p className="text-[11px] text-slate-500 font-normal">In-Person Sessions</p>
+                    <p className="text-[11px] text-slate-500 font-normal">In-Person Campus Sessions</p>
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="size-4 text-emerald-500" />
-                  <span>Instant access without data loss (your trial progress is preserved)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-500" />
-                  <span>30-Day Money Back Guarantee</span>
+              {/* Payment Method Tabs */}
+              <div className="space-y-3">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Select Payment Method:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMethod('UPI')}
+                    className={`p-3 rounded-lg border text-left text-xs transition-all flex items-center gap-2 ${
+                      selectedMethod === 'UPI'
+                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 font-semibold text-indigo-900 dark:text-indigo-200'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <QrCode className="size-4 text-indigo-500" />
+                    <div>
+                      <p className="font-bold">UPI QR / Direct Pay</p>
+                      <p className="text-[10px] text-slate-500">Google Pay, PhonePe, Paytm</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMethod('GATEWAY')}
+                    className={`p-3 rounded-lg border text-left text-xs transition-all flex items-center gap-2 ${
+                      selectedMethod === 'GATEWAY'
+                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 font-semibold text-indigo-900 dark:text-indigo-200'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <CreditCard className="size-4 text-indigo-500" />
+                    <div>
+                      <p className="font-bold">Instant Gateway</p>
+                      <p className="text-[10px] text-slate-500">Card / NetBanking / Mock</p>
+                    </div>
+                  </button>
                 </div>
               </div>
 
-              <div className="pt-3 flex justify-end gap-2">
+              {/* UPI QR Display & UTR Submission */}
+              {selectedMethod === 'UPI' && (
+                <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20 space-y-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="size-32 bg-white p-2 rounded-xl border border-slate-200 shadow-sm shrink-0 flex items-center justify-center">
+                      <img
+                        src={
+                          courseConfig?.qrCodeUrl ||
+                          `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                            `upi://pay?pa=${courseConfig?.upiId || 'eedi@icici'}&pn=${encodeURIComponent(
+                              courseConfig?.merchantName || 'Winners Creek LMS'
+                            )}&am=${courseConfig?.fee ?? 2499}&cu=INR`
+                          )}`
+                        }
+                        alt="UPI Payment QR Code"
+                        className="size-28 object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        Scan with any UPI App to Pay ₹{num(courseConfig?.fee ?? 2499)}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-300">
+                        UPI ID:{' '}
+                        <strong className="font-mono text-indigo-600 dark:text-indigo-400 select-all">
+                          {courseConfig?.upiId || 'eedi@icici'}
+                        </strong>
+                      </p>
+                      <p className="text-slate-500 text-[11px]">
+                        Payee: {courseConfig?.merchantName || 'Winners Creek LMS'}
+                      </p>
+                      <p className="text-slate-500 text-[11px] leading-relaxed">
+                        {courseConfig?.paymentInstructions ||
+                          'After paying, enter your 12-digit UPI UTR reference number below to verify your transaction.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        12-Digit Transaction UTR Reference *
+                      </label>
+                      <input
+                        type="text"
+                        value={transactionRef}
+                        onChange={(e) => setTransactionRef(e.target.value)}
+                        placeholder="e.g. 429182749102"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        Your UPI ID (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={payerUpiId}
+                        onChange={(e) => setPayerUpiId(e.target.value)}
+                        placeholder="e.g. student@okhdfcbank"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-emerald-500" />
+                  <span>Instant access without data loss (your 3-day trial progress is preserved)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-500" />
+                  <span>{courseConfig?.refundPolicy || '7-Day refund policy applies.'}</span>
+                </div>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
                 <Button
+                  type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() => setCheckoutModalOpen(false)}
@@ -500,17 +673,21 @@ export default function StudentPaymentsPage() {
                   Cancel
                 </Button>
                 <Button
+                  type="submit"
                   variant="primary"
                   size="sm"
                   disabled={checkoutProcessing}
-                  onClick={handleConfirmCheckout}
                   className="flex items-center gap-1.5"
                 >
                   <CreditCard className="size-3.5" />
-                  {checkoutProcessing ? 'Processing Payment…' : 'Pay ₹2,499 (Instant Checkout)'}
+                  {checkoutProcessing
+                    ? 'Submitting…'
+                    : selectedMethod === 'UPI'
+                    ? `Submit UPI Payment (₹${num(courseConfig?.fee ?? 2499)})`
+                    : `Pay ₹${num(courseConfig?.fee ?? 2499)} (Instant Checkout)`}
                 </Button>
               </div>
-            </div>
+            </form>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -519,9 +696,9 @@ export default function StudentPaymentsPage() {
       <Dialog open={invoiceModalOpen} onOpenChange={setInvoiceModalOpen}>
         <DialogContent wide>
           <DialogHeader>
-            <DialogTitle>Tax Invoice & Payment Receipt</DialogTitle>
+            <DialogTitle>Tax Invoice &amp; Payment Receipt</DialogTitle>
             <DialogDescription>
-              Official electronic receipt issued by Winners Creek Platform.
+              Official electronic receipt issued by Winners Creek LMS.
             </DialogDescription>
           </DialogHeader>
 
@@ -558,7 +735,7 @@ export default function StudentPaymentsPage() {
                 <div className="text-right">
                   <p className="font-bold text-slate-500 uppercase text-[10px]">Payment Method</p>
                   <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1">
-                    Online / Electronic
+                    {invoiceData.paymentMethod || 'UPI / Electronic'}
                   </p>
                   <p className="text-slate-500">Currency: INR (₹)</p>
                 </div>
@@ -567,46 +744,31 @@ export default function StudentPaymentsPage() {
               <table className="w-full text-xs text-left">
                 <thead className="border-y border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                   <tr>
-                    <th className="py-2.5 px-3">Description</th>
-                    <th className="py-2.5 px-3 text-right">Amount</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {invoiceData.items.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">
-                        {item.description}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                        ₹{num(item.amount)}
-                      </td>
+                      <td className="py-3 px-3">{item.description}</td>
+                      <td className="py-3 px-3 text-right font-bold">₹{num(item.amount)}</td>
                     </tr>
                   ))}
-                  <tr className="font-bold text-sm bg-slate-50/60 dark:bg-slate-800/40">
-                    <td className="py-3 px-3">Total Paid</td>
-                    <td className="py-3 px-3 text-right text-indigo font-mono">
-                      ₹{num(invoiceData.total)}
-                    </td>
-                  </tr>
                 </tbody>
               </table>
 
-              <div className="pt-2 flex justify-end">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1.5 text-xs"
-                >
-                  <Download className="size-3.5" />
-                  Print / Save PDF
-                </Button>
+              <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-800 pt-4">
+                <span className="font-bold text-sm">Total Paid</span>
+                <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                  ₹{num(invoiceData.total)}
+                </span>
               </div>
             </div>
           ) : null}
         </DialogContent>
       </Dialog>
-      </div>
     </VisualPageBackground>
   );
 }
+

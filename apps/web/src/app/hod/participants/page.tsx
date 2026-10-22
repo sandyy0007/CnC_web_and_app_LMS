@@ -24,7 +24,18 @@ const LEGEND_TONE: Record<string, string> = {
 export default function HodParticipantsPage() {
   const table = useTableState('hod-participants', { pageSize: 20 });
   const query = useApi<any>('/hod/participants', table.params, {
-    select: (raw) => ({ items: raw.items, pagination: raw.pagination, meta: raw.meta }),
+    select: (raw) => ({
+      items: raw.items,
+      pagination: raw.pagination ?? {
+        page: raw.page ?? 1,
+        pageSize: raw.pageSize ?? 20,
+        total: raw.total ?? 0,
+        totalPages: raw.totalPages ?? 1,
+        hasNext: raw.hasNext ?? false,
+        hasPrev: raw.hasPrev ?? false,
+      },
+      meta: raw.meta,
+    }),
   });
 
   const meta = query.data?.meta;
@@ -83,12 +94,6 @@ export default function HodParticipantsPage() {
       ),
     },
     {
-      key: 'certificate',
-      header: 'Certificate',
-      hideBelow: 'md',
-      render: (row) => <StatusBadge status={row.certificateStatus} />,
-    },
-    {
       key: 'enrollment',
       header: 'Enrollment',
       hideBelow: 'lg',
@@ -107,7 +112,7 @@ export default function HodParticipantsPage() {
     >
       <PageHeader
         title="Participant Directory"
-        description="Everyone enrolled in your department, with attendance, scores and certificate state." 
+        description="Everyone enrolled in your department, with attendance and average skill scores." 
       />
 
       <div className="mb-4">
@@ -132,15 +137,6 @@ export default function HodParticipantsPage() {
               options: (meta?.filters?.statuses ?? []).map((status: string) => ({
                 value: status,
                 label: titleCase(status),
-              })),
-            },
-            {
-              name: 'certificateStatus',
-              label: 'Certificate',
-              allLabel: 'All certificate states',
-              options: (meta?.filters?.certificateStates ?? []).map((state: string) => ({
-                value: state,
-                label: titleCase(state),
               })),
             },
           ]}

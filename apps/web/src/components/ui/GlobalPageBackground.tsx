@@ -5,6 +5,8 @@ import * as React from 'react';
 import { cn } from '@/lib/cn';
 import { useGlobalBackground } from './GlobalBackgroundLayer';
 
+import { useTheme } from '@/lib/theme/ThemeContext';
+
 export interface GlobalPageBackgroundProps {
   image: string;
   imageAlt?: string;
@@ -34,7 +36,7 @@ export interface GlobalPageBackgroundProps {
 export function GlobalPageBackground({
   image,
   imageAlt = 'Page background',
-  variant = 'dark',
+  variant,
   blur = 6,
   overlayOpacity,
   withGrid = true,
@@ -44,6 +46,8 @@ export function GlobalPageBackground({
   className,
   children,
 }: GlobalPageBackgroundProps) {
+  const { theme } = useTheme();
+  const activeVariant = theme;
   // Clamp blur to safe range (4px - 10px) to prevent over-blurring or under-blurring
   const safeBlur = Math.min(Math.max(blur, 4), 10);
   const { setBackground } = useGlobalBackground();
@@ -53,7 +57,7 @@ export function GlobalPageBackground({
       setBackground({
         image,
         imageAlt,
-        variant,
+        variant: activeVariant,
         blur,
         overlayOpacity,
         withGrid,
@@ -61,14 +65,14 @@ export function GlobalPageBackground({
         orbTone,
       });
     }
-  }, [image, imageAlt, variant, blur, overlayOpacity, withGrid, withOrbs, orbTone, setBackground]);
+  }, [image, imageAlt, activeVariant, blur, overlayOpacity, withGrid, withOrbs, orbTone, setBackground]);
 
   return (
     <div
       className={cn(
         'relative w-full overflow-hidden transition-all duration-300',
         fullBleed && '-mx-4 -mt-5 -mb-12 sm:-mx-6 sm:-mt-6 sm:-mb-12 p-4 pt-5 pb-12 sm:p-6 sm:pt-6',
-        variant === 'dark' ? 'text-slate-100' : 'text-slate-900',
+        'text-ink-1 dark:text-slate-100',
         className,
       )}
     >
@@ -90,24 +94,14 @@ export function GlobalPageBackground({
 
       {/* 2. Readability Overlay Layer (z-1) — Calibrated Translucency */}
       <div
-        className={cn(
-          'pointer-events-none absolute inset-0 z-[1] transition-colors duration-500',
-          variant === 'dark'
-            ? 'bg-gradient-to-b from-slate-950/70 via-slate-950/60 to-slate-950/85'
-            : 'bg-gradient-to-b from-white/80 via-slate-50/75 to-white/90',
-        )}
+        className="pointer-events-none absolute inset-0 z-[1] transition-colors duration-500 bg-gradient-to-b from-slate-100/90 via-[#F4F6F8]/88 to-[#F4F6F8]/95 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/85"
         style={overlayOpacity !== undefined ? { opacity: overlayOpacity } : undefined}
       />
 
       {/* 3. Decorative Visual Layer (z-2) — Subtle Grid & Radiant Orbs */}
       {withGrid && (
         <div
-          className={cn(
-            'pointer-events-none absolute inset-0 z-[2]',
-            variant === 'dark'
-              ? 'bg-grid-cyber opacity-40'
-              : 'bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-25',
-          )}
+          className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-15 dark:bg-grid-cyber dark:opacity-40"
         />
       )}
 

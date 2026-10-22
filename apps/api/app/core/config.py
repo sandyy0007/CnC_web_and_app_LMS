@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", "../../.env"), env_file_encoding="utf-8", extra="ignore"
+        env_file=(".env", "apps/api/.env", "../../.env"), env_file_encoding="utf-8", extra="ignore"
     )
 
     # ---------- runtime ----------
@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     QUEUE_NAME: str = "eedi:jobs"
     QUEUE_EAGER: bool = False  # run jobs inline (tests only)
     JOB_MAX_ATTEMPTS: int = 3
-    REPORT_ASYNC_ROW_THRESHOLD: int = 500
+    REPORT_ASYNC_ROW_THRESHOLD: int = 5000
 
     # ---------- business rules ----------
     ATTENDANCE_DEFAULTER_THRESHOLD: float = 75.0

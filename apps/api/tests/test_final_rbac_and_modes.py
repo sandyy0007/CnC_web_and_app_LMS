@@ -139,7 +139,7 @@ async def test_super_admin_payment_verification_workflow(client: AsyncClient, su
 
     # Enrollment is created in pending_verification status
     enrollment = await db.enrollments.find_one({
-        "studentUserId": ObjectId(student.user["id"]),
+        "studentUserId": str(student.user["id"]),
         "courseId": course["_id"],
     })
     assert enrollment is not None
@@ -162,7 +162,7 @@ async def test_super_admin_payment_verification_workflow(client: AsyncClient, su
 
     # Enrollment is now active
     active_enrollment = await db.enrollments.find_one({
-        "studentUserId": ObjectId(student.user["id"]),
+        "studentUserId": str(student.user["id"]),
         "courseId": course["_id"],
     })
     assert active_enrollment["status"] == "active"
@@ -192,9 +192,9 @@ async def test_dual_course_mode_isolation(super_admin: Session, admin: Session, 
     from app.core.errors import ScopeForbidden
 
     admin_ctx = ScopeContext(
-        user_id=ObjectId(admin.user["id"]),
+        user_id=admin.user["id"],
         role=Role.ADMIN,
-        college_id=ObjectId(admin.user["collegeId"]),
+        college_id=admin.user["collegeId"],
         department_id=None,
         session_id="test-session-admin",
     )

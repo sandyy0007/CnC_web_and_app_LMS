@@ -25,6 +25,9 @@ import { AsyncSection } from '@/components/shared/state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardBody, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/card';
+import { TiltCard } from '@/components/ui/TiltCard';
+import { DepthCard, DepthLayer } from '@/components/ui/DepthCard';
+import { ProgressRing } from '@/components/ui/ProgressRing';
 import { ImageHero } from '@/components/ui/ImageHero';
 import { InteractiveArrowButton } from '@/components/ui/InteractiveArrowButton';
 import { VisualPageBackground } from '@/components/ui/VisualPageBackground';
@@ -113,21 +116,25 @@ export default function StudentDashboardPage() {
             <div className="space-y-5">
               {/* ------------------------------------------------ continue learning */}
               {data.continueLearning && (
-                <Card className="card-interactive">
-                  <CardHeader>
-                    <div>
-                      <CardTitle>Continue learning</CardTitle>
-                      <CardSubtitle>{data.continueLearning.moduleLabel}</CardSubtitle>
-                    </div>
-                    <Button asChild variant="primary" size="sm">
-                      <Link href={`/student/learning/${data.continueLearning.courseId}`}>
-                        {data.continueLearning.percent >= 100 ? 'Review' : 'Resume'}
-                      </Link>
-                    </Button>
-                  </CardHeader>
-                  <CardBody>
+                <DepthCard maxAngle={2.5} glare className="p-5 border-line bg-card/90 shadow-card">
+                  <div className="flex items-center justify-between pb-3 border-b border-line-soft">
+                    <DepthLayer z={12}>
+                      <div>
+                        <CardTitle>Continue learning</CardTitle>
+                        <CardSubtitle>{data.continueLearning.moduleLabel}</CardSubtitle>
+                      </div>
+                    </DepthLayer>
+                    <DepthLayer z={20}>
+                      <Button asChild variant="primary" size="sm">
+                        <Link href={`/student/learning/${data.continueLearning.courseId}`}>
+                          {data.continueLearning.percent >= 100 ? 'Review' : 'Resume'}
+                        </Link>
+                      </Button>
+                    </DepthLayer>
+                  </div>
+                  <DepthLayer z={16} className="mt-4">
                     <div className="flex items-start gap-3.5">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-[11px] bg-indigo-50 text-indigo">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-[11px] bg-indigo-50 text-indigo shadow-xs">
                         {(() => {
                           const Icon = iconFor(data.continueLearning.icon, BookOpen);
                           return <Icon className="size-5" aria-hidden />;
@@ -146,14 +153,14 @@ export default function StudentDashboardPage() {
                         <ProgressBar value={data.continueLearning.percent} className="mt-3" />
                       </div>
                     </div>
-                  </CardBody>
-                </Card>
+                  </DepthLayer>
+                </DepthCard>
               )}
 
               {/* ------------------------------------------------------ daily quest */}
               {data.dailyQuest && (
-                <Card className="card-interactive">
-                  <CardHeader>
+                <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+                  <div className="flex items-center justify-between pb-3 border-b border-line-soft">
                     <div>
                       <CardTitle>Today&apos;s quest</CardTitle>
                       <CardSubtitle>
@@ -162,10 +169,10 @@ export default function StudentDashboardPage() {
                       </CardSubtitle>
                     </div>
                     <Badge tone="indigo">Resets {formatTime(data.dailyQuest.resetsAt)}</Badge>
-                  </CardHeader>
-                  <CardBody>
+                  </div>
+                  <div className="mt-3.5">
                     <ul className="space-y-2">
-                      {data.dailyQuest.tasks.map((task: any) => (
+                      {(data.dailyQuest.tasks ?? []).map((task: any) => (
                         <li key={task.code}>
                           <Link
                             href={task.href}
@@ -196,13 +203,13 @@ export default function StudentDashboardPage() {
                         </li>
                       ))}
                     </ul>
-                  </CardBody>
-                </Card>
+                  </div>
+                </TiltCard>
               )}
 
               {/* -------------------------------------------------- week at a glance */}
-              <Card className="card-interactive">
-                <CardHeader>
+              <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+                <div className="flex items-center justify-between pb-3 border-b border-line-soft">
                   <div>
                     <CardTitle>Your week</CardTitle>
                     <CardSubtitle>Classes, assessments and assignment deadlines</CardSubtitle>
@@ -213,10 +220,10 @@ export default function StudentDashboardPage() {
                       Full calendar
                     </Link>
                   </Button>
-                </CardHeader>
-                <CardBody>
+                </div>
+                <div className="mt-3.5">
                   <ol className="grid gap-2 sm:grid-cols-7">
-                    {data.weekAtAGlance.map((day: any) => (
+                    {(data.weekAtAGlance ?? []).map((day: any) => (
                       <li
                         key={day.label}
                         className={cn(
@@ -236,7 +243,7 @@ export default function StudentDashboardPage() {
                           <p className="mt-1.5 text-2xs text-ink-3">Rest day</p>
                         ) : (
                           <ul className="mt-1.5 space-y-1">
-                            {day.items.map((item: any, index: number) => (
+                            {(day.items ?? []).map((item: any, index: number) => (
                               <li
                                 key={index}
                                 className="rounded-[6px] bg-white px-1.5 py-1 text-2xs leading-snug text-ink-2 shadow-[0_1px_2px_rgba(23,19,64,.05)] transition-transform hover:scale-[1.02]"
@@ -250,14 +257,14 @@ export default function StudentDashboardPage() {
                       </li>
                     ))}
                   </ol>
-                </CardBody>
-              </Card>
+                </div>
+              </TiltCard>
             </div>
 
             {/* ---------------------------------------------------------- right rail */}
             <div className="space-y-5">
-              <Card className="card-interactive">
-                <CardHeader>
+              <TiltCard maxAngle={2.5} glare className="p-5 border-line bg-card/90 shadow-card">
+                <div className="flex items-center justify-between pb-3 border-b border-line-soft">
                   <div>
                     <CardTitle>Communication readiness</CardTitle>
                     <CardSubtitle>
@@ -265,26 +272,28 @@ export default function StudentDashboardPage() {
                       {data.readiness.aiComponent ?? '—'}
                     </CardSubtitle>
                   </div>
-                </CardHeader>
-                <CardBody className="flex items-center gap-5">
-                  <RadialScore
-                    value={data.readiness.hasData ? data.readiness.score : null}
-                    label="Communication readiness"
-                    size={104}
+                </div>
+                <div className="mt-4 flex items-center gap-5">
+                  <ProgressRing
+                    value={data.readiness.hasData ? data.readiness.score : 0}
+                    label={data.readiness.hasData ? `${data.readiness.score}` : '—'}
+                    sublabel="/100"
+                    size={98}
+                    tone="indigo"
                   />
                   <p className="text-sm leading-relaxed text-ink-2">
                     Blended from your trainers&apos; parameter ratings and your AI-scored practice
                     attempts, weighted towards recent work.
                   </p>
-                </CardBody>
-              </Card>
+                </div>
+              </TiltCard>
 
               {data.upcomingLiveSession && (
-                <Card className="card-interactive">
-                  <CardHeader>
+                <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+                  <div className="pb-3 border-b border-line-soft">
                     <CardTitle>Next live class</CardTitle>
-                  </CardHeader>
-                  <CardBody>
+                  </div>
+                  <div className="mt-3.5">
                     <p className="text-md font-semibold">{data.upcomingLiveSession.title}</p>
                     <p className="mt-1 text-sm text-ink-2">
                       {data.upcomingLiveSession.trainerName}
@@ -299,23 +308,21 @@ export default function StudentDashboardPage() {
                         Go to live classes
                       </Link>
                     </Button>
-                  </CardBody>
-                </Card>
+                  </div>
+                </TiltCard>
               )}
 
               {data.recommendedActivity && (
-                <Card className="card-interactive border-amber/40 bg-amber-50/60">
-                  <CardHeader>
-                    <div>
-                      <CardTitle>Recommended next</CardTitle>
-                      <CardSubtitle>
-                        Weakest area: {data.recommendedActivity.weakestDimensionLabel} (
-                        {data.recommendedActivity.weakestScore})
-                      </CardSubtitle>
-                    </div>
-                  </CardHeader>
-                  <CardBody>
-                    <p className="text-md font-semibold">{data.recommendedActivity.exerciseTitle}</p>
+                <TiltCard maxAngle={2} glare className="p-5 border-amber/40 bg-amber-50/60 shadow-card">
+                  <div className="pb-3 border-b border-amber/20">
+                    <CardTitle>Recommended next</CardTitle>
+                    <CardSubtitle>
+                      Weakest area: {data.recommendedActivity.weakestDimensionLabel} (
+                      {data.recommendedActivity.weakestScore})
+                    </CardSubtitle>
+                  </div>
+                  <div className="mt-3.5">
+                    <p className="text-md font-semibold text-ink-1">{data.recommendedActivity.exerciseTitle}</p>
                     <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
                       {data.recommendedActivity.reason}
                     </p>
@@ -329,12 +336,12 @@ export default function StudentDashboardPage() {
                         Start practice
                       </Link>
                     </Button>
-                  </CardBody>
-                </Card>
+                  </div>
+                </TiltCard>
               )}
 
-              <Card className="card-interactive">
-                <CardHeader>
+              <TiltCard maxAngle={2} glare className="p-5 border-line bg-card/90 shadow-card">
+                <div className="flex items-center justify-between pb-3 border-b border-line-soft">
                   <div>
                     <CardTitle>Skill breakdown</CardTitle>
                     <CardSubtitle>Seven employability pillars</CardSubtitle>
@@ -342,16 +349,16 @@ export default function StudentDashboardPage() {
                   <Button asChild variant="ghost" size="sm">
                     <Link href="/student/progress">Details</Link>
                   </Button>
-                </CardHeader>
-                <CardBody>
+                </div>
+                <div className="mt-3.5">
                   <SkillBreakdown pillars={data.skillBreakdown} />
-                </CardBody>
-              </Card>
+                </div>
+              </TiltCard>
 
               {data.coachInsight && (
-                <Card className="card-interactive border-indigo-100 bg-indigo-50/50">
-                  <CardBody>
-                    <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600">
+                <TiltCard maxAngle={2} glare className="p-5 border-indigo-500/20 bg-indigo-500/10 shadow-card">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-400">
                       <Sparkles className="size-3.5" aria-hidden />
                       Coach insight
                     </p>
@@ -359,13 +366,13 @@ export default function StudentDashboardPage() {
                       {data.coachInsight.observation}
                     </p>
                     <p className="mt-2 text-sm text-ink-2">
-                      Focus area: <strong className="font-semibold">{data.coachInsight.focusArea}</strong>
+                      Focus area: <strong className="font-semibold text-ink-1">{data.coachInsight.focusArea}</strong>
                       {data.coachInsight.recommendedPractice
                         ? ` · Try “${data.coachInsight.recommendedPractice}”`
                         : ''}
                     </p>
-                  </CardBody>
-                </Card>
+                  </div>
+                </TiltCard>
               )}
 
               {path.data && (
@@ -377,7 +384,7 @@ export default function StudentDashboardPage() {
                     </div>
                   </CardHeader>
                   <CardBody className="space-y-3">
-                    {path.data.stages.map((stage: any) => (
+                    {(path.data.stages ?? []).map((stage: any) => (
                       <ProgressBar
                         key={stage.stage}
                         label={`${stage.stage} · ${stage.courses} program(s)`}
@@ -397,7 +404,7 @@ export default function StudentDashboardPage() {
                 </CardHeader>
                 <CardBody>
                   <ol className="space-y-2.5">
-                    {data.leaderboard.top.map((row: any) => (
+                    {(data.leaderboard.top ?? []).map((row: any) => (
                       <li key={row.studentUserId} className="flex items-center gap-2.5">
                         <span className="tnum w-5 shrink-0 text-sm font-bold text-ink-3">
                           {row.rank}

@@ -1,0 +1,7 @@
+question_id,difficulty,tag,eedi_parameter,weight,scenario,passage,question,option_0,option_1,option_2,option_3,correct_option,explanation
+SPX_001,BEGINNER,spelling,COM08,1.0,"I will share the report with my ___ in the finance team.","",Which spelling is correct?,"collegue","colleague","coleague","collaegue",1,"Colleague is spelled c-o-l-l-e-a-g-u-e; think col-league."
+SPX_002,BEGINNER,spelling,COM08,1.0,"I will ___ attend the training session.","",Which spelling is correct?,"definately","definitly","definitely","defenitely",2,"Definitely has -ite- in the middle: defin-ite-ly."
+SPX_003,INTERMEDIATE,spelling,COM08,1.25,"Keep the ___ as proof of payment.","",Which spelling is correct?,"receit","reciept","recepit","receipt",3,"Receipt follows i before e except after c, and it has a silent p."
+SPX_004,INTERMEDIATE,spelling,COM02,1.5,"Please keep the invoices ___ from the contracts.","",Which spelling is correct?,"separate","seperate","separete","seprate",0,"Separate has a rat in the middle: sep-a-rate."
+SPX_005,ADVANCED,spelling,COM08,1.5,"The conference centre can ___ up to 300 delegates.","",Which spelling is correct?,"accomodate","acommodate","accommodate","accomodete",2,"Accommodate doubles both the c and the m."
+SPX_006,ADVANCED,spelling,COM05,2.0,"The audit found a serious ___ in the financial records.","",Which spelling is correct?,"discrepency","discrepancy","descrepancy","discrepansy",1,"Discrepancy starts with dis-crep and ends in -ancy."

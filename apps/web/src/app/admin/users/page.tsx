@@ -314,7 +314,7 @@ function RoleChangeDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {['STUDENT', 'TRAINER', 'HOD', 'ADMIN', 'PLACEMENT_CELL', 'RECRUITER', 'PARENT'].map(
+              {['STUDENT', 'TRAINER', 'HOD', 'ADMIN', 'PARENT'].map(
                 (value) => (
                   <SelectItem key={value} value={value}>
                     {ROLE_LABEL[value] ?? titleCase(value)}
@@ -353,7 +353,18 @@ export default function AdminUsersPage() {
   const table = useTableState('admin-users', { pageSize: 25 });
   const departments = useApi<any[]>('/admin/departments');
   const query = useApi<any>('/admin/users', table.params, {
-    select: (raw) => ({ items: raw.items, pagination: raw.pagination, meta: raw.meta }),
+    select: (raw) => ({
+      items: raw.items,
+      pagination: raw.pagination ?? {
+        page: raw.page ?? 1,
+        pageSize: raw.pageSize ?? 25,
+        total: raw.total ?? 0,
+        totalPages: raw.totalPages ?? 1,
+        hasNext: raw.hasNext ?? false,
+        hasPrev: raw.hasPrev ?? false,
+      },
+      meta: raw.meta,
+    }),
   });
 
   const [creating, setCreating] = React.useState(false);
@@ -412,6 +423,21 @@ export default function AdminUsersPage() {
       header: 'Department',
       hideBelow: 'md',
       render: (row) => row.departmentName ?? '—',
+    },
+    {
+      key: 'batch',
+      header: 'Batch',
+      hideBelow: 'md',
+      render: (row) =>
+        row.role === 'STUDENT' ? (
+          row.batchName ? (
+            <Badge tone="teal">{row.batchName}</Badge>
+          ) : (
+            <span className="text-xs text-ink-3">Unassigned</span>
+          )
+        ) : (
+          <span className="text-ink-3">—</span>
+        ),
     },
     {
       key: 'institutionId',

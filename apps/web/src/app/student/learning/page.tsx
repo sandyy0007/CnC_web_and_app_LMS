@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
+import { ArrowRight, BookOpen, CheckCircle2, Clock, PlayCircle, Sparkles, Target } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 
@@ -27,6 +27,7 @@ export default function MyLearningPage() {
   const [filter, setFilter] = React.useState('all');
   const courses = useApi<any[]>('/student/courses');
   const path = useApi<any>('/student/learning-path');
+  const recs = useApi<any>('/student/recommendations/courses');
 
   return (
     <GlobalPageBackground
@@ -40,6 +41,106 @@ export default function MyLearningPage() {
         description="Your enrolled programs, in the order your learning path suggests."
       />
 
+      {/* Diagnosed Skill-Gap Course Recommendations */}
+      {/* Diagnosed Skill-Gap Course Recommendations */}
+      {recs.data && (
+        recs.data.recommendations && recs.data.recommendations.length > 0 ? (
+          <Card className="mb-5 card-interactive border-indigo/30 bg-gradient-to-r from-indigo-50/70 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20">
+            <CardHeader>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-6 items-center justify-center rounded-lg bg-indigo text-white shadow-xs">
+                      <Sparkles className="size-3.5" aria-hidden />
+                    </span>
+                    <CardTitle className="text-base text-ink-1 dark:text-white">
+                      Recommended Soft Skills Programs
+                    </CardTitle>
+                    <Badge tone="indigo" className="text-[10px] py-0 px-1.5 capitalize">
+                      {recs.data.diagnosedWeakPillar?.replace('_', ' ') || 'Communication'} Focus
+                    </Badge>
+                  </div>
+                  <CardSubtitle className="mt-1 text-xs">
+                    Deterministic curriculum recommendations ranked to close identified growth areas.
+                  </CardSubtitle>
+                </div>
+                <Button asChild variant="secondary" size="sm" className="text-xs">
+                  <Link href="/courses">
+                    Browse Soft Skills Catalog
+                    <ArrowRight className="size-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardBody className="pt-0">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {recs.data.recommendations.slice(0, 4).map((rec: any) => (
+                  <div
+                    key={rec.courseId}
+                    className="rounded-xl bg-white dark:bg-slate-900 p-3.5 border border-line dark:border-slate-800 shadow-xs flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                        <Badge
+                          tone={rec.priority === 'HIGH' ? 'danger' : rec.priority === 'MEDIUM' ? 'amber' : 'neutral'}
+                          className="text-[10px] py-0 px-1.5"
+                        >
+                          {rec.priority} Priority
+                        </Badge>
+                        <span className="text-[10px] font-mono text-ink-3 dark:text-slate-400">
+                          Match {rec.score}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-ink-1 dark:text-white line-clamp-1">
+                        {rec.title}
+                      </h4>
+                      <p className="text-[11px] text-ink-2 dark:text-slate-400 mt-1 line-clamp-2">
+                        {rec.reasons?.[0] || 'Directly addresses your primary growth area.'}
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-line/60 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-[10px] font-semibold text-indigo">
+                        {rec.category || 'Soft Skills'}
+                      </span>
+                      <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[11px]">
+                        <Link href={`/student/learning/${rec.courseId}`}>
+                          View
+                          <ArrowRight className="size-2.5 ml-0.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        ) : (
+          <Card className="mb-5 border border-line-soft bg-card/60 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-indigo/10 text-indigo">
+                  <Sparkles className="size-4" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-ink-1">
+                    {recs.data.message || 'No eligible Soft Skills courses available right now.'}
+                  </p>
+                  <p className="text-xs text-ink-3">
+                    You are enrolled in all active Soft Skills modules configured for your cohort.
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="secondary" size="sm" className="text-xs shrink-0">
+                <Link href="/courses">
+                  Browse Catalog
+                  <ArrowRight className="size-3 ml-1" />
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        )
+      )}
+
       {path.data && (
         <Card className="mb-5 card-interactive">
           <CardHeader>
@@ -50,7 +151,7 @@ export default function MyLearningPage() {
           </CardHeader>
           <CardBody>
             <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {path.data.stages.map((stage: any, index: number) => (
+              {(path.data.stages ?? []).map((stage: any, index: number) => (
                 <li key={stage.stage} className="rounded-lg p-1.5 transition-colors hover:bg-slate-50/60">
                   <div className="flex items-center gap-2">
                     <span
@@ -87,16 +188,17 @@ export default function MyLearningPage() {
         </Tabs>
       </div>
 
-      <AsyncSection query={courses} skeleton="cards" isEmpty={(rows) => rows.length === 0}>
-        {(rows) => {
-          const filtered = rows.filter((course) => {
+      <AsyncSection query={courses} skeleton="cards" isEmpty={(rows) => (rows ?? []).length === 0}>
+        {(rawRows) => {
+          const rows = Array.isArray(rawRows) ? rawRows : (rawRows as any)?.items ?? (rawRows as any)?.data ?? [];
+          const filtered = rows.filter((course: any) => {
             if (filter === 'all') return true;
             return course.state === filter;
           });
 
           return (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((course) => {
+              {filtered.map((course: any) => {
                 const Icon = iconFor(course.category);
                 return (
                   <Card key={course.id} className="flex flex-col">

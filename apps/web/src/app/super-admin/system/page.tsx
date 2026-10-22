@@ -171,8 +171,8 @@ export default function SuperAdminSystemPage() {
             <Card>
               <CardHeader className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">System Audit Events</CardTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">Immutable audit events</p>
+                  <CardTitle className="text-base">System Operations &amp; Telemetry</CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">Automated runtime events and engine health</p>
                 </div>
                 <ShieldAlert className="size-4 text-indigo" />
               </CardHeader>
