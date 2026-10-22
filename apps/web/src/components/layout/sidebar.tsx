@@ -37,6 +37,7 @@ export function Sidebar({
         )}
       />
       <aside
+        role="navigation"
         aria-label="Portal navigation"
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-[246px] shrink-0 flex-col px-3.5 py-5',
@@ -59,10 +60,15 @@ export function Sidebar({
               <X className="size-4" aria-hidden />
             </button>
           </div>
-          <div className="flex items-center">
-            <span className="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium tracking-wide text-indigo-700 dark:text-indigo-200 border border-indigo-500/20 dark:border-white/10">
+          <div className="flex flex-col">
+            <span className="inline-flex w-fit items-center rounded-md bg-indigo-500/10 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium tracking-wide text-indigo-700 dark:text-indigo-200 border border-indigo-500/20 dark:border-white/10">
               {PORTAL_SUBTITLE[role] || 'Portal'}
             </span>
+            {role === 'HOD' && user.departmentName && (
+              <span className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Data isolation active: {user.departmentName}
+              </span>
+            )}
           </div>
         </div>
 
@@ -84,37 +90,47 @@ export function Sidebar({
                   const Icon = item.icon;
                   return (
                     <li key={`${group.label || 'nav'}-${item.label}-${item.href}`}>
-                      <Link
-                        href={item.href}
-                        onClick={onClose}
-                        className={cn(
-                          'group relative flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-all duration-200',
-                          active
-                            ? 'bg-indigo-500/15 text-indigo-700 dark:bg-white/12 dark:text-white font-semibold shadow-xs border border-indigo-500/25 dark:border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.3)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)] translate-x-0.5'
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/[0.08] hover:text-slate-900 dark:hover:text-white hover:translate-x-0.5',
-                          item.locked && 'opacity-60 cursor-not-allowed',
-                        )}
-                      >
-                        {active && (
-                          <span
-                            aria-hidden
-                            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
-                          />
-                        )}
-                        <Icon
+                      {item.locked ? (
+                        <div className="group relative flex flex-col gap-0.5 rounded-[10px] px-3 py-2 text-sm font-medium opacity-60 cursor-not-allowed text-slate-600 dark:text-slate-300">
+                          <div className="flex items-center gap-2.5">
+                            <Icon className="size-4 shrink-0 text-slate-400" aria-hidden />
+                            <span className="truncate">{item.label}</span>
+                            <Lock className="ml-auto size-3 text-slate-400" aria-hidden />
+                          </div>
+                          <span className="text-[10px] text-slate-400">
+                            Not rendered; also blocked server-side
+                          </span>
+                        </div>
+                      ) : (
+                        <Link
+                          href={item.href}
+                          onClick={onClose}
+                          aria-current={active ? 'page' : undefined}
                           className={cn(
-                            'size-4 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                            'group relative flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-all duration-200',
                             active
-                              ? 'text-indigo-600 dark:text-indigo-400'
-                              : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200',
+                              ? 'bg-indigo-500/15 text-indigo-700 dark:bg-white/12 dark:text-white font-semibold shadow-xs border border-indigo-500/25 dark:border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.3)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)] translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/[0.08] hover:text-slate-900 dark:hover:text-white hover:translate-x-0.5',
                           )}
-                          aria-hidden
-                        />
-                        <span className="truncate">{item.label}</span>
-                        {item.locked && (
-                          <Lock className="ml-auto size-3 text-slate-400" aria-hidden />
-                        )}
-                      </Link>
+                        >
+                          {active && (
+                            <span
+                              aria-hidden
+                              className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
+                            />
+                          )}
+                          <Icon
+                            className={cn(
+                              'size-4 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                              active
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200',
+                            )}
+                            aria-hidden
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      )}
                     </li>
                   );
                 })}

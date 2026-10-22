@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_ROOT: str = "./.storage"
 
     # ---------- AI ----------
-    AI_PROVIDER: Literal["mock", "anthropic", "openai"] = "mock"
+    AI_PROVIDER: Literal["mock", "anthropic", "openai", "huggingface"] = "mock"
     AI_API_KEY: str | None = None
     AI_MODEL: str = "claude-sonnet-4-5"
     AI_BASE_URL: str | None = None

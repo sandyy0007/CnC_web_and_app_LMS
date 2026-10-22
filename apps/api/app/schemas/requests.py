@@ -157,7 +157,7 @@ class CoachRequest(Base):
 
 
 class AssistantRequest(Base):
-    question: Annotated[str, Field(min_length=2, max_length=600)]
+    question: Annotated[str, Field(min_length=1, max_length=1500)]
 
 
 class DeviceTokenRequest(Base):
