@@ -302,7 +302,7 @@ export default function EbookDetailPage() {
 
       {/* ---------------------------------------------------------------- Review Modal */}
       {reviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-[2px] p-4">
           <div className="w-full max-w-md rounded-2xl border border-line bg-card p-6 text-ink-1 shadow-2xl dark:border-white/15 dark:bg-slate-900 dark:text-white">
             <h3 className="text-lg font-bold text-ink-1">Review & Rate this eBook</h3>
             <form onSubmit={handleReviewSubmit} className="mt-4 space-y-4">
@@ -346,7 +346,7 @@ export default function EbookDetailPage() {
 
       {/* ---------------------------------------------------------------- Report Modal */}
       {reportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-[2px] p-4">
           <div className="w-full max-w-md rounded-2xl border border-line bg-card p-6 text-ink-1 shadow-2xl dark:border-white/15 dark:bg-slate-900 dark:text-white">
             <h3 className="text-lg font-bold text-ink-1">Report this eBook</h3>
             <form onSubmit={handleReportSubmit} className="mt-4 space-y-4">

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import * as React from 'react';
 import { cn } from '@/lib/cn';
 import { useGlobalBackground } from './GlobalBackgroundLayer';
@@ -70,59 +69,13 @@ export function GlobalPageBackground({
   return (
     <div
       className={cn(
-        'relative w-full overflow-hidden transition-all duration-300',
+        'relative z-10 w-full transition-all duration-300',
         fullBleed && '-mx-4 -mt-5 -mb-12 sm:-mx-6 sm:-mt-6 sm:-mb-12 p-4 pt-5 pb-12 sm:p-6 sm:pt-6',
         'text-ink-1 dark:text-slate-100',
         className,
       )}
     >
-      {/* 1. Background Image Layer (z-0) — Controlled Blur */}
-      <div className="pointer-events-none absolute inset-0 z-0 select-none overflow-hidden">
-        <Image
-          src={image}
-          alt={imageAlt}
-          fill
-          sizes="100vw"
-          priority={false}
-          className="object-cover object-center transition-all duration-700"
-          style={{
-            filter: `blur(${safeBlur}px)`,
-            transform: 'scale(1.05)', // Prevent boundary vignette from CSS blur
-          }}
-        />
-      </div>
-
-      {/* 2. Readability Overlay Layer (z-1) — Calibrated Translucency */}
-      <div
-        className="pointer-events-none absolute inset-0 z-[1] transition-colors duration-500 bg-gradient-to-b from-slate-100/90 via-[#F4F6F8]/88 to-[#F4F6F8]/95 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/85"
-        style={overlayOpacity !== undefined ? { opacity: overlayOpacity } : undefined}
-      />
-
-      {/* 3. Decorative Visual Layer (z-2) — Subtle Grid & Radiant Orbs */}
-      {withGrid && (
-        <div
-          className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-15 dark:bg-grid-cyber dark:opacity-40"
-        />
-      )}
-
-      {withOrbs && (
-        <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
-          <div
-            className={cn(
-              'absolute -top-32 -right-32 size-[440px] rounded-full blur-[130px] opacity-20',
-              orbTone === 'indigo' && 'bg-indigo-500',
-              orbTone === 'cyan' && 'bg-cyan-500',
-              orbTone === 'purple' && 'bg-purple-600',
-              orbTone === 'amber' && 'bg-amber-500',
-            )}
-          />
-          <div className="absolute top-1/2 -left-36 size-[380px] rounded-full bg-blue-600 blur-[120px] opacity-15" />
-          <div className="absolute -bottom-32 right-1/4 size-[420px] rounded-full bg-violet-600 blur-[130px] opacity-15" />
-        </div>
-      )}
-
-      {/* 4. Actual Sharp Content Layer (z-10) — Never Blurred */}
-      <div className="relative z-10 w-full">{children}</div>
+      {children}
     </div>
   );
 }

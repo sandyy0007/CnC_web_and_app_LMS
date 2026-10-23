@@ -15,13 +15,13 @@ export const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { wide?: boolean }
 >(({ className, children, wide, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md data-[state=open]:animate-fade" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] data-[state=open]:animate-fade" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[calc(100vw-2rem)] -translate-x-1/2',
-        '-translate-y-1/2 overflow-y-auto rounded-2xl border border-line dark:border-white/15 bg-card/95',
-        'backdrop-blur-2xl shadow-3d-pop text-ink-1 data-[state=open]:animate-scale-in scroll-thin surface-3d',
+        'fixed left-1/2 top-1/2 z-[51] max-h-[90vh] w-[calc(100vw-2rem)] -translate-x-1/2',
+        '-translate-y-1/2 overflow-y-auto rounded-2xl border border-line dark:border-white/15 bg-card/98',
+        'shadow-3d-pop text-ink-1 data-[state=open]:animate-scale-in scroll-thin',
         wide ? 'max-w-3xl' : 'max-w-lg',
         className,
       )}

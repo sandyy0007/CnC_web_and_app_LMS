@@ -118,7 +118,7 @@ export function UploadEbookModal({ open, onClose, onSuccess, uploaderRole }: Upl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-[2px] p-4 overflow-y-auto">
       <div className="w-full max-w-xl rounded-2xl border border-white/15 bg-slate-900 p-6 sm:p-8 text-white shadow-2xl animate-enter my-8">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div>

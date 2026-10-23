@@ -4,7 +4,7 @@ import { WinnersCreekLogo } from '@/components/ui/WinnersCreekLogo';
 export default function Loading() {
   return (
     <div
-      className="fixed inset-0 z-50 flex min-h-screen w-full flex-col items-center justify-center bg-background/90 p-4 backdrop-blur-2xl transition-all animate-in fade-in duration-300"
+      className="fixed inset-0 z-50 flex min-h-screen w-full flex-col items-center justify-center bg-background/80 p-4 backdrop-blur-[2px] transition-all animate-in fade-in duration-200"
       role="status"
       aria-label="Loading Winners Creek Platform"
     >
