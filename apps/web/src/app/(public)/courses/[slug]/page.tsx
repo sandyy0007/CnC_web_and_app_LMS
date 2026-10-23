@@ -168,7 +168,7 @@ export default function CourseDetailPage() {
                   size="md"
                   className="w-full border-slate-700 bg-slate-800 text-white hover:bg-slate-700 flex items-center justify-center gap-1.5"
                 >
-                  <Link href={`/student/payments`}>
+                  <Link href={`/student/payments?courseId=${data.id}`}>
                     <CreditCard className="size-4" />
                     Buy Lifetime Access
                   </Link>

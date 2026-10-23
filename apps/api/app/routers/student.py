@@ -611,87 +611,100 @@ async def my_courses(ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
 async def course_detail(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[str, Any]:
     if settings.USE_POSTGRES:
         from app.db.postgres import get_pg_connection
+        cid = None
         try:
             cid = uuid.UUID(str(course_id))
-        except ValueError:
+        except (ValueError, TypeError):
             cid = None
-        if cid:
-            async with get_pg_connection() as conn:
-                course = await conn.fetchrow("""
-                    SELECT id, title, slug, code, description, category, training_type,
-                           delivery_mode, duration_hours, fee, published,
-                           trial_duration_days, trial_enabled, payment_methods, upi_id, merchant_name,
-                           qr_code_url, payment_instructions, refund_policy, enrollment_open, status
-                    FROM courses WHERE id = $1 AND deleted_at IS NULL;
-                """, cid)
-                if course:
-                    modules = await conn.fetch("""
-                        SELECT id, title, slug, description, order_index
-                        FROM modules WHERE course_id = $1 AND deleted_at IS NULL
-                        ORDER BY order_index ASC;
-                    """, cid)
-                    m_ids = [m["id"] for m in modules]
-                    lessons = await conn.fetch("""
-                        SELECT id, module_id, title, slug, duration_minutes, order_index, content_type
-                        FROM lessons WHERE module_id = ANY($1::uuid[]) AND deleted_at IS NULL
-                        ORDER BY order_index ASC;
-                    """, m_ids) if m_ids else []
-                    
-                    lessons_by_m: dict[str, list[dict[str, Any]]] = {}
-                    for l in lessons:
-                        mid = str(l["module_id"])
-                        lessons_by_m.setdefault(mid, []).append({
-                            "id": str(l["id"]),
-                            "title": l["title"],
-                            "slug": l["slug"],
-                            "durationMinutes": l["duration_minutes"],
-                            "order": l["order_index"],
-                            "completed": False
-                        })
-                    
-                    serialized_modules = [
-                        {
-                            "id": str(m["id"]),
-                            "title": m["title"],
-                            "slug": m["slug"],
-                            "description": m["description"],
-                            "order": m["order_index"],
-                            "lessons": lessons_by_m.get(str(m["id"]), [])
-                        }
-                        for m in modules
-                    ]
 
-                    # Check participant access entitlement
-                    access_info = await trial_service.check_course_access(ctx.user_id, cid) if ctx.user_id else {"hasAccess": False}
+        async with get_pg_connection() as conn:
+            if not cid:
+                slug_row = await conn.fetchrow(
+                    "SELECT id FROM courses WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL",
+                    str(course_id).strip(),
+                )
+                if slug_row:
+                    cid = slug_row["id"]
+            if not cid:
+                raise NotFound("Course not found.")
 
-                    return {
-                        "success": True,
-                        "data": {
-                            "id": str(course["id"]),
-                            "_id": str(course["id"]),
-                            "title": course["title"],
-                            "slug": course["slug"],
-                            "code": course["code"],
-                            "description": course["description"],
-                            "category": course["category"],
-                            "durationHours": course["duration_hours"],
-                            "fee": float(course["fee"]) if course["fee"] is not None else 0.0,
-                            "published": course["published"],
-                            "status": course.get("status") or ("PUBLISHED" if course["published"] else "DRAFT"),
-                            "trialDurationDays": course.get("trial_duration_days") or 3,
-                            "trialEnabled": course.get("trial_enabled", True),
-                            "paymentMethods": course.get("payment_methods") or ["UPI", "GATEWAY"],
-                            "upiId": course.get("upi_id") or "",
-                            "merchantName": course.get("merchant_name") or "Winners Creek",
-                            "qrCodeUrl": course.get("qr_code_url") or "",
-                            "paymentInstructions": course.get("payment_instructions") or "Scan the UPI QR code or pay to the UPI ID. Enter the 12-digit transaction UTR reference to verify.",
-                            "refundPolicy": course.get("refund_policy") or "Full refund within 7 days of course purchase if less than 20% course completed.",
-                            "enrollmentOpen": course.get("enrollment_open", True),
-                            "access": access_info,
-                            "modules": serialized_modules,
-                            "progress": {"completedLessonIds": [], "percent": 0.0}
-                        }
-                    }
+            course = await conn.fetchrow("""
+                SELECT id, title, slug, code, description, category, training_type,
+                       delivery_mode, duration_hours, fee, published,
+                       trial_duration_days, trial_enabled, payment_methods, upi_id, merchant_name,
+                       qr_code_url, payment_instructions, refund_policy, enrollment_open, status
+                FROM courses WHERE id = $1 AND deleted_at IS NULL;
+            """, cid)
+            if not course:
+                raise NotFound("Course not found.")
+
+            modules = await conn.fetch("""
+                SELECT id, title, slug, description, order_index
+                FROM modules WHERE course_id = $1 AND deleted_at IS NULL
+                ORDER BY order_index ASC;
+            """, cid)
+            m_ids = [m["id"] for m in modules]
+            lessons = await conn.fetch("""
+                SELECT id, module_id, title, slug, duration_minutes, order_index, content_type
+                FROM lessons WHERE module_id = ANY($1::uuid[]) AND deleted_at IS NULL
+                ORDER BY order_index ASC;
+            """, m_ids) if m_ids else []
+            
+            lessons_by_m: dict[str, list[dict[str, Any]]] = {}
+            for l in lessons:
+                mid = str(l["module_id"])
+                lessons_by_m.setdefault(mid, []).append({
+                    "id": str(l["id"]),
+                    "title": l["title"],
+                    "slug": l["slug"],
+                    "durationMinutes": l["duration_minutes"],
+                    "order": l["order_index"],
+                    "completed": False
+                })
+            
+            serialized_modules = [
+                {
+                    "id": str(m["id"]),
+                    "title": m["title"],
+                    "slug": m["slug"],
+                    "description": m["description"],
+                    "order": m["order_index"],
+                    "lessons": lessons_by_m.get(str(m["id"]), [])
+                }
+                for m in modules
+            ]
+
+            # Check participant access entitlement
+            access_info = await trial_service.check_course_access(ctx.user_id, cid) if ctx.user_id else {"hasAccess": False}
+
+            return {
+                "success": True,
+                "data": {
+                    "id": str(course["id"]),
+                    "_id": str(course["id"]),
+                    "title": course["title"],
+                    "slug": course["slug"],
+                    "code": course["code"],
+                    "description": course["description"],
+                    "category": course["category"],
+                    "durationHours": course["duration_hours"],
+                    "fee": float(course["fee"]) if course["fee"] is not None else 0.0,
+                    "published": course["published"],
+                    "status": course.get("status") or ("PUBLISHED" if course["published"] else "DRAFT"),
+                    "trialDurationDays": course.get("trial_duration_days") or 3,
+                    "trialEnabled": course.get("trial_enabled", True),
+                    "paymentMethods": course.get("payment_methods") or ["UPI", "GATEWAY"],
+                    "upiId": course.get("upi_id") or "",
+                    "merchantName": course.get("merchant_name") or "Winners Creek",
+                    "qrCodeUrl": course.get("qr_code_url") or "",
+                    "paymentInstructions": course.get("payment_instructions") or "Scan the UPI QR code or pay to the UPI ID. Enter the 12-digit transaction UTR reference to verify.",
+                    "refundPolicy": course.get("refund_policy") or "Full refund within 7 days of course purchase if less than 20% course completed.",
+                    "enrollmentOpen": course.get("enrollment_open", True),
+                    "access": access_info,
+                    "modules": serialized_modules,
+                    "progress": {"completedLessonIds": [], "percent": 0.0}
+                }
+            }
 
     course = await CourseRepo(ctx).get(course_id)
     db = get_db()
@@ -3120,12 +3133,23 @@ async def enroll_course(course_id: str, ctx: ScopeContext = StudentCtx) -> dict[
 
     if settings.USE_POSTGRES:
         from app.db.postgres import get_pg_connection
+        cid = None
         try:
             cid = uuid.UUID(str(course_id))
-        except ValueError:
-            raise NotFound("Course not found")
+        except (ValueError, TypeError):
+            cid = None
 
         async with get_pg_connection() as conn:
+            if not cid:
+                slug_row = await conn.fetchrow(
+                    "SELECT id FROM courses WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL",
+                    str(course_id).strip(),
+                )
+                if slug_row:
+                    cid = slug_row["id"]
+            if not cid:
+                raise NotFound("Course not found")
+
             # 1. Verify course exists and is published
             course = await conn.fetchrow("SELECT * FROM courses WHERE id = $1 AND deleted_at IS NULL", cid)
             if not course:

@@ -30,6 +30,7 @@ export function useApi<T = any>(
   const [loaded, setLoaded] = useState(false);
   const [nonce, setNonce] = useState(0);
 
+  const prevPathRef = useRef(path);
   const selectRef = useRef(options?.select);
   selectRef.current = options?.select;
   const serialised = JSON.stringify(params ?? {});
@@ -38,6 +39,11 @@ export function useApi<T = any>(
     if (!enabled || !path) {
       setLoading(false);
       return;
+    }
+    if (prevPathRef.current !== path) {
+      prevPathRef.current = path;
+      setData(null);
+      setLoaded(false);
     }
     let active = true;
     setLoading(true);

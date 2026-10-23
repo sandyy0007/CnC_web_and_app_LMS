@@ -88,24 +88,42 @@ async def create_course_payment(
     except (ValueError, TypeError):
         u_uuid = None
 
-    if settings.USE_POSTGRES and c_uuid and u_uuid:
+    if settings.USE_POSTGRES and u_uuid:
         from app.repositories.course_repo import CourseRepository
         from app.repositories.enrollment_repo import EnrollmentRepository
         from app.repositories.payment_repo import PaymentRepository
         from app.db.postgres import get_pg_connection
 
-        course = await CourseRepository.get_by_id(c_uuid)
-        if not course:
-            raise NotFound("Course not found.")
-
-        fee = float(course.get("fee") or 0.0)
-        currency = course.get("currency") or "INR"
-
-        if fee < 0:
-            raise ValidationError("Course fee cannot be negative.")
-
-        # Check existing enrollment
         async with get_pg_connection() as conn:
+            if not c_uuid:
+                slug_row = await conn.fetchrow(
+                    "SELECT id FROM courses WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL",
+                    str(course_id).strip(),
+                )
+                if slug_row:
+                    c_uuid = slug_row["id"]
+
+            if not c_uuid:
+                raise NotFound("Course not found.")
+
+            course = await CourseRepository.get_by_id(c_uuid)
+            if not course:
+                raise NotFound("Course not found.")
+
+            fee = float(course.get("fee") or 0.0)
+            currency = course.get("currency") or "INR"
+
+            if fee < 0:
+                raise ValidationError("Course fee cannot be negative.")
+
+            # Check if this user already has a verified payment for this exact course
+            verified_pay = await conn.fetchrow(
+                "SELECT id FROM payments WHERE participant_user_id = $1 AND course_id = $2 AND status = 'VERIFIED'",
+                u_uuid, c_uuid
+            )
+            if verified_pay:
+                raise Conflict("You have already purchased and verified access to this course.")
+
             if transaction_ref:
                 existing_ref = await conn.fetchval("SELECT id FROM payments WHERE transaction_ref = $1", transaction_ref.strip())
                 if existing_ref:
@@ -444,9 +462,9 @@ async def verify_course_payment(payment_id: Any, verified_by: Any, note: str = "
         {"$set": {"status": "paid", "paidAt": now}},
     )
 
-    # Convert any active trial for this course
+    # Convert any trial for this course
     await db.course_trials.update_many(
-        {"studentUserId": payment["studentUserId"], "courseId": payment["courseId"], "status": "active"},
+        {"studentUserId": payment["studentUserId"], "courseId": payment["courseId"]},
         {"$set": {"status": "converted", "convertedAt": now, "updatedAt": now}},
     )
 

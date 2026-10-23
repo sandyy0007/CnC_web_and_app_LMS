@@ -60,6 +60,11 @@ export default function CoursePlayerPage() {
   const [saving, setSaving] = React.useState(false);
   const startedAt = React.useRef<number>(Date.now());
 
+  // Reset activeId when navigating to a different course
+  React.useEffect(() => {
+    setActiveId(null);
+  }, [courseId]);
+
   const lessons: Lesson[] = React.useMemo(
     () => (query.data?.modules ?? []).flatMap((module: any) => module.lessons ?? []),
     [query.data],
@@ -98,10 +103,11 @@ export default function CoursePlayerPage() {
     }
   }
 
-  const access = accessQuery.data;
-  const isTrialActive = access?.accessType === 'trial' && !access?.trialExpired;
-  const isTrialExpired = access?.trialExpired || (access?.accessType === 'none' && access?.trial?.status === 'expired');
-  const hasAccess = access?.hasAccess !== false && !isTrialExpired;
+  const access = accessQuery.data ?? query.data?.access;
+  const isPaid = access?.accessType === 'paid' || access?.accessType === 'super_admin' || access?.accessType === 'trainer' || access?.accessType === 'institution_admin' || access?.accessType === 'free';
+  const isTrialActive = !isPaid && access?.accessType === 'trial' && !access?.trialExpired;
+  const isTrialExpired = !isPaid && (access?.trialExpired || (access?.accessType === 'none' && access?.trial?.status === 'expired'));
+  const hasAccess = isPaid || (access?.hasAccess === true && !isTrialExpired);
 
   return (
     <AsyncSection query={query} skeleton="detail">
@@ -128,7 +134,7 @@ export default function CoursePlayerPage() {
                   </Button>
                   {!hasAccess && (
                     <Button asChild variant="primary" size="sm" className="bg-amber-600 hover:bg-amber-700">
-                      <Link href="/student/payments">
+                      <Link href={`/student/payments?courseId=${course.id}`}>
                         Unlock Full Access (₹{num(course.fee ?? 2499)})
                       </Link>
                     </Button>
@@ -146,12 +152,12 @@ export default function CoursePlayerPage() {
                     <strong>3-Day Free Trial (72 Hours):</strong>{' '}
                     {access?.hoursRemaining !== undefined
                       ? `${access.hoursRemaining} hours remaining.`
-                      : `${access?.trial?.daysRemaining ?? 3} days remaining.`}{' '}
+                      : `${access?.trial?.daysRemaining ?? access?.remainingDays ?? 3} days remaining.`}{' '}
                     All progress is automatically saved to your account.
                   </p>
                 </div>
                 <Button asChild size="sm" variant="primary" className="bg-amber-600 hover:bg-amber-700 text-xs">
-                  <Link href="/student/payments">Upgrade to Full Access (₹{num(course.fee ?? 2499)})</Link>
+                  <Link href={`/student/payments?courseId=${course.id}`}>Upgrade to Full Access (₹{num(course.fee ?? 2499)})</Link>
                 </Button>
               </div>
             )}
@@ -168,7 +174,7 @@ export default function CoursePlayerPage() {
                 </p>
                 <div className="pt-2">
                   <Button asChild size="md" variant="primary" className="bg-indigo-600 hover:bg-indigo-700 font-bold px-6">
-                    <Link href="/student/payments">
+                    <Link href={`/student/payments?courseId=${course.id}`}>
                       Unlock Full Access for ₹{num(course.fee ?? 2499)}
                     </Link>
                   </Button>

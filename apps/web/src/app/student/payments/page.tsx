@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -68,6 +69,7 @@ interface CourseTrial {
   hoursRemaining?: number;
   status: 'active' | 'expired' | 'converted';
   isActive: boolean;
+  isPaid?: boolean;
 }
 
 interface InvoiceData {
@@ -81,7 +83,10 @@ interface InvoiceData {
   paymentMethod?: string;
 }
 
-export default function StudentPaymentsPage() {
+function StudentPaymentsContent() {
+  const searchParams = useSearchParams();
+  const targetCourseId = searchParams.get('courseId');
+
   const paymentsQuery = useApi<any>('/student/payments');
   const trialsQuery = useApi<any>('/student/trials');
 
@@ -102,23 +107,55 @@ export default function StudentPaymentsPage() {
   const [invoiceData, setInvoiceData] = React.useState<InvoiceData | null>(null);
   const [loadingInvoice, setLoadingInvoice] = React.useState(false);
 
-  const rawPayments =
-    paymentsQuery.data?.payments ??
-    paymentsQuery.data?.data?.payments ??
-    paymentsQuery.data?.data ??
-    paymentsQuery.data;
-  const payments: PaymentRecord[] = Array.isArray(rawPayments) ? rawPayments : [];
+  const payments: PaymentRecord[] = React.useMemo(() => {
+    const rawPayments =
+      paymentsQuery.data?.payments ??
+      paymentsQuery.data?.data?.payments ??
+      paymentsQuery.data?.data ??
+      paymentsQuery.data;
+    return Array.isArray(rawPayments) ? rawPayments : [];
+  }, [paymentsQuery.data]);
+
+  const successfulPayments = React.useMemo(
+    () => payments.filter(
+      (p) => p.status === 'success' || p.status === 'completed' || p.status === 'verified'
+    ),
+    [payments]
+  );
+
+  const paidCourseIds = React.useMemo(
+    () => new Set(successfulPayments.map((p) => p.courseId).filter(Boolean)),
+    [successfulPayments]
+  );
 
   const rawTrials =
     trialsQuery.data?.trials ??
     trialsQuery.data?.data?.trials ??
     trialsQuery.data?.data ??
     trialsQuery.data;
-  const trials: CourseTrial[] = Array.isArray(rawTrials) ? rawTrials : [];
 
-  const successfulPayments = payments.filter(
-    (p) => p.status === 'success' || p.status === 'completed' || p.status === 'verified'
-  );
+  const trials: CourseTrial[] = React.useMemo(() => {
+    const list = Array.isArray(rawTrials) ? rawTrials : [];
+    return list.map((t: any) => {
+      const isPaid = t.isPaid || t.status === 'converted' || (t.courseId && paidCourseIds.has(t.courseId));
+      const days = t.daysRemaining ?? t.remainingDays ?? 0;
+      const hours = t.hoursRemaining ?? t.remainingHours ?? 0;
+      const isAct = !isPaid && (t.isActive ?? (t.status === 'active' && (days > 0 || hours > 0)));
+      return {
+        id: String(t.id),
+        courseId: String(t.courseId),
+        courseName: t.courseName || t.courseTitle || 'Course',
+        startedAt: t.startedAt,
+        expiresAt: t.expiresAt,
+        daysRemaining: days,
+        hoursRemaining: hours,
+        status: isPaid ? ('converted' as const) : isAct ? ('active' as const) : ('expired' as const),
+        isActive: isAct,
+        isPaid,
+      };
+    });
+  }, [rawTrials, paidCourseIds]);
+
   const totalSpent = successfulPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
   const activeTrials = trials.filter((t) => t.isActive);
 
@@ -138,6 +175,7 @@ export default function StudentPaymentsPage() {
 
   // Open checkout for a course trial
   const handleBuyCourse = async (trial: CourseTrial) => {
+    setCourseConfig(null);
     setSelectedTrialToBuy(trial);
     setCheckoutSuccessMessage(null);
     setTransactionRef('');
@@ -155,6 +193,65 @@ export default function StudentPaymentsPage() {
       setLoadingConfig(false);
     }
   };
+
+  // Open checkout by course ID directly
+  const handleBuyCourseById = React.useCallback(async (courseId: string) => {
+    setCourseConfig(null);
+    setSelectedTrialToBuy({
+      id: courseId,
+      courseId: courseId,
+      courseName: 'Loading course…',
+      startedAt: new Date().toISOString(),
+      expiresAt: new Date().toISOString(),
+      daysRemaining: 0,
+      status: 'expired',
+      isActive: false,
+    });
+    setCheckoutSuccessMessage(null);
+    setTransactionRef('');
+    setPayerUpiId('');
+    setLoadingConfig(true);
+    setCheckoutModalOpen(true);
+
+    try {
+      const res = await api.get<any>(`/student/courses/${courseId}`);
+      const course = res.data ?? res;
+      setCourseConfig(course);
+      setSelectedTrialToBuy((prev) =>
+        prev
+          ? {
+              ...prev,
+              courseName: course.title || prev.courseName,
+            }
+          : null
+      );
+    } catch {
+      setCourseConfig(null);
+    } finally {
+      setLoadingConfig(false);
+    }
+  }, []);
+
+  // Handle URL query target course
+  const handledQueryRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!targetCourseId || handledQueryRef.current === targetCourseId) return;
+    handledQueryRef.current = targetCourseId;
+
+    if (paidCourseIds.has(targetCourseId)) {
+      toast.info('You already have verified lifetime access to this course.');
+      return;
+    }
+
+    const matchedTrial = trials.find((t) => t.courseId === targetCourseId);
+    if (matchedTrial) {
+      if (matchedTrial.status !== 'converted') {
+        handleBuyCourse(matchedTrial);
+      }
+    } else {
+      handleBuyCourseById(targetCourseId);
+    }
+  }, [targetCourseId, paidCourseIds, trials, handleBuyCourseById]);
 
   // Perform Checkout
   const handleConfirmCheckout = async (e: React.FormEvent) => {
@@ -177,7 +274,7 @@ export default function StudentPaymentsPage() {
       });
 
       const data = res.data ?? res;
-      if (data.status === 'PENDING') {
+      if (data.status === 'PENDING' || data.status === 'pending_verification') {
         setCheckoutSuccessMessage(
           'Payment submitted for verification! Your UTR reference has been recorded. Once verified by the administration, your lifetime course access will be unlocked.'
         );
@@ -187,10 +284,8 @@ export default function StudentPaymentsPage() {
         );
       }
 
-      setTimeout(() => {
-        paymentsQuery.refetch();
-        trialsQuery.refetch();
-      }, 1500);
+      paymentsQuery.refetch();
+      trialsQuery.refetch();
     } catch (err: any) {
       toast.error(err.message || 'Payment submission failed.');
     } finally {
@@ -218,6 +313,28 @@ export default function StudentPaymentsPage() {
             </Badge>
           }
         />
+
+        {/* Target Course Already Verified Notification */}
+        {targetCourseId && paidCourseIds.has(targetCourseId) && (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/40 dark:border-emerald-800 p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div>
+                <p className="font-bold text-xs text-emerald-900 dark:text-emerald-100">
+                  You Already Have Verified Access
+                </p>
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                  Payment for this course is verified. You have lifetime access to all lessons, class materials, and recordings.
+                </p>
+              </div>
+            </div>
+            <Button asChild size="sm" variant="primary" className="bg-emerald-600 hover:bg-emerald-700 text-xs shrink-0">
+              <Link href={`/student/learning/${targetCourseId}`}>
+                Open Course →
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -274,12 +391,13 @@ export default function StudentPaymentsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {trials.map((trial) => {
                   const isExpiringSoon = trial.isActive && trial.daysRemaining <= 1;
+                  const isPaid = trial.status === 'converted' || paidCourseIds.has(trial.courseId);
                   return (
                     <div
                       key={trial.id}
                       className={cn(
                         'p-4 rounded-xl border surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover transition-all flex flex-col justify-between space-y-3',
-                        trial.status === 'converted'
+                        isPaid
                           ? 'border-emerald-200/80 bg-emerald-50/40 dark:bg-emerald-950/20'
                           : trial.isActive
                           ? isExpiringSoon
@@ -295,7 +413,7 @@ export default function StudentPaymentsPage() {
                           </span>
                           <Badge
                             tone={
-                              trial.status === 'converted'
+                              isPaid
                                 ? 'success'
                                 : trial.isActive
                                 ? isExpiringSoon
@@ -304,7 +422,7 @@ export default function StudentPaymentsPage() {
                                 : 'danger'
                             }
                           >
-                            {trial.status === 'converted'
+                            {isPaid
                               ? 'Paid & Enrolled'
                               : trial.isActive
                               ? `${trial.daysRemaining}d remaining`
@@ -326,7 +444,7 @@ export default function StudentPaymentsPage() {
                           Open Course →
                         </Link>
 
-                        {trial.status !== 'converted' && (
+                        {!isPaid ? (
                           <Button
                             size="sm"
                             variant="primary"
@@ -335,6 +453,10 @@ export default function StudentPaymentsPage() {
                           >
                             {trial.isActive ? 'Unlock Lifetime Access' : 'Purchase Course'}
                           </Button>
+                        ) : (
+                          <Badge tone="success" className="text-[11px]">
+                            Verified Lifetime Access
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -444,7 +566,7 @@ export default function StudentPaymentsPage() {
                               </Link>
                             ) : (
                               <span className="text-slate-400 text-[11px]">
-                                {p.status === 'pending' ? 'Verifying…' : 'Locked'}
+                                {p.status === 'pending' || p.status === 'pending_verification' ? 'Verifying…' : 'Locked'}
                               </span>
                             )}
                           </td>
@@ -465,7 +587,7 @@ export default function StudentPaymentsPage() {
           <DialogHeader>
             <DialogTitle>Unlock Lifetime Course Access</DialogTitle>
             <DialogDescription>
-              Preserve your 3-day free trial progress and gain unlimited lifetime access to all learning content.
+              Preserve your learning progress and gain unlimited lifetime access to all learning content.
             </DialogDescription>
           </DialogHeader>
 
@@ -478,16 +600,25 @@ export default function StudentPaymentsPage() {
               <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">
                 {checkoutSuccessMessage}
               </p>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setCheckoutModalOpen(false);
-                  setCheckoutSuccessMessage(null);
-                }}
-              >
-                Close &amp; Return to Payments
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setCheckoutModalOpen(false);
+                    setCheckoutSuccessMessage(null);
+                  }}
+                >
+                  Close &amp; Return to Payments
+                </Button>
+                {selectedTrialToBuy?.courseId && (
+                  <Button asChild variant="primary" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                    <Link href={`/student/learning/${selectedTrialToBuy.courseId}`}>
+                      Open Purchased Course →
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
           ) : selectedTrialToBuy ? (
             <form onSubmit={handleConfirmCheckout} className="p-6 space-y-5">
@@ -655,7 +786,7 @@ export default function StudentPaymentsPage() {
               <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="size-4 text-emerald-500" />
-                  <span>Instant access without data loss (your 3-day trial progress is preserved)</span>
+                  <span>Instant access without data loss (your free trial progress is preserved)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-4 text-emerald-500" />
@@ -772,3 +903,16 @@ export default function StudentPaymentsPage() {
   );
 }
 
+export default function StudentPaymentsPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="p-12 text-center text-xs text-slate-500">
+          Loading billing and payment records…
+        </div>
+      }
+    >
+      <StudentPaymentsContent />
+    </React.Suspense>
+  );
+}

@@ -220,7 +220,7 @@ async def activate_course_trial(
 
 
 async def get_student_trials(student_user_id: Any) -> list[dict[str, Any]]:
-    """Returns all trial records for a student with remaining time calculation."""
+    """Returns all trial records for a student with remaining time calculation and paid conversion detection."""
     uid = _to_uuid(student_user_id)
     if settings.USE_POSTGRES and uid:
         async with get_pg_connection() as conn:
@@ -228,7 +228,9 @@ async def get_student_trials(student_user_id: Any) -> list[dict[str, Any]]:
                 """
                 SELECT ct.id, ct.participant_user_id, ct.course_id, ct.started_at,
                        ct.expires_at, ct.duration_hours, ct.status,
-                       c.title as course_title, c.slug as course_slug
+                       c.title as course_title, c.slug as course_slug,
+                       (SELECT 1 FROM payments p WHERE p.participant_user_id = ct.participant_user_id AND p.course_id = ct.course_id AND p.status = 'VERIFIED' LIMIT 1) as has_verified_pay,
+                       (SELECT 1 FROM enrollments e WHERE e.participant_user_id = ct.participant_user_id AND e.course_id = ct.course_id AND e.payment_status = 'VERIFIED' AND e.access_status = 'ACTIVE' LIMIT 1) as has_verified_enr
                 FROM course_trials ct
                 JOIN courses c ON c.id = ct.course_id
                 WHERE ct.participant_user_id = $1
@@ -240,6 +242,14 @@ async def get_student_trials(student_user_id: Any) -> list[dict[str, Any]]:
             results = []
             for r in rows:
                 status = str(r["status"]).lower()
+                is_paid = bool(r["has_verified_pay"] or r["has_verified_enr"])
+                if is_paid and status != "converted":
+                    status = "converted"
+                    await conn.execute(
+                        "UPDATE course_trials SET status = 'CONVERTED', converted_at = NOW(), updated_at = NOW() WHERE id = $1",
+                        r["id"],
+                    )
+
                 expires_at = r["expires_at"]
                 if expires_at.tzinfo is None:
                     expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -253,21 +263,27 @@ async def get_student_trials(student_user_id: Any) -> list[dict[str, Any]]:
                         r["id"],
                     )
 
-                remaining_days = max(0, diff.days if not is_expired else 0)
-                remaining_hours = max(0, int(diff.total_seconds() // 3600)) if not is_expired else 0
+                is_active = (status == "active") and not is_expired
+                remaining_days = max(0, diff.days if is_active else 0)
+                remaining_hours = max(0, int(diff.total_seconds() // 3600)) if is_active else 0
 
                 results.append({
                     "id": str(r["id"]),
                     "courseId": str(r["course_id"]),
                     "courseTitle": r["course_title"],
+                    "courseName": r["course_title"],
                     "courseSlug": r["course_slug"],
                     "startedAt": r["started_at"].isoformat(),
                     "expiresAt": expires_at.isoformat(),
                     "durationDays": int(r["duration_hours"] // 24) if r["duration_hours"] else DEFAULT_TRIAL_DAYS,
                     "durationHours": r["duration_hours"],
                     "status": status,
+                    "isActive": is_active,
+                    "isPaid": is_paid or (status == "converted"),
                     "remainingDays": remaining_days,
+                    "daysRemaining": remaining_days,
                     "remainingHours": remaining_hours,
+                    "hoursRemaining": remaining_hours,
                 })
             return results
 
@@ -288,20 +304,26 @@ async def get_student_trials(student_user_id: Any) -> list[dict[str, Any]]:
             await db.course_trials.update_one({"_id": t["_id"]}, {"$set": {"status": "expired"}})
 
         diff = expires_at - now
-        remaining_days = max(0, diff.days if diff.total_seconds() > 0 else 0)
-        remaining_hours = max(0, int(diff.total_seconds() // 3600)) if remaining_days == 0 and diff.total_seconds() > 0 else 0
+        is_active = (status == "active") and (diff.total_seconds() > 0)
+        remaining_days = max(0, diff.days if is_active else 0)
+        remaining_hours = max(0, int(diff.total_seconds() // 3600)) if remaining_days == 0 and is_active else 0
 
         results.append({
             "id": str(t["_id"]),
             "courseId": str(t["courseId"]),
             "courseTitle": t.get("courseTitle"),
+            "courseName": t.get("courseTitle"),
             "courseSlug": t.get("courseSlug"),
             "startedAt": t["startedAt"].isoformat(),
             "expiresAt": t["expiresAt"].isoformat(),
             "durationDays": t.get("durationDays", DEFAULT_TRIAL_DAYS),
             "status": status,
+            "isActive": is_active,
+            "isPaid": status == "converted",
             "remainingDays": remaining_days,
+            "daysRemaining": remaining_days,
             "remainingHours": remaining_hours,
+            "hoursRemaining": remaining_hours,
         })
     return results
 
@@ -311,8 +333,18 @@ async def check_course_access(student_user_id: Any, course_id: Any) -> dict[str,
     uid = _to_uuid(student_user_id)
     cid = _to_uuid(course_id)
 
-    if settings.USE_POSTGRES and uid and cid:
+    if settings.USE_POSTGRES and uid:
         async with get_pg_connection() as conn:
+            if not cid:
+                slug_row = await conn.fetchrow(
+                    "SELECT id FROM courses WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL",
+                    str(course_id).strip(),
+                )
+                if slug_row:
+                    cid = slug_row["id"]
+            if not cid:
+                return {"hasAccess": False, "accessType": "none", "trial": None}
+
             # Free course check
             course = await conn.fetchrow(
                 "SELECT id, fee, published, status FROM courses WHERE id = $1 AND deleted_at IS NULL", cid
@@ -335,7 +367,40 @@ async def check_course_access(student_user_id: Any, course_id: Any) -> dict[str,
                 uid,
                 cid,
             )
-            if paid_enr:
+            if not paid_enr:
+                # Also check payments table directly for verified payment
+                paid_payment = await conn.fetchrow(
+                    """
+                    SELECT id FROM payments
+                    WHERE participant_user_id = $1 AND course_id = $2 AND status = 'VERIFIED'
+                    """,
+                    uid,
+                    cid,
+                )
+                if paid_payment:
+                    # Auto heal enrollment access
+                    await conn.execute(
+                        """
+                        UPDATE enrollments
+                        SET payment_status = 'VERIFIED',
+                            access_status = 'ACTIVE',
+                            enrollment_status = 'ACTIVE',
+                            access_start_date = COALESCE(access_start_date, CURRENT_DATE),
+                            access_end_date = NULL,
+                            updated_at = NOW()
+                        WHERE participant_user_id = $1 AND course_id = $2
+                        """,
+                        uid,
+                        cid,
+                    )
+                    return {"hasAccess": True, "accessType": "paid", "trial": None}
+            else:
+                # If access_end_date was left at an expired trial date, clear it for verified paid member
+                if paid_enr["access_end_date"] and paid_enr["access_end_date"] < _now().date():
+                    await conn.execute(
+                        "UPDATE enrollments SET access_end_date = NULL, updated_at = NOW() WHERE id = $1",
+                        paid_enr["id"]
+                    )
                 return {"hasAccess": True, "accessType": "paid", "trial": None}
 
             # 2. Free trial check
@@ -370,7 +435,9 @@ async def check_course_access(student_user_id: Any, course_id: Any) -> dict[str,
                         "id": str(trial["id"]),
                         "expiresAt": expires_at.isoformat(),
                         "remainingDays": remaining_days,
+                        "daysRemaining": remaining_days,
                         "remainingHours": remaining_hours,
+                        "hoursRemaining": remaining_hours,
                         "status": "active",
                     },
                 }
@@ -383,7 +450,9 @@ async def check_course_access(student_user_id: Any, course_id: Any) -> dict[str,
                     "id": str(trial["id"]),
                     "expiresAt": expires_at.isoformat(),
                     "remainingDays": 0,
+                    "daysRemaining": 0,
                     "remainingHours": 0,
+                    "hoursRemaining": 0,
                     "status": "expired",
                 },
             }

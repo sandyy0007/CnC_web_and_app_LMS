@@ -60,10 +60,11 @@ async def authorize_course_content_access(
             "courseId": str(course_id),
         }
 
-    cid = _to_uuid(course_id)
     uid = _to_uuid(ctx.user_id)
-    if not cid or not uid:
-        raise NotFound("Course not found.")
+    if not uid:
+        raise ScopeForbidden("Authentication required to access course content.")
+
+    cid = _to_uuid(course_id)
 
     if not settings.USE_POSTGRES:
         # Mongo fallback
@@ -78,6 +79,16 @@ async def authorize_course_content_access(
         }
 
     async with get_pg_connection() as conn:
+        if not cid:
+            slug_row = await conn.fetchrow(
+                "SELECT id FROM courses WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL",
+                str(course_id).strip(),
+            )
+            if slug_row:
+                cid = slug_row["id"]
+        if not cid:
+            raise NotFound("Course not found.")
+
         # 2. Check user account active status
         user = await conn.fetchrow("SELECT id, status, institution_id, role FROM users WHERE id = $1", uid)
         if not user or str(user["status"]).upper() != "ACTIVE":
@@ -168,6 +179,34 @@ async def authorize_course_content_access(
             uid,
             cid,
         )
+        if not paid_enr:
+            # Check payments table for verified transaction
+            paid_pay = await conn.fetchrow(
+                """
+                SELECT id FROM payments
+                WHERE participant_user_id = $1 AND course_id = $2 AND status = 'VERIFIED'
+                """,
+                uid,
+                cid,
+            )
+            if paid_pay:
+                # Auto heal enrollment access
+                await conn.execute(
+                    """
+                    UPDATE enrollments
+                    SET payment_status = 'VERIFIED',
+                        access_status = 'ACTIVE',
+                        enrollment_status = 'ACTIVE',
+                        access_start_date = COALESCE(access_start_date, CURRENT_DATE),
+                        access_end_date = NULL,
+                        updated_at = NOW()
+                    WHERE participant_user_id = $1 AND course_id = $2
+                    """,
+                    uid,
+                    cid,
+                )
+                paid_enr = {"id": paid_pay["id"]}
+
         if paid_enr:
             return {
                 "authorized": True,

@@ -92,7 +92,7 @@ class PaymentRepository:
             )
 
             if activate_access:
-                # Update corresponding enrollment payment_status to VERIFIED and access to ACTIVE
+                # Update corresponding enrollment payment_status to VERIFIED and access to ACTIVE (lifetime access without trial date expiry)
                 await conn.execute(
                     """
                     UPDATE enrollments
@@ -101,6 +101,8 @@ class PaymentRepository:
                         enrollment_status = 'ACTIVE',
                         activated_by = $2,
                         activated_at = NOW(),
+                        access_start_date = COALESCE(access_start_date, CURRENT_DATE),
+                        access_end_date = NULL,
                         updated_at = NOW()
                     WHERE id = $1
                     """,
@@ -108,14 +110,14 @@ class PaymentRepository:
                     v_uid,
                 )
 
-                # Convert any active trial for this participant and course
+                # Convert any trial (active or expired) for this participant and course
                 await conn.execute(
                     """
                     UPDATE course_trials
                     SET status = 'CONVERTED',
                         converted_at = NOW(),
                         updated_at = NOW()
-                    WHERE participant_user_id = $1 AND course_id = $2 AND status = 'ACTIVE'
+                    WHERE participant_user_id = $1 AND course_id = $2
                     """,
                     p_row["participant_user_id"],
                     p_row["course_id"],
