@@ -1,0 +1,3 @@
+# Root fallback requirements file for platforms (such as Render) that default
+# to the repository root directory.
+-r apps/api/requirements.txt
