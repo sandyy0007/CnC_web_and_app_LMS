@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Star,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import * as React from 'react';
 
@@ -357,10 +358,12 @@ export default function HomePage() {
                 <Card elevated className="h-full surface-3d surface-3d-interactive shadow-3d-card hover:shadow-3d-hover flex flex-col overflow-hidden transition-all duration-300">
                   <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
                     {book.coverUrl ? (
-                      <img
+                      <Image
                         src={book.coverUrl}
                         alt={book.title}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 640px) 50vw, 25vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-6 text-center text-slate-800 dark:text-white">

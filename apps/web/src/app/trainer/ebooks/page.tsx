@@ -15,6 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -156,12 +157,14 @@ export default function TrainerEbooksPage() {
                         <tr key={book.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-2.5">
-                              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                              <span className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50 text-indigo-600">
                                 {book.coverUrl ? (
-                                  <img
+                                  <Image
                                     src={book.coverUrl}
                                     alt={book.title}
-                                    className="h-full w-full rounded-lg object-cover"
+                                    fill
+                                    sizes="36px"
+                                    className="rounded-lg object-cover"
                                   />
                                 ) : (
                                   <BookOpen className="size-4" />

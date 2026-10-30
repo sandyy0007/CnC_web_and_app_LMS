@@ -10,6 +10,25 @@ const nextConfig = {
   poweredByHeader: false,
   eslint: { ignoreDuringBuilds: false },
 
+  images: {
+    // Allow next/image to load book covers and other externally-hosted media.
+    // Using remotePatterns (preferred over deprecated `domains`) for precise control.
+    remotePatterns: [
+      {
+        // QR code generation service used in the UPI payments page
+        protocol: 'https',
+        hostname: 'api.qrserver.com',
+        pathname: '/v1/create-qr-code/**',
+      },
+      {
+        // Generic HTTPS fallback for book cover images hosted anywhere (S3, CDN, etc.)
+        // Restrict to https only to prevent loading insecure assets.
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
+
   webpack(config) {
     config.resolve.modules = [
       ...(config.resolve.modules || ['node_modules']),

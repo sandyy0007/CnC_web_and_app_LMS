@@ -30,6 +30,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -527,9 +528,15 @@ export default function SuperAdminEbooksPage() {
                     <CardBody className="p-5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-start gap-4">
-                          <div className="size-16 rounded-lg bg-slate-900 border border-line-soft overflow-hidden flex items-center justify-center shrink-0">
+                          <div className="relative size-16 rounded-lg bg-slate-900 border border-line-soft overflow-hidden flex items-center justify-center shrink-0">
                             {req.coverUrl ? (
-                              <img src={req.coverUrl} alt={req.title} className="h-full w-full object-cover" />
+                              <Image
+                                src={req.coverUrl}
+                                alt={req.title}
+                                fill
+                                sizes="64px"
+                                className="object-cover"
+                              />
                             ) : (
                               <BookOpen className="size-7 text-indigo-400" />
                             )}
@@ -665,9 +672,15 @@ export default function SuperAdminEbooksPage() {
                       <tr key={book.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-md bg-slate-900 border border-line-soft overflow-hidden flex items-center justify-center shrink-0">
+                            <div className="relative size-10 rounded-md bg-slate-900 border border-line-soft overflow-hidden flex items-center justify-center shrink-0">
                               {book.coverUrl ? (
-                                <img src={book.coverUrl} alt={book.title} className="h-full w-full object-cover" />
+                                <Image
+                                src={book.coverUrl}
+                                alt={book.title}
+                                fill
+                                sizes="40px"
+                                className="object-cover"
+                              />
                               ) : (
                                 <BookOpen className="size-5 text-indigo-400" />
                               )}

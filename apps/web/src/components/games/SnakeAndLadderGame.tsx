@@ -98,67 +98,51 @@ export function SnakeAndLadderGame({
     return { row: rowFromTop, col };
   };
 
-  const handleSelectOption = (idx: number) => {
+  const handleSelectOption = React.useCallback((idx: number) => {
     if (questionFeedback || isSubmitting) return;
     setSelectedOption(idx);
     gameAudio.playSelect();
-  };
+  }, [questionFeedback, isSubmitting]);
 
-  const handleRollDice = () => {
-    if (isRolling || snakeModalOpen) return;
+  const handleDismissModal = React.useCallback(() => {
+    setSnakeModalOpen(false);
+    setPendingSnakePosition(null);
+    setQuestionFeedback(null);
+    setSelectedOption(null);
+    onNextQuestion();
+  }, [onNextQuestion]);
 
-    gameAudio.playDiceRoll();
-    setIsRolling(true);
-    let rolls = 0;
-    const interval = setInterval(() => {
-      setDiceValue(Math.floor(Math.random() * 6) + 1);
-      rolls++;
-      if (rolls > 8) {
-        clearInterval(interval);
-        const finalRoll = Math.floor(Math.random() * 6) + 1;
-        setDiceValue(finalRoll);
-        setIsRolling(false);
-        processMove(finalRoll);
-      }
-    }, 60);
-  };
+  const handleSubmitChallenge = React.useCallback(async () => {
+    if (selectedOption === null || !currentQuestion || isSubmitting) return;
 
-  // Keyboard navigation (Space to roll, 1-4 / A-D / Enter for challenge)
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (snakeModalOpen) {
-        if (questionFeedback || isSubmitting || !currentQuestion) {
-          if (e.key === 'Enter' && questionFeedback) {
-            handleDismissModal();
-          }
-          return;
-        }
-        const key = e.key.toUpperCase();
-        if (['1', '2', '3', '4'].includes(key)) {
-          const idx = parseInt(key, 10) - 1;
-          if (currentQuestion.options[idx]) {
-            handleSelectOption(idx);
-          }
-        } else if (['A', 'B', 'C', 'D'].includes(key)) {
-          const idx = key.charCodeAt(0) - 65;
-          if (currentQuestion.options[idx]) {
-            handleSelectOption(idx);
-          }
-        } else if (e.key === 'Enter' && selectedOption !== null) {
-          void handleSubmitChallenge();
-        }
+    setIsSubmitting(true);
+    const responseTimeMs = Date.now() - questionStartTime;
+
+    try {
+      const result = await onAnswer(selectedOption, responseTimeMs);
+      setQuestionFeedback({
+        isCorrect: result.is_correct,
+        explanation: result.explanation || (result.is_correct ? 'Snake Defeated! You stay at your position.' : 'Wrong answer! Sliding down.'),
+      });
+
+      if (!result.is_correct && pendingSnakePosition) {
+        // Slide down to snake tail
+        gameAudio.playWrong();
+        const tail = SNAKES[pendingSnakePosition];
+        setPlayerPosition(tail);
+        setTurnMessage(`Snake Strike! Slipped from cell ${pendingSnakePosition} down to cell ${tail}.`);
       } else {
-        if ((e.code === 'Space' || e.key === 'Enter') && !isRolling) {
-          e.preventDefault();
-          handleRollDice();
-        }
+        gameAudio.playCorrect();
+        setTurnMessage(`Snake Overcome! Stayed at cell ${pendingSnakePosition}.`);
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [snakeModalOpen, isRolling, questionFeedback, isSubmitting, selectedOption, currentQuestion]);
+    } catch {
+      // Handled in parent
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [selectedOption, currentQuestion, isSubmitting, questionStartTime, onAnswer, pendingSnakePosition]);
 
-  const processMove = (roll: number) => {
+  const processMove = React.useCallback((roll: number) => {
     const targetCell = Math.min(100, playerPosition + roll);
     setPlayerPosition(targetCell);
 
@@ -194,45 +178,61 @@ export function SnakeAndLadderGame({
     }
 
     setTurnMessage(`Moved to cell ${targetCell}. Ready for next turn.`);
-  };
+  }, [playerPosition, onFinishGame]);
 
-  const handleSubmitChallenge = async () => {
-    if (selectedOption === null || !currentQuestion || isSubmitting) return;
+  const handleRollDice = React.useCallback(() => {
+    if (isRolling || snakeModalOpen) return;
 
-    setIsSubmitting(true);
-    const responseTimeMs = Date.now() - questionStartTime;
-
-    try {
-      const result = await onAnswer(selectedOption, responseTimeMs);
-      setQuestionFeedback({
-        isCorrect: result.is_correct,
-        explanation: result.explanation || (result.is_correct ? 'Snake Defeated! You stay at your position.' : 'Wrong answer! Sliding down.'),
-      });
-
-      if (!result.is_correct && pendingSnakePosition) {
-        // Slide down to snake tail
-        gameAudio.playWrong();
-        const tail = SNAKES[pendingSnakePosition];
-        setPlayerPosition(tail);
-        setTurnMessage(`Snake Strike! Slipped from cell ${pendingSnakePosition} down to cell ${tail}.`);
-      } else {
-        gameAudio.playCorrect();
-        setTurnMessage(`Snake Overcome! Stayed at cell ${pendingSnakePosition}.`);
+    gameAudio.playDiceRoll();
+    setIsRolling(true);
+    let rolls = 0;
+    const interval = setInterval(() => {
+      setDiceValue(Math.floor(Math.random() * 6) + 1);
+      rolls++;
+      if (rolls > 8) {
+        clearInterval(interval);
+        const finalRoll = Math.floor(Math.random() * 6) + 1;
+        setDiceValue(finalRoll);
+        setIsRolling(false);
+        processMove(finalRoll);
       }
-    } catch {
-      // Handled in parent
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    }, 60);
+  }, [isRolling, snakeModalOpen, processMove]);
 
-  const handleDismissModal = () => {
-    setSnakeModalOpen(false);
-    setPendingSnakePosition(null);
-    setQuestionFeedback(null);
-    setSelectedOption(null);
-    onNextQuestion();
-  };
+  // Keyboard navigation (Space to roll, 1-4 / A-D / Enter for challenge)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (snakeModalOpen) {
+        if (questionFeedback || isSubmitting || !currentQuestion) {
+          if (e.key === 'Enter' && questionFeedback) {
+            handleDismissModal();
+          }
+          return;
+        }
+        const key = e.key.toUpperCase();
+        if (['1', '2', '3', '4'].includes(key)) {
+          const idx = parseInt(key, 10) - 1;
+          if (currentQuestion.options[idx]) {
+            handleSelectOption(idx);
+          }
+        } else if (['A', 'B', 'C', 'D'].includes(key)) {
+          const idx = key.charCodeAt(0) - 65;
+          if (currentQuestion.options[idx]) {
+            handleSelectOption(idx);
+          }
+        } else if (e.key === 'Enter' && selectedOption !== null) {
+          void handleSubmitChallenge();
+        }
+      } else {
+        if ((e.code === 'Space' || e.key === 'Enter') && !isRolling) {
+          e.preventDefault();
+          handleRollDice();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [snakeModalOpen, isRolling, questionFeedback, isSubmitting, selectedOption, currentQuestion, handleSelectOption, handleSubmitChallenge, handleRollDice, handleDismissModal]);
 
   const DiceIcon = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6][diceValue - 1];
 

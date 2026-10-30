@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarCheck,
@@ -71,7 +71,7 @@ export default function TrainerClassesPage() {
   const [recUrl, setRecUrl] = useState('');
   const [recDurationMins, setRecDurationMins] = useState(45);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [classesData, batchesData, coursesRes] = await Promise.all([
@@ -82,21 +82,21 @@ export default function TrainerClassesPage() {
       setLiveClasses(classesData);
       setBatches(batchesData);
       setAssignedCourses(coursesRes);
-      if (coursesRes && coursesRes.length > 0 && !selectedCourseId) {
-        setSelectedCourseId(coursesRes[0].id);
-        setMatCourseId(coursesRes[0].id);
-        setRecCourseId(coursesRes[0].id);
+      if (coursesRes && coursesRes.length > 0) {
+        setSelectedCourseId((prev) => prev || coursesRes[0].id);
+        setMatCourseId((prev) => prev || coursesRes[0].id);
+        setRecCourseId((prev) => prev || coursesRes[0].id);
       }
     } catch (err) {
       console.error('Failed to load trainer classes:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleScheduleClass = async (e: React.FormEvent) => {
     e.preventDefault();

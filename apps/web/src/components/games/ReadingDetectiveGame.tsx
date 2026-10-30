@@ -92,11 +92,11 @@ export function ReadingDetectiveGame({
     setFeedback(null);
   }, [currentQuestion?.question_id]);
 
-  const handleSelectOption = (idx: number) => {
+  const handleSelectOption = React.useCallback((idx: number) => {
     if (feedback?.show || isSubmitting) return;
     setSelectedOption(idx);
     gameAudio.playSelect();
-  };
+  }, [feedback?.show, isSubmitting]);
 
   const dossierText = React.useMemo(() => {
     if (activeTab === 'timeline') {
@@ -125,30 +125,7 @@ export function ReadingDetectiveGame({
     };
   }, []);
 
-  // Keyboard navigation (1-4, A-D, Enter)
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (feedback?.show || isSubmitting || !currentQuestion) return;
-      const key = e.key.toUpperCase();
-      if (['1', '2', '3', '4'].includes(key)) {
-        const idx = parseInt(key, 10) - 1;
-        if (currentQuestion.options[idx]) {
-          handleSelectOption(idx);
-        }
-      } else if (['A', 'B', 'C', 'D'].includes(key)) {
-        const idx = key.charCodeAt(0) - 65;
-        if (currentQuestion.options[idx]) {
-          handleSelectOption(idx);
-        }
-      } else if (e.key === 'Enter' && selectedOption !== null) {
-        void handleSubmitDeduction();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedOption, isSubmitting, feedback, currentQuestion]);
-
-  const handleSubmitDeduction = async () => {
+  const handleSubmitDeduction = React.useCallback(async () => {
     if (selectedOption === null || !currentQuestion || isSubmitting) return;
 
     setIsSubmitting(true);
@@ -172,7 +149,30 @@ export function ReadingDetectiveGame({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [selectedOption, currentQuestion, isSubmitting, startTime, onAnswer]);
+
+  // Keyboard navigation (1-4, A-D, Enter)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (feedback?.show || isSubmitting || !currentQuestion) return;
+      const key = e.key.toUpperCase();
+      if (['1', '2', '3', '4'].includes(key)) {
+        const idx = parseInt(key, 10) - 1;
+        if (currentQuestion.options[idx]) {
+          handleSelectOption(idx);
+        }
+      } else if (['A', 'B', 'C', 'D'].includes(key)) {
+        const idx = key.charCodeAt(0) - 65;
+        if (currentQuestion.options[idx]) {
+          handleSelectOption(idx);
+        }
+      } else if (e.key === 'Enter' && selectedOption !== null) {
+        void handleSubmitDeduction();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedOption, isSubmitting, feedback, currentQuestion, handleSelectOption, handleSubmitDeduction]);
 
   const handleContinue = () => {
     setFeedback(null);

@@ -19,6 +19,7 @@ import {
   User,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
 import { PdfViewer } from '@/components/ebook/PdfViewer';
@@ -122,7 +123,13 @@ export default function EbookDetailPage() {
           <div className="flex flex-col items-center">
             <div className="relative aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-2xl bg-slate-900 border border-white/10 shadow-2xl flex items-center justify-center">
               {book.coverUrl ? (
-                <img src={book.coverUrl} alt={book.title} className="h-full w-full object-cover" />
+                <Image
+                  src={book.coverUrl}
+                  alt={book.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 300px"
+                  className="object-cover"
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center p-6 text-center text-white">
                   <BookOpen className="size-16 text-indigo-400 mb-3" />

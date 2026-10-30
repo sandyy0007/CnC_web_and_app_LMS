@@ -58,6 +58,10 @@ export function PdfViewer({
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  // We track the blob URL in a ref so the effect cleanup can always revoke
+  // the *latest* URL without needing pdfBlobUrl in the dependency array
+  // (which would cause an infinite fetch loop).
+  const blobUrlRef = React.useRef<string | null>(null);
 
   // Load appropriate PDF stream (authenticated vs preview)
   React.useEffect(() => {
@@ -84,7 +88,10 @@ export function PdfViewer({
 
         const blob = await res.blob();
         if (active) {
+          // Revoke the previous blob URL before creating a new one
+          if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
           const url = URL.createObjectURL(blob);
+          blobUrlRef.current = url;
           setPdfBlobUrl(url);
         }
       } catch (err: any) {
@@ -99,7 +106,10 @@ export function PdfViewer({
     fetchPdf();
     return () => {
       active = false;
-      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
     };
   }, [ebookId, isAuthenticated]);
 
