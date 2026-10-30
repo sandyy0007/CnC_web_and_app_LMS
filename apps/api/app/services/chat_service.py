@@ -3,15 +3,16 @@
 Enforces scope and relationship checks between students and trainers (§5).
 Only students and trainers with an active educational relationship (assigned batches or courses)
 are permitted to message each other. In-app notifications are dispatched on new messages.
+100% powered by PostgreSQL.
 """
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
-from bson import ObjectId
+from uuid import UUID
 
-from app.core.errors import ScopeForbidden, NotFound, ValidationError
-from app.db.mongo import get_db, serialize
+from app.core.errors import NotFound, ScopeForbidden, ValidationError
+from app.db.postgres import get_pg_connection
 from app.services.notifications import Kind, notify
 
 
@@ -19,121 +20,200 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def get_authorized_trainers_for_student(student_user_id: ObjectId, college_id: ObjectId) -> list[dict[str, Any]]:
+async def get_authorized_trainers_for_student(
+    student_user_id: UUID | str, college_id: UUID | str
+) -> list[dict[str, Any]]:
     """Return trainers assigned to batches the student is enrolled in."""
-    db = get_db()
-    profile = await db.student_profiles.find_one({"userId": student_user_id})
-    if not profile or not profile.get("batchId"):
-        return []
+    s_uuid = UUID(str(student_user_id))
+    c_uuid = UUID(str(college_id))
 
-    batch = await db.batches.find_one({"_id": profile["batchId"]})
-    if not batch:
-        return []
+    async with get_pg_connection() as conn:
+        profile = await conn.fetchrow(
+            "SELECT batch_id FROM student_profiles WHERE user_id = $1", s_uuid
+        )
+        batch_id = profile["batch_id"] if profile else None
 
-    trainer_ids = batch.get("trainerIds", [])
-    if not trainer_ids:
-        # Fallback to any trainer in the college/department
-        trainers = await db.users.find({
-            "collegeId": college_id,
-            "role": "TRAINER",
-            "status": "active",
-        }).to_list(length=20)
-    else:
-        trainers = await db.users.find({
-            "_id": {"$in": trainer_ids},
-            "status": "active",
-        }).to_list(length=50)
+        if batch_id:
+            rows = await conn.fetch(
+                """
+                SELECT u.id, u.name, u.email, u.avatar_color, b.name as batch_name, d.name as department_name
+                FROM batch_trainers bt
+                JOIN users u ON u.id = bt.trainer_user_id
+                JOIN batches b ON b.id = bt.batch_id
+                LEFT JOIN departments d ON d.id = b.department_id
+                WHERE bt.batch_id = $1 AND u.status = 'ACTIVE' AND u.deleted_at IS NULL
+                """,
+                batch_id,
+            )
+            if rows:
+                return [
+                    {
+                        "id": str(r["id"]),
+                        "name": r["name"],
+                        "email": r["email"],
+                        "avatarColor": r["avatar_color"] or "#4f46e5",
+                        "batchName": r["batch_name"],
+                        "departmentName": r["department_name"],
+                    }
+                    for r in rows
+                ]
 
-    return [
-        {
-            "id": str(t["_id"]),
-            "name": t.get("name"),
-            "email": t.get("email"),
-            "avatarColor": t.get("avatarColor"),
-            "batchName": batch.get("name"),
-            "departmentName": batch.get("departmentName"),
-        }
-        for t in trainers
-    ]
+        # Fallback to any trainer in the college
+        trainers = await conn.fetch(
+            """
+            SELECT id, name, email, avatar_color
+            FROM users
+            WHERE institution_id = $1 AND role = 'TRAINER' AND status = 'ACTIVE' AND deleted_at IS NULL
+            LIMIT 20
+            """,
+            c_uuid,
+        )
+        return [
+            {
+                "id": str(t["id"]),
+                "name": t["name"],
+                "email": t["email"],
+                "avatarColor": t["avatar_color"] or "#4f46e5",
+                "batchName": "Platform Assigned",
+                "departmentName": None,
+            }
+            for t in trainers
+        ]
 
 
-async def get_authorized_students_for_trainer(trainer_user_id: ObjectId, college_id: ObjectId) -> list[dict[str, Any]]:
+async def get_authorized_students_for_trainer(
+    trainer_user_id: UUID | str, college_id: UUID | str
+) -> list[dict[str, Any]]:
     """Return students in batches assigned to this trainer."""
-    db = get_db()
-    batches = await db.batches.find({"trainerIds": trainer_user_id, "collegeId": college_id}).to_list(100)
-    batch_ids = [b["_id"] for b in batches]
-    batch_map = {b["_id"]: b.get("name") for b in batches}
+    t_uuid = UUID(str(trainer_user_id))
+    c_uuid = UUID(str(college_id))
 
-    if not batch_ids:
-        # If no explicit assignment, fallback to department batches or active students
-        profiles = await db.student_profiles.find({"collegeId": college_id}).limit(100).to_list(100)
-    else:
-        profiles = await db.student_profiles.find({"batchId": {"$in": batch_ids}}).limit(200).to_list(200)
+    async with get_pg_connection() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT sp.user_id as id, u.name, sp.roll_number, u.email, u.avatar_color, b.name as batch_name
+            FROM batch_trainers bt
+            JOIN student_profiles sp ON sp.batch_id = bt.batch_id
+            JOIN users u ON u.id = sp.user_id
+            JOIN batches b ON b.id = bt.batch_id
+            WHERE bt.trainer_user_id = $1 AND u.status = 'ACTIVE' AND u.deleted_at IS NULL
+            LIMIT 200
+            """,
+            t_uuid,
+        )
+        if rows:
+            return [
+                {
+                    "id": str(r["id"]),
+                    "name": r["name"],
+                    "rollNumber": r["roll_number"],
+                    "email": r["email"],
+                    "batchName": r["batch_name"],
+                    "avatarColor": r["avatar_color"] or "#4f46e5",
+                }
+                for r in rows
+            ]
 
-    return [
-        {
-            "id": str(p["userId"]),
-            "name": p.get("name"),
-            "rollNumber": p.get("rollNumber"),
-            "email": p.get("email"),
-            "batchName": batch_map.get(p.get("batchId"), "Assigned Batch"),
-            "avatarColor": p.get("avatarColor", "#4f46e5"),
-        }
-        for p in profiles
-    ]
+        # Fallback to college students
+        students = await conn.fetch(
+            """
+            SELECT sp.user_id as id, u.name, sp.roll_number, u.email, u.avatar_color
+            FROM student_profiles sp
+            JOIN users u ON u.id = sp.user_id
+            WHERE sp.institution_id = $1 AND u.status = 'ACTIVE' AND u.deleted_at IS NULL
+            LIMIT 100
+            """,
+            c_uuid,
+        )
+        return [
+            {
+                "id": str(s["id"]),
+                "name": s["name"],
+                "rollNumber": s["roll_number"],
+                "email": s["email"],
+                "batchName": "Assigned Batch",
+                "avatarColor": s["avatar_color"] or "#4f46e5",
+            }
+            for s in students
+        ]
 
 
-async def verify_relationship(student_user_id: ObjectId, trainer_user_id: ObjectId, college_id: ObjectId) -> bool:
+async def verify_relationship(
+    student_user_id: UUID | str, trainer_user_id: UUID | str, college_id: UUID | str
+) -> bool:
     """Check that student and trainer belong to the same college and share an assigned batch or scope."""
-    db = get_db()
-    student = await db.users.find_one({"_id": student_user_id, "collegeId": college_id, "role": "STUDENT"})
-    trainer = await db.users.find_one({"_id": trainer_user_id, "collegeId": college_id, "role": "TRAINER"})
-    if not student or not trainer:
-        return False
-    return True
+    s_uuid = UUID(str(student_user_id))
+    t_uuid = UUID(str(trainer_user_id))
+    c_uuid = UUID(str(college_id))
+
+    async with get_pg_connection() as conn:
+        count = await conn.fetchval(
+            """
+            SELECT COUNT(*) FROM users
+            WHERE id IN ($1, $2) AND (institution_id = $3 OR institution_id IS NULL)
+              AND status = 'ACTIVE' AND deleted_at IS NULL
+            """,
+            s_uuid,
+            t_uuid,
+            c_uuid,
+        )
+        return bool(count and count >= 2)
 
 
 async def get_or_create_conversation(
-    student_user_id: ObjectId,
-    trainer_user_id: ObjectId,
-    college_id: ObjectId,
+    student_user_id: UUID | str,
+    trainer_user_id: UUID | str,
+    college_id: UUID | str,
 ) -> dict[str, Any]:
-    db = get_db()
-    is_valid = await verify_relationship(student_user_id, trainer_user_id, college_id)
+    s_uuid = UUID(str(student_user_id))
+    t_uuid = UUID(str(trainer_user_id))
+    c_uuid = UUID(str(college_id))
+
+    is_valid = await verify_relationship(s_uuid, t_uuid, c_uuid)
     if not is_valid:
         raise ScopeForbidden("No active mentor-student relationship exists between these users.")
 
-    conv = await db.conversations.find_one({
-        "studentUserId": student_user_id,
-        "trainerUserId": trainer_user_id,
-        "collegeId": college_id,
-    })
+    async with get_pg_connection() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, institution_id, student_user_id, trainer_user_id,
+                   last_message_at, last_message_text, student_unread_count, trainer_unread_count,
+                   created_at, updated_at
+            FROM conversations
+            WHERE student_user_id = $1 AND trainer_user_id = $2
+            """,
+            s_uuid,
+            t_uuid,
+        )
+        if row:
+            d = dict(row)
+            d["_id"] = str(d["id"])
+            d["id"] = str(d["id"])
+            return d
 
-    if not conv:
-        student = await db.users.find_one({"_id": student_user_id})
-        trainer = await db.users.find_one({"_id": trainer_user_id})
-        doc = {
-            "collegeId": college_id,
-            "studentUserId": student_user_id,
-            "studentName": student.get("name") if student else "Student",
-            "trainerUserId": trainer_user_id,
-            "trainerName": trainer.get("name") if trainer else "Trainer",
-            "lastMessageAt": _now(),
-            "lastMessageText": "",
-            "studentUnreadCount": 0,
-            "trainerUnreadCount": 0,
-            "createdAt": _now(),
-            "updatedAt": _now(),
-        }
-        res = await db.conversations.insert_one(doc)
-        conv = await db.conversations.find_one({"_id": res.inserted_id})
-
-    return conv
+        inserted = await conn.fetchrow(
+            """
+            INSERT INTO conversations (
+                institution_id, student_user_id, trainer_user_id,
+                last_message_at, last_message_text, student_unread_count, trainer_unread_count,
+                created_at, updated_at
+            )
+            VALUES ($1, $2, $3, NOW(), '', 0, 0, NOW(), NOW())
+            RETURNING *
+            """,
+            c_uuid,
+            s_uuid,
+            t_uuid,
+        )
+        d = dict(inserted)
+        d["_id"] = str(d["id"])
+        d["id"] = str(d["id"])
+        return d
 
 
 async def send_chat_message(
-    conversation_id: ObjectId,
-    sender_id: ObjectId,
+    conversation_id: UUID | str,
+    sender_id: UUID | str,
     sender_role: str,
     text: str,
 ) -> dict[str, Any]:
@@ -141,72 +221,100 @@ async def send_chat_message(
     if not text:
         raise ValidationError("Message text cannot be empty.")
 
-    db = get_db()
-    conv = await db.conversations.find_one({"_id": conversation_id})
-    if not conv:
-        raise NotFound("Conversation not found.")
+    conv_uuid = UUID(str(conversation_id))
+    snd_uuid = UUID(str(sender_id))
 
-    if sender_role == "STUDENT":
-        if conv["studentUserId"] != sender_id:
-            raise ScopeForbidden("Cannot post to this conversation.")
-        receiver_id = conv["trainerUserId"]
-        unread_field = "trainerUnreadCount"
-        sender_name = conv.get("studentName", "Student")
-        notify_href = "/trainer/chat"
-    else:
-        if conv["trainerUserId"] != sender_id:
-            raise ScopeForbidden("Cannot post to this conversation.")
-        receiver_id = conv["studentUserId"]
-        unread_field = "studentUnreadCount"
-        sender_name = conv.get("trainerName", "Trainer")
-        notify_href = "/student/chat"
+    async with get_pg_connection() as conn:
+        conv = await conn.fetchrow("SELECT * FROM conversations WHERE id = $1", conv_uuid)
+        if not conv:
+            raise NotFound("Conversation not found.")
 
-    msg_doc = {
-        "conversationId": conversation_id,
-        "senderId": sender_id,
-        "senderRole": sender_role,
-        "receiverId": receiver_id,
-        "message": text,
-        "messageType": "text",
-        "readAt": None,
-        "createdAt": _now(),
-    }
-    res = await db.messages.insert_one(msg_doc)
-    msg_doc["_id"] = res.inserted_id
+        if sender_role == "STUDENT":
+            if conv["student_user_id"] != snd_uuid:
+                raise ScopeForbidden("Cannot post to this conversation.")
+            receiver_id = conv["trainer_user_id"]
+            unread_field = "trainer_unread_count"
+            notify_href = "/trainer/chat"
+        else:
+            if conv["trainer_user_id"] != snd_uuid:
+                raise ScopeForbidden("Cannot post to this conversation.")
+            receiver_id = conv["student_user_id"]
+            unread_field = "student_unread_count"
+            notify_href = "/student/chat"
 
-    await db.conversations.update_one(
-        {"_id": conversation_id},
-        {
-            "$set": {"lastMessageAt": _now(), "lastMessageText": text, "updatedAt": _now()},
-            "$inc": {unread_field: 1},
-        },
-    )
+        sender_row = await conn.fetchrow("SELECT name FROM users WHERE id = $1", snd_uuid)
+        sender_name = sender_row["name"] if sender_row else "Sender"
 
-    # Trigger in-app notification
+        msg_row = await conn.fetchrow(
+            """
+            INSERT INTO messages (
+                conversation_id, sender_user_id, receiver_user_id, sender_role,
+                message_type, message_text, is_read, created_at
+            )
+            VALUES ($1, $2, $3, $4, 'text', $5, FALSE, NOW())
+            RETURNING id, conversation_id, sender_user_id, receiver_user_id, sender_role,
+                      message_type, message_text, is_read, read_at, created_at
+            """,
+            conv_uuid,
+            snd_uuid,
+            receiver_id,
+            sender_role,
+            text,
+        )
+
+        await conn.execute(
+            f"""
+            UPDATE conversations
+            SET last_message_at = NOW(), last_message_text = $1, {unread_field} = {unread_field} + 1, updated_at = NOW()
+            WHERE id = $2
+            """,
+            text,
+            conv_uuid,
+        )
+
     await notify(
         user_id=receiver_id,
         kind=Kind.CHAT_MESSAGE,
         title=f"New message from {sender_name}",
         body=text[:80] + ("..." if len(text) > 80 else ""),
         href=notify_href,
-        college_id=conv.get("collegeId"),
+        college_id=conv["institution_id"],
     )
 
-    return serialize(msg_doc)
+    msg_dict = dict(msg_row)
+    return {
+        "id": str(msg_dict["id"]),
+        "_id": str(msg_dict["id"]),
+        "conversationId": str(msg_dict["conversation_id"]),
+        "senderId": str(msg_dict["sender_user_id"]),
+        "senderRole": msg_dict["sender_role"],
+        "receiverId": str(msg_dict["receiver_user_id"]),
+        "message": msg_dict["message_text"],
+        "messageType": msg_dict["message_type"],
+        "isRead": msg_dict["is_read"],
+        "readAt": msg_dict["read_at"].isoformat() if msg_dict.get("read_at") else None,
+        "createdAt": msg_dict["created_at"].isoformat() if msg_dict.get("created_at") else None,
+    }
 
 
-async def mark_conversation_read(conversation_id: ObjectId, user_id: ObjectId, role: str) -> None:
-    db = get_db()
-    conv = await db.conversations.find_one({"_id": conversation_id})
-    if not conv:
-        return
+async def mark_conversation_read(
+    conversation_id: UUID | str, user_id: UUID | str, role: str
+) -> None:
+    conv_uuid = UUID(str(conversation_id))
+    u_uuid = UUID(str(user_id))
 
-    now = _now()
-    await db.messages.update_many(
-        {"conversationId": conversation_id, "receiverId": user_id, "readAt": None},
-        {"$set": {"readAt": now}},
-    )
-
-    reset_field = "studentUnreadCount" if role == "STUDENT" else "trainerUnreadCount"
-    await db.conversations.update_one({"_id": conversation_id}, {"$set": {reset_field: 0}})
-
+    reset_col = "student_unread_count" if role == "STUDENT" else "trainer_unread_count"
+    async with get_pg_connection() as conn:
+        await conn.execute(
+            """
+            UPDATE messages
+            SET is_read = TRUE, read_at = NOW()
+            WHERE conversation_id = $1 AND receiver_user_id = $2 AND is_read = FALSE
+            """,
+            conv_uuid,
+            u_uuid,
+        )
+        await conn.execute(
+            f"UPDATE conversations SET {reset_col} = 0, updated_at = NOW() WHERE id = $1",
+            conv_uuid,
+        )

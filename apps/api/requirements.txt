@@ -6,7 +6,9 @@ pydantic==2.10.5
 pydantic-settings==2.7.1
 email-validator==2.2.0
 PyMuPDF==1.25.1
-# ---- Database (MongoDB) ----
+# ---- Database (PostgreSQL Primary) ----
+# asyncpg is the primary database driver
+# ---- Legacy Drivers (Not used in active path) ----
 motor==3.6.0
 pymongo==4.9.2
 pypdf==5.1.0

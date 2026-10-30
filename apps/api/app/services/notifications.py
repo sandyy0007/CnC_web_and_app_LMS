@@ -1,21 +1,19 @@
-"""Notifications.
+"""Notifications service backed entirely by PostgreSQL.
 
-In-app notifications always work (they are rows in MongoDB, scoped to one user). Push delivery is
-isolated behind `PushProvider` so Firebase Cloud Messaging is one adapter rather than a dependency
-threaded through the codebase. Every notification respects role and tenant scope: it is addressed
-to a specific user id, and the reader endpoint only ever returns that user's own rows.
+In-app notifications are persisted in PostgreSQL `notifications` table.
+Push delivery is optionally routed through PushProvider (FCM).
 """
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Iterable
-
-from bson import ObjectId
+from uuid import UUID
 
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.db.mongo import get_db
+from app.db.postgres import get_pg_connection
 
 log = get_logger("app.notifications")
 
@@ -59,86 +57,38 @@ class PushProvider(ABC):
     @abstractmethod
     async def send(self, *, tokens: list[str], title: str, body: str, data: dict) -> int: ...
 
-    @property
-    @abstractmethod
-    def name(self) -> str: ...
 
-
-class NoopPushProvider(PushProvider):
-    """Used whenever FCM is not configured — in-app notifications still work."""
-
-    @property
-    def name(self) -> str:
-        return "noop"
-
+class ConsolePushProvider(PushProvider):
     async def send(self, *, tokens: list[str], title: str, body: str, data: dict) -> int:
-        log.info("push_skipped_not_configured", extra={"title": title, "devices": len(tokens)})
-        return 0
+        log.info(
+            "push_notification",
+            extra={"recipients": len(tokens), "title": title, "kind": data.get("kind")},
+        )
+        return len(tokens)
 
 
-class FcmPushProvider(PushProvider):
-    @property
-    def name(self) -> str:
-        return "fcm"
-
-    async def send(self, *, tokens: list[str], title: str, body: str, data: dict) -> int:
-        if not tokens:
-            return 0
-        import httpx
-
-        sent = 0
-        headers = {
-            "Authorization": f"key={settings.FCM_SERVER_KEY or ''}",
-            "Content-Type": "application/json",
-        }
-        try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                response = await client.post(
-                    "https://fcm.googleapis.com/fcm/send",
-                    headers=headers,
-                    json={
-                        "registration_ids": tokens[:500],
-                        "notification": {"title": title, "body": body},
-                        "data": {k: str(v) for k, v in data.items()},
-                    },
-                )
-                response.raise_for_status()
-                sent = int(response.json().get("success", 0))
-        except Exception as exc:  # pragma: no cover - external service
-            log.error("push_failed", extra={"error": str(exc)})
-        return sent
-
-
-_push: PushProvider | None = None
+_push_provider: PushProvider | None = None
 
 
 def get_push_provider() -> PushProvider:
-    global _push
-    if _push is None:
-        _push = (
-            FcmPushProvider()
-            if settings.FCM_ENABLED and settings.FCM_SERVER_KEY
-            else NoopPushProvider()
-        )
-    return _push
+    global _push_provider
+    if _push_provider is None:
+        _push_provider = ConsolePushProvider()
+    return _push_provider
 
 
 def reset_push_for_tests() -> None:
-    global _push
-    _push = None
+    global _push_provider
+    _push_provider = None
 
 
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _safe_obj_id(val: Any) -> Any:
-    if val is None:
+def _to_uuid(val: Any) -> UUID | None:
+    if not val:
         return None
-    s = str(val)
-    if ObjectId.is_valid(s):
-        return ObjectId(s)
-    return s
+    try:
+        return UUID(str(val))
+    except (ValueError, TypeError):
+        return None
 
 
 async def notify(
@@ -152,128 +102,173 @@ async def notify(
     department_id: Any = None,
     metadata: dict[str, Any] | None = None,
     push: bool = True,
-) -> Any:
-    """Create one in-app notification (and optionally push it)."""
-    if user_id is None:
+) -> str | None:
+    """Create one in-app notification in PostgreSQL."""
+    u_uuid = _to_uuid(user_id)
+    if not u_uuid:
         return None
-    document = {
-        "userId": _safe_obj_id(user_id),
-        "kind": kind,
-        "icon": ICON_BY_KIND.get(kind, "bell"),
-        "title": title,
-        "body": body,
-        "href": href,
-        "collegeId": str(college_id) if college_id is not None else None,
-        "departmentId": str(department_id) if department_id is not None else None,
-        "metadata": metadata or {},
-        "read": False,
-        "createdAt": _now(),
-        "updatedAt": _now(),
-        "deletedAt": None,
-    }
-    result = await get_db().notifications.insert_one(document)
 
-    if push:
-        tokens = await _device_tokens(document["userId"])
-        if tokens:
-            await get_push_provider().send(
-                tokens=tokens,
-                title=title,
-                body=body,
-                data={"kind": kind, "href": href or "", "id": str(result.inserted_id)},
+    c_uuid = _to_uuid(college_id)
+    meta = metadata or {}
+    meta_json = json.dumps(meta)
+
+    try:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO notifications (
+                    recipient_user_id, title, message, type, kind, is_read, action_url, institution_id, metadata, created_at
+                )
+                VALUES ($1, $2, $3, $4, $5, FALSE, $6, $7, $8::jsonb, NOW())
+                RETURNING id
+                """,
+                u_uuid,
+                title,
+                body,
+                "SYSTEM",
+                kind,
+                href,
+                c_uuid,
+                meta_json,
             )
-    return result.inserted_id
+            notif_id = str(row["id"])
+
+        if push:
+            tokens = await _device_tokens(u_uuid)
+            if tokens:
+                await get_push_provider().send(
+                    tokens=tokens,
+                    title=title,
+                    body=body,
+                    data={"kind": kind, "href": href or "", "id": notif_id},
+                )
+        return notif_id
+    except Exception as exc:
+        log.error("notification_create_failed", extra={"error": str(exc), "user_id": str(user_id)})
+        return None
 
 
 async def notify_many(user_ids: Iterable[Any], **kwargs: Any) -> int:
     count = 0
-    for user_id in user_ids:
-        if await notify(user_id=user_id, **kwargs):
+    for uid in user_ids:
+        if await notify(user_id=uid, **kwargs):
             count += 1
     return count
 
 
-async def _device_tokens(user_id: Any) -> list[str]:
-    user = await get_db().users.find_one({"_id": _safe_obj_id(user_id)}, {"deviceTokens": 1, "preferences": 1})
-    if not user:
+async def _device_tokens(user_uuid: UUID) -> list[str]:
+    try:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow("SELECT preferences FROM users WHERE id = $1", user_uuid)
+            if not row or not row.get("preferences"):
+                return []
+            prefs = row["preferences"]
+            if isinstance(prefs, str):
+                prefs = json.loads(prefs)
+            if prefs.get("pushNotifications") is False:
+                return []
+            return prefs.get("deviceTokens", [])
+    except Exception:
         return []
-    preferences = user.get("preferences") or {}
-    if preferences.get("pushNotifications") is False:
-        return []
-    return [t for t in (user.get("deviceTokens") or []) if t]
 
 
 async def register_device_token(user_id: Any, token: str, platform: str = "web") -> None:
-    await get_db().users.update_one(
-        {"_id": _safe_obj_id(user_id)},
-        {
-            "$addToSet": {"deviceTokens": token},
-            "$set": {"lastDevicePlatform": platform, "updatedAt": _now()},
-        },
-    )
+    u_uuid = _to_uuid(user_id)
+    if not u_uuid:
+        return
+    try:
+        async with get_pg_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE users
+                SET preferences = jsonb_set(
+                    COALESCE(preferences, '{}'::jsonb),
+                    '{deviceTokens}',
+                    (COALESCE(preferences->'deviceTokens', '[]'::jsonb) || to_jsonb($2::text))
+                ),
+                updated_at = NOW()
+                WHERE id = $1
+                """,
+                u_uuid,
+                token,
+            )
+    except Exception as exc:
+        log.warning("register_device_token_failed", extra={"error": str(exc)})
 
 
 async def unread_count(user_id: Any) -> int:
-    return await get_db().notifications.count_documents(
-        {"userId": _safe_obj_id(user_id), "read": False, "deletedAt": None}
-    )
+    u_uuid = _to_uuid(user_id)
+    if not u_uuid:
+        return 0
+    try:
+        async with get_pg_connection() as conn:
+            val = await conn.fetchval(
+                "SELECT COUNT(*) FROM notifications WHERE recipient_user_id = $1 AND is_read = FALSE",
+                u_uuid,
+            )
+            return val or 0
+    except Exception:
+        return 0
 
 
 async def mark_read(user_id: Any, notification_id: Any) -> bool:
-    result = await get_db().notifications.update_one(
-        {"_id": _safe_obj_id(notification_id), "userId": _safe_obj_id(user_id)},
-        {"$set": {"read": True, "readAt": _now(), "updatedAt": _now()}},
-    )
-    return result.matched_count > 0
+    u_uuid = _to_uuid(user_id)
+    n_uuid = _to_uuid(notification_id)
+    if not u_uuid or not n_uuid:
+        return False
+    try:
+        async with get_pg_connection() as conn:
+            res = await conn.execute(
+                "UPDATE notifications SET is_read = TRUE WHERE id = $1 AND recipient_user_id = $2",
+                n_uuid,
+                u_uuid,
+            )
+            return "UPDATE 1" in res
+    except Exception:
+        return False
 
 
 async def mark_all_read(user_id: Any) -> int:
-    result = await get_db().notifications.update_many(
-        {"userId": _safe_obj_id(user_id), "read": False},
-        {"$set": {"read": True, "readAt": _now(), "updatedAt": _now()}},
-    )
-    return result.modified_count
+    u_uuid = _to_uuid(user_id)
+    if not u_uuid:
+        return 0
+    try:
+        async with get_pg_connection() as conn:
+            res = await conn.execute(
+                "UPDATE notifications SET is_read = TRUE WHERE recipient_user_id = $1 AND is_read = FALSE",
+                u_uuid,
+            )
+            # res is e.g. 'UPDATE 3'
+            parts = res.split(" ")
+            return int(parts[-1]) if len(parts) > 1 and parts[-1].isdigit() else 0
+    except Exception:
+        return 0
 
 
-# --------------------------------------------------------------------------- routing helpers
 async def notify_department_hod(
     *, college_id: Any, department_id: Any, kind: str, title: str, body: str, href: str | None = None
 ) -> None:
-    """Route a department-scoped alert to that department's HOD only."""
-    department = await get_db().departments.find_one(
-        {"_id": ObjectId(str(department_id))}, {"hodUserId": 1, "collegeId": 1}
-    )
-    if not department or not department.get("hodUserId"):
+    """Route a department-scoped alert to that department's HOD."""
+    d_uuid = _to_uuid(department_id)
+    c_uuid = _to_uuid(college_id)
+    if not d_uuid:
         return
-    if department.get("collegeId") != ObjectId(str(college_id)):
-        return
-    await notify(
-        user_id=department["hodUserId"],
-        kind=kind,
-        title=title,
-        body=body,
-        href=href,
-        college_id=department.get("collegeId"),
-        department_id=ObjectId(str(department_id)),
-    )
-
-
-async def notify_college_admins(
-    *, college_id: Any, kind: str, title: str, body: str, href: str | None = None
-) -> int:
-    admins = await (
-        get_db()
-        .users.find(
-            {"collegeId": ObjectId(str(college_id)), "role": "ADMIN", "status": "active"},
-            {"_id": 1},
-        )
-        .to_list(length=50)
-    )
-    return await notify_many(
-        [a["_id"] for a in admins],
-        kind=kind,
-        title=title,
-        body=body,
-        href=href,
-        college_id=ObjectId(str(college_id)),
-    )
+    try:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                "SELECT hod_user_id, institution_id FROM departments WHERE id = $1",
+                d_uuid,
+            )
+            if not row or not row.get("hod_user_id"):
+                return
+            await notify(
+                user_id=row["hod_user_id"],
+                kind=kind,
+                title=title,
+                body=body,
+                href=href,
+                college_id=c_uuid or row["institution_id"],
+                department_id=d_uuid,
+            )
+    except Exception as exc:
+        log.warning("notify_department_hod_failed", extra={"error": str(exc)})

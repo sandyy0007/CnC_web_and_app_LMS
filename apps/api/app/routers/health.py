@@ -5,7 +5,7 @@ from fastapi import APIRouter
 
 from app.core.config import settings
 from app.core.redis_client import ping_redis
-from app.db.mongo import is_inmemory, ping_mongo
+from app.db.postgres import ping_postgres
 from app.services.ai_provider import provider_health
 from app.services.storage import get_storage
 from app.workers.queue import queue_stats
@@ -20,12 +20,12 @@ async def health() -> dict:
 
 @router.get("/health/ready")
 async def ready() -> dict:
-    mongo_ok = await ping_mongo()
+    pg_ok = await ping_postgres()
     redis_ok = await ping_redis()
     return {
-        "status": "ok" if (mongo_ok and redis_ok) else "degraded",
+        "status": "ok" if (pg_ok and redis_ok) else "degraded",
         "checks": {
-            "mongo": {"ok": mongo_ok, "usingDevelopmentFallback": is_inmemory()},
+            "postgres": {"ok": pg_ok},
             "redis": {"ok": redis_ok},
             "storage": {"driver": get_storage().name},
             "ai": provider_health(),

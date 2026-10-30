@@ -14,7 +14,7 @@ import time
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.redis_client import close_redis, ping_redis
-from app.db.mongo import close_mongo, connect_to_mongo
+from app.db.postgres import close_postgres, connect_to_postgres, ping_postgres, run_migrations
 from app.workers import jobs  # noqa: F401  (registers every handler)
 from app.workers.queue import (
     acknowledge,
@@ -48,18 +48,15 @@ async def run_once(timeout: int = 5) -> bool:
         log.error("no_handler_registered", extra={"job": job.name, "job_id": job.id})
         await fail(job, f"no handler registered for '{job.name}'")
         return True
-
-    started = time.perf_counter()
+    log.info("job_started", extra={"job": job.name, "job_id": job.id, "attempt": job.attempt})
+    t0 = time.perf_counter()
     try:
         await handler(job.payload)
         await acknowledge(job)
+        duration_ms = int((time.perf_counter() - t0) * 1000)
         log.info(
             "job_completed",
-            extra={
-                "job": job.name,
-                "job_id": job.id,
-                "duration_ms": int((time.perf_counter() - started) * 1000),
-            },
+            extra={"job": job.name, "job_id": job.id, "duration_ms": duration_ms},
         )
     except Exception as exc:
         log.exception("job_failed", extra={"job": job.name, "job_id": job.id})
@@ -70,7 +67,18 @@ async def run_once(timeout: int = 5) -> bool:
 async def main() -> None:
     configure_logging()
     settings.assert_production_safe()
-    await connect_to_mongo()
+
+    # PostgreSQL is mandatory
+    try:
+        await connect_to_postgres()
+        if not await ping_postgres():
+            raise RuntimeError("PostgreSQL ping failed in worker.")
+        applied = await run_migrations()
+        log.info("worker_postgres_ready", extra={"connected": True, "migrations_applied": len(applied)})
+    except Exception as err:
+        log.error("worker_postgres_failed", extra={"error": str(err)})
+        raise RuntimeError(f"PostgreSQL connection required for worker: {err}") from err
+
     if not await ping_redis():
         log.error("redis_unavailable_worker_cannot_start")
         return
@@ -100,7 +108,7 @@ async def main() -> None:
             await asyncio.sleep(1)
 
     log.info("worker_stopping")
-    await close_mongo()
+    await close_postgres()
     await close_redis()
 
 

@@ -31,13 +31,7 @@ services:
         fromDatabase:
           name: cnc-postgres
           property: connectionString
-      # MongoDB Atlas connection string (e.g. mongodb+srv://user:pass@cluster.mongodb.net)
-      - key: MONGODB_URL
-        sync: false
-      - key: MONGODB_DB
-        value: eedi_lms
-      - key: USE_INMEMORY_DB
-        value: "false"
+
       # Redis Cache / Queue
       - key: REDIS_URL
         fromService:
@@ -123,10 +117,7 @@ services:
         fromDatabase:
           name: cnc-postgres
           property: connectionString
-      - key: MONGODB_URL
-        sync: false
-      - key: MONGODB_DB
-        value: eedi_lms
+
       - key: REDIS_URL
         fromService:
           type: redis

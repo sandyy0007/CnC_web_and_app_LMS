@@ -13,7 +13,7 @@ from pypdf import PdfReader, PdfWriter
 
 from app.core.errors import NotFound, ValidationError
 from app.core.logging import get_logger
-from app.db.mongo import get_db
+from app.repositories.ebook_repo import EbookRepository
 from app.services.storage import Keys, get_storage
 
 log = get_logger("app.services.ebook")
@@ -121,15 +121,7 @@ def create_pdf_slice(pdf_bytes: bytes, max_pages: int = FREE_PREVIEW_PAGE_LIMIT)
 
 async def ensure_categories_seeded() -> None:
     """Ensures standard eBook categories exist in the database."""
-    db = get_db()
-    for cat in DEFAULT_CATEGORIES:
-        existing = await db.ebook_categories.find_one({"slug": cat["slug"]})
-        if not existing:
-            await db.ebook_categories.insert_one({
-                **cat,
-                "createdAt": _now(),
-                "updatedAt": _now(),
-            })
+    await EbookRepository.ensure_categories_seeded()
 
 
 async def get_or_create_preview_slice(ebook_doc: dict[str, Any]) -> bytes:
@@ -153,9 +145,7 @@ async def get_or_create_preview_slice(ebook_doc: dict[str, Any]) -> bytes:
     await storage.put(new_preview_key, sliced_bytes, "application/pdf")
 
     # Update document with previewKey
-    await get_db().ebooks.update_one(
-        {"_id": ebook_doc["_id"]},
-        {"$set": {"previewKey": new_preview_key, "updatedAt": _now()}},
-    )
+    eb_id = ebook_doc.get("id") or ebook_doc.get("_id")
+    await EbookRepository.update_preview_key(eb_id, new_preview_key)
 
     return sliced_bytes

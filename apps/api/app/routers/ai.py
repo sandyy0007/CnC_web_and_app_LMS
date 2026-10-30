@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from app.authz.context import ScopeContext
 from app.authz.guards import CurrentUser, require_role
 from app.authz.roles import Role
-from app.repositories.collections import AiScoreRepo, PracticeSessionRepo
+# Decoupled MongoDB collections
 from app.schemas.requests import CoachRequest
 from app.services.ai_provider import get_evaluation_provider, provider_health
 from app.services.chatbot_service import answer_ai_query
@@ -176,35 +176,48 @@ async def coach(
     payload: CoachRequest, ctx: ScopeContext = Depends(require_role(Role.STUDENT))
 ) -> dict[str, Any]:
     """RAG-style grounding: the coach may only answer from this student's own session evidence."""
-    scores = await AiScoreRepo(ctx).find_all(
-        {"studentUserId": ctx.user_id}, limit=8, sort=[("createdAt", -1)]
-    )
-    session_ids = [s["practiceSessionId"] for s in scores]
-    sessions = {
-        s["_id"]: s
-        for s in await PracticeSessionRepo(ctx).find_all(
-            {"_id": {"$in": session_ids}}, limit=20
-        )
-    }
-
     grounding: list[dict[str, Any]] = []
-    for score in scores:
-        session = sessions.get(score["practiceSessionId"], {})
-        for dimension in score.get("dimensions", []):
-            evidence = dimension.get("evidence") or []
-            span = evidence[0].get("span") if evidence else None
-            if not span:
-                continue
-            grounding.append(
-                {
-                    "sessionId": str(score["practiceSessionId"]),
-                    "sessionTitle": session.get("practiceModeTitle"),
-                    "dimension": dimension.get("label"),
-                    "score": dimension.get("score"),
-                    "span": span,
-                    "at": score.get("createdAt"),
-                }
+    try:
+        from app.db.postgres import get_pg_connection
+        from uuid import UUID
+        async with get_pg_connection() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id, practice_mode_title, overall_score, transcript, ai_feedback, created_at
+                FROM practice_sessions
+                WHERE participant_user_id = $1
+                ORDER BY created_at DESC
+                LIMIT 8
+                """,
+                UUID(str(ctx.user_id)),
             )
+            for r in rows:
+                feedback = r["ai_feedback"] if isinstance(r["ai_feedback"], dict) else {}
+                dimensions = feedback.get("dimensions", [])
+                if dimensions:
+                    for dimension in dimensions:
+                        evidence = dimension.get("evidence") or []
+                        span = evidence[0].get("span") if evidence else None
+                        if span:
+                            grounding.append({
+                                "sessionId": str(r["id"]),
+                                "sessionTitle": r.get("practice_mode_title"),
+                                "dimension": dimension.get("label"),
+                                "score": dimension.get("score"),
+                                "span": span,
+                                "at": r["created_at"].isoformat() if r.get("created_at") else None,
+                            })
+                elif r.get("transcript"):
+                    grounding.append({
+                        "sessionId": str(r["id"]),
+                        "sessionTitle": r.get("practice_mode_title"),
+                        "dimension": "Performance",
+                        "score": float(r["overall_score"] or 0),
+                        "span": r["transcript"][:200],
+                        "at": r["created_at"].isoformat() if r.get("created_at") else None,
+                    })
+    except Exception:
+        grounding = []
 
     result = await get_evaluation_provider().coach(
         question=payload.question, grounding=grounding, student_name=ctx.name or ""

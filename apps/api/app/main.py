@@ -25,9 +25,9 @@ from app.core.errors import (
 )
 from app.core.logging import configure_logging, get_logger
 from app.core.redis_client import close_redis, ping_redis
-from app.db.indexes import ensure_indexes
-from app.db.mongo import close_mongo, connect_to_mongo, is_inmemory
-from app.db.postgres import close_postgres, connect_to_postgres, ping_postgres
+# MongoDB indexes removed - PostgreSQL is single persistent store
+# MongoDB driver removed
+from app.db.postgres import close_postgres, connect_to_postgres, ping_postgres, run_migrations
 from app.routers import (
     admin,
     ai,
@@ -55,34 +55,37 @@ log = get_logger("app.main")
 async def lifespan(app: FastAPI):
     configure_logging()
     settings.assert_production_safe()
-    if settings.USE_POSTGRES:
-        try:
-            await connect_to_postgres()
-            pg_ok = await ping_postgres()
-            log.info("postgres_lifecycle_ready", extra={"connected": pg_ok})
-        except Exception as err:
-            log.error("postgres_startup_failed", extra={"error": str(err)})
+    try:
+        await connect_to_postgres()
+        pg_ok = await ping_postgres()
+        if not pg_ok:
+            raise RuntimeError("PostgreSQL ping failed after connecting pool.")
+        applied = await run_migrations()
+        log.info("postgres_lifecycle_ready", extra={"connected": True, "migrations_applied": len(applied)})
+    except Exception as err:
+        log.error("postgres_startup_failed", extra={"error": str(err)})
+        raise RuntimeError(f"PostgreSQL connection is required for operation: {err}") from err
 
-    database = await connect_to_mongo()
-    await ensure_indexes(database)
+    # MongoDB connection removed
+    # MongoDB indexes removed
     # Production policy: Do not auto-seed synthetic demo institutions or users into any store.
     redis_ok = await ping_redis()
     log.info(
         "api_started",
         extra={
             "env": settings.ENV,
-            "db": settings.MONGODB_DB,
+            "database": "postgresql",
             "postgres": settings.USE_POSTGRES,
-            "inMemoryDb": is_inmemory(),
+            "postgres": True,
             "redis": redis_ok,
         },
     )
     if not redis_ok:
         log.warning("redis_unreachable_sessions_and_queue_degraded")
     yield
-    if settings.USE_POSTGRES:
-        await close_postgres()
-    await close_mongo()
+    await close_postgres()
+    # PostgreSQL pool closed
+    # MongoDB closed
     await close_redis()
     log.info("api_stopped")
 

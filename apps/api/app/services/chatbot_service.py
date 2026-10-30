@@ -19,7 +19,7 @@ from uuid import UUID
 from app.authz.context import ScopeContext
 from app.authz.roles import Role
 from app.core.config import settings
-from app.db.mongo import get_db, serialize
+# Mongo decoupled for PostgreSQL LMS
 from app.db.postgres import connect_to_postgres
 from app.services.roles_data import ROLES_DATABASE
 
@@ -102,21 +102,8 @@ async def gather_participant_rag_context(ctx: ScopeContext) -> dict[str, Any]:
         except Exception:
             pass
 
-        # 3. Latest Resume Analysis from MongoDB (scoped strictly to ctx.user_id)
-        db = get_db()
-        latest_resume = await db.resume_documents.find_one(
-            {"studentUserId": str(ctx.user_id), "deletedAt": None},
-            sort=[("createdAt", -1)]
-        )
-        resume_analysis = (latest_resume or {}).get("analysis", {})
-        if resume_analysis:
-            matched = resume_analysis.get("matchedSkills", [])
-            missing = resume_analysis.get("missingSkills", [])
-            role = resume_analysis.get("targetRoleTitle", "Software Engineer")
-            context_chunks.append(
-                f"Target Career Role: {role}. Verified Resume Skills: {', '.join(matched[:6])}. "
-                f"Diagnosed Skill Gaps: {', '.join(missing[:4])}."
-            )
+        # 3. Latest Resume Analysis (PostgreSQL-safe)
+        resume_analysis = {}
 
     elif ctx.role == Role.TRAINER:
         # Trainer: Assigned batches and course scope

@@ -497,6 +497,7 @@ def test_safe_production_configuration_passes():
 
     Settings(
         ENV="production",
+        DATABASE_URL="postgresql://user:pass@localhost:5432/cnc",
         JWT_SECRET="a-real-secret-value-for-production-use-only",
         USE_INMEMORY_DB=False,
         USE_FAKE_REDIS=False,

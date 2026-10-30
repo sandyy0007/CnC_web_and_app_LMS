@@ -13,10 +13,15 @@ class UserRepository:
         async with get_pg_connection() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT id, email, password_hash, name, role, institution_id, department_id,
-                       phone, status, last_login_at, created_at
-                FROM users
-                WHERE id = $1 AND deleted_at IS NULL
+                SELECT u.id, u.email, u.password_hash, u.name, u.role, u.institution_id, u.department_id,
+                       u.phone, u.status, u.last_login_at, u.created_at, u.email_verified,
+                       u.activation_token, u.activation_token_expires_at, u.must_change_password,
+                       u.avatar_color, u.preferences,
+                       i.name as college_name, d.name as department_name
+                FROM users u
+                LEFT JOIN institutions i ON i.id = u.institution_id
+                LEFT JOIN departments d ON d.id = u.department_id
+                WHERE u.id = $1 AND u.deleted_at IS NULL
                 """,
                 UUID(str(user_id)),
             )
@@ -27,10 +32,15 @@ class UserRepository:
         async with get_pg_connection() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT id, email, password_hash, name, role, institution_id, department_id,
-                       phone, status, last_login_at, created_at
-                FROM users
-                WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL
+                SELECT u.id, u.email, u.password_hash, u.name, u.role, u.institution_id, u.department_id,
+                       u.phone, u.status, u.last_login_at, u.created_at, u.email_verified,
+                       u.activation_token, u.activation_token_expires_at, u.must_change_password,
+                       u.avatar_color, u.preferences,
+                       i.name as college_name, d.name as department_name
+                FROM users u
+                LEFT JOIN institutions i ON i.id = u.institution_id
+                LEFT JOIN departments d ON d.id = u.department_id
+                WHERE LOWER(u.email) = LOWER($1) AND u.deleted_at IS NULL
                 """,
                 email.strip(),
             )
@@ -44,9 +54,15 @@ class UserRepository:
             row = await conn.fetchrow(
                 """
                 SELECT u.id, u.email, u.password_hash, u.name, u.role, u.institution_id, u.department_id,
-                       u.phone, u.status, u.last_login_at, u.created_at, sp.roll_number
+                       u.phone, u.status, u.last_login_at, u.created_at, u.email_verified,
+                       u.activation_token, u.activation_token_expires_at, u.must_change_password,
+                       u.avatar_color, u.preferences,
+                       sp.roll_number,
+                       i.name as college_name, d.name as department_name
                 FROM users u
                 LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                LEFT JOIN institutions i ON i.id = u.institution_id
+                LEFT JOIN departments d ON d.id = u.department_id
                 WHERE (LOWER(u.email) = LOWER($1) OR UPPER(sp.roll_number) = UPPER($1))
                   AND u.deleted_at IS NULL
                 LIMIT 1
@@ -54,6 +70,170 @@ class UserRepository:
                 clean_id,
             )
             return dict(row) if row else None
+
+    @staticmethod
+    async def get_by_activation_token(token: str) -> dict[str, Any] | None:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT u.id, u.email, u.name, u.role, u.institution_id, u.department_id,
+                       i.name as college_name, d.name as department_name
+                FROM users u
+                LEFT JOIN institutions i ON i.id = u.institution_id
+                LEFT JOIN departments d ON d.id = u.department_id
+                WHERE u.activation_token = $1
+                  AND (u.activation_token_expires_at IS NULL OR u.activation_token_expires_at > NOW())
+                  AND u.deleted_at IS NULL
+                """,
+                token.strip(),
+            )
+            return dict(row) if row else None
+
+    @staticmethod
+    async def activate_user(token: str, password_hash: str) -> dict[str, Any] | None:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                """
+                UPDATE users
+                SET password_hash = $1,
+                    status = 'ACTIVE',
+                    email_verified = TRUE,
+                    email_verified_at = NOW(),
+                    must_change_password = FALSE,
+                    activation_token = NULL,
+                    activated_at = NOW(),
+                    password_changed_at = NOW(),
+                    updated_at = NOW()
+                WHERE activation_token = $2
+                  AND (activation_token_expires_at IS NULL OR activation_token_expires_at > NOW())
+                  AND deleted_at IS NULL
+                RETURNING id, email, role, institution_id, department_id
+                """,
+                password_hash,
+                token.strip(),
+            )
+            return dict(row) if row else None
+
+    @staticmethod
+    async def verify_email(user_id: UUID | str) -> None:
+        async with get_pg_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE users
+                SET email_verified = TRUE, email_verified_at = NOW(), updated_at = NOW()
+                WHERE id = $1
+                """,
+                UUID(str(user_id)),
+            )
+
+    @staticmethod
+    async def update_password(user_id: UUID | str, password_hash: str) -> None:
+        async with get_pg_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE users
+                SET password_hash = $1, password_changed_at = NOW(), must_change_password = FALSE, updated_at = NOW()
+                WHERE id = $2
+                """,
+                password_hash,
+                UUID(str(user_id)),
+            )
+
+    @staticmethod
+    async def update_login_activity(
+        user_id: UUID | str, ip: str | None = None, rehash_password: str | None = None
+    ) -> None:
+        async with get_pg_connection() as conn:
+            if rehash_password:
+                await conn.execute(
+                    """
+                    UPDATE users
+                    SET last_login_at = NOW(), last_active_at = NOW(), last_login_ip = $1, password_hash = $2
+                    WHERE id = $3
+                    """,
+                    ip,
+                    rehash_password,
+                    UUID(str(user_id)),
+                )
+            else:
+                await conn.execute(
+                    """
+                    UPDATE users
+                    SET last_login_at = NOW(), last_active_at = NOW(), last_login_ip = $1
+                    WHERE id = $2
+                    """,
+                    ip,
+                    UUID(str(user_id)),
+                )
+
+    @staticmethod
+    async def get_institution_by_code(code: str) -> dict[str, Any] | None:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                "SELECT id, name, code FROM institutions WHERE UPPER(code) = UPPER($1) AND deleted_at IS NULL",
+                code.strip(),
+            )
+            return dict(row) if row else None
+
+    @staticmethod
+    async def get_department_by_code(institution_id: UUID | str, code: str) -> dict[str, Any] | None:
+        async with get_pg_connection() as conn:
+            row = await conn.fetchrow(
+                "SELECT id, name, code FROM departments WHERE institution_id = $1 AND UPPER(code) = UPPER($2) AND deleted_at IS NULL",
+                UUID(str(institution_id)),
+                code.strip(),
+            )
+            return dict(row) if row else None
+
+    @staticmethod
+    async def create_user_with_profile(
+        email: str,
+        password_hash: str,
+        name: str,
+        role: str = "STUDENT",
+        institution_id: UUID | str | None = None,
+        department_id: UUID | str | None = None,
+        phone: str | None = None,
+        avatar_color: str | None = None,
+        roll_number: str | None = None,
+        accepted_terms: bool = True,
+    ) -> dict[str, Any]:
+        inst_uuid = UUID(str(institution_id)) if institution_id else None
+        dept_uuid = UUID(str(department_id)) if department_id else None
+        now = datetime.now(timezone.utc)
+        async with get_pg_connection() as conn:
+            async with conn.transaction():
+                user_row = await conn.fetchrow(
+                    """
+                    INSERT INTO users (email, password_hash, name, role, institution_id, department_id, phone,
+                                       email_verified, status, avatar_color, accepted_terms_at, created_at, updated_at)
+                    VALUES (LOWER($1), $2, $3, $4, $5, $6, $7, FALSE, 'ACTIVE', $8, $9, NOW(), NOW())
+                    RETURNING id, email, name, role, institution_id, department_id, phone, status, created_at
+                    """,
+                    email.strip(),
+                    password_hash,
+                    name.strip(),
+                    role,
+                    inst_uuid,
+                    dept_uuid,
+                    phone,
+                    avatar_color,
+                    now if accepted_terms else None,
+                )
+                user_dict = dict(user_row)
+                if role == "STUDENT":
+                    rn = roll_number or f"{'COL' if inst_uuid else 'ONL'}{str(user_dict['id'])[-6:].upper()}"
+                    await conn.execute(
+                        """
+                        INSERT INTO student_profiles (user_id, roll_number, institution_id, department_id, created_at, updated_at)
+                        VALUES ($1, $2, $3, $4, NOW(), NOW())
+                        """,
+                        user_dict["id"],
+                        rn,
+                        inst_uuid,
+                        dept_uuid,
+                    )
+                return user_dict
 
     @staticmethod
     async def create_user(
@@ -203,4 +383,3 @@ class UserRepository:
         query = f"SELECT COUNT(*) FROM users WHERE {' AND '.join(conditions)}"
         async with get_pg_connection() as conn:
             return await conn.fetchval(query, *params) or 0
-

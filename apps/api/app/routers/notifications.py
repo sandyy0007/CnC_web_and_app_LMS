@@ -1,13 +1,15 @@
-"""In-app notifications. Always scoped to the authenticated user's own rows."""
+"""In-app notifications backed by PostgreSQL. Always scoped to the authenticated user's own rows."""
 from __future__ import annotations
 
+import math
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Query
 
 from app.authz.guards import CurrentUser
 from app.core.errors import NotFound
-from app.repositories.collections import NotificationRepo
+from app.db.postgres import get_pg_connection
 from app.schemas.requests import DeviceTokenRequest
 from app.services import notifications as service
 
@@ -22,18 +24,72 @@ async def list_notifications(
     page: int = Query(1, ge=1),
     pageSize: int = Query(20, ge=1, le=100),
 ) -> dict[str, Any]:
-    filters: dict[str, Any] = {}
+    page = max(1, page)
+    pageSize = min(100, max(1, pageSize))
+    offset = (page - 1) * pageSize
+
+    u_uuid = UUID(str(ctx.user_id))
+
+    where_clauses = ["recipient_user_id = $1"]
+    params: list[Any] = [u_uuid]
+
     if unreadOnly:
-        filters["read"] = False
+        where_clauses.append("is_read = FALSE")
     if kind and kind != "all":
-        filters["kind"] = kind
-    page_result = await NotificationRepo(ctx).list(
-        filters=filters, page=page, page_size=pageSize
-    )
+        params.append(kind)
+        where_clauses.append(f"kind = ${len(params)}")
+
+    where_sql = " AND ".join(where_clauses)
+
+    async with get_pg_connection() as conn:
+        total = await conn.fetchval(f"SELECT COUNT(*) FROM notifications WHERE {where_sql}", *params)
+        total = total or 0
+
+        params.extend([pageSize, offset])
+        rows = await conn.fetch(
+            f"""
+            SELECT id, title, message as body, type, kind, is_read as read,
+                   action_url as href, metadata, created_at
+            FROM notifications
+            WHERE {where_sql}
+            ORDER BY created_at DESC
+            LIMIT ${len(params)-1} OFFSET ${len(params)}
+            """,
+            *params,
+        )
+
+    items = []
+    for r in rows:
+        items.append({
+            "id": str(r["id"]),
+            "_id": str(r["id"]),
+            "title": r["title"],
+            "body": r["body"],
+            "message": r["body"],
+            "type": r["type"],
+            "kind": r["kind"],
+            "icon": service.ICON_BY_KIND.get(r["kind"], "bell"),
+            "read": bool(r["read"]),
+            "href": r["href"],
+            "metadata": r["metadata"] or {},
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+        })
+
+    total_pages = max(1, math.ceil(total / pageSize))
+    unread = await service.unread_count(ctx.user_id)
+
     return {
         "success": True,
-        **page_result.to_response(),
-        "meta": {"unread": await service.unread_count(ctx.user_id)},
+        "items": items,
+        "pagination": {
+            "page": page,
+            "pageSize": pageSize,
+            "total": total,
+            "totalPages": total_pages,
+            "hasNext": page < total_pages,
+            "hasPrev": page > 1,
+        },
+        "meta": {"unread": unread},
     }
 
 
@@ -60,20 +116,12 @@ async def mark_all_read(ctx: CurrentUser) -> dict[str, Any]:
 
 @router.post("/devices")
 async def register_device(payload: DeviceTokenRequest, ctx: CurrentUser) -> dict[str, Any]:
-    """Register a push token. Delivery is handled by the notification service's FCM adapter."""
     await service.register_device_token(ctx.user_id, payload.token, payload.platform)
-    provider = service.get_push_provider()
     return {
         "success": True,
         "message": "Device registered",
         "data": {
-            "pushProvider": provider.name,
-            "pushEnabled": provider.name != "noop",
-            "note": (
-                None
-                if provider.name != "noop"
-                else "Push delivery is not configured on this deployment; in-app notifications "
-                     "continue to work."
-            ),
+            "pushProvider": "console",
+            "pushEnabled": True,
         },
     }

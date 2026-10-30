@@ -134,3 +134,77 @@ async def pg_transaction() -> AsyncGenerator[asyncpg.Connection, None]:
     async with pool.acquire() as conn:
         async with conn.transaction():
             yield conn
+
+
+ADVISORY_LOCK_ID = 847291048  # Arbitrary 64-bit integer lock for migrations
+
+
+async def run_migrations() -> list[str]:
+    """Run pending database migrations safely using PostgreSQL advisory locks.
+
+    Guarantees concurrency safety across multiple API replicas and worker instances.
+    Each migration file is executed once inside an atomic transaction.
+    """
+    from pathlib import Path
+
+    possible_paths = [
+        Path("apps/api/migrations"),
+        Path("migrations"),
+        Path(__file__).resolve().parent.parent.parent / "migrations",
+    ]
+    migrations_dir: Path | None = None
+    for p in possible_paths:
+        if p.is_dir():
+            migrations_dir = p
+            break
+
+    if not migrations_dir:
+        log.warning("migrations_dir_not_found")
+        return []
+
+    applied_migrations: list[str] = []
+    pool = await get_or_create_pg_pool()
+
+    async with pool.acquire() as conn:
+        # Acquire advisory lock to prevent race conditions during multi-instance boot
+        await conn.execute("SELECT pg_advisory_lock($1)", ADVISORY_LOCK_ID)
+        try:
+            # Ensure migration tracking table exists
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version VARCHAR(255) PRIMARY KEY,
+                    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+                """
+            )
+
+            # Get all applied versions
+            rows = await conn.fetch("SELECT version FROM schema_migrations")
+            already_applied = {r["version"] for r in rows}
+
+            # Discover all .sql files sorted by filename
+            sql_files = sorted(migrations_dir.glob("*.sql"))
+
+            for sql_file in sql_files:
+                version_name = sql_file.name
+                if version_name in already_applied:
+                    continue
+
+                log.info("applying_migration", extra={"version": version_name})
+                sql_content = sql_file.read_text(encoding="utf-8")
+
+                async with conn.transaction():
+                    await conn.execute(sql_content)
+                    await conn.execute(
+                        "INSERT INTO schema_migrations (version) VALUES ($1)",
+                        version_name,
+                    )
+
+                applied_migrations.append(version_name)
+                log.info("migration_applied", extra={"version": version_name})
+
+        finally:
+            await conn.execute("SELECT pg_advisory_unlock($1)", ADVISORY_LOCK_ID)
+
+    return applied_migrations

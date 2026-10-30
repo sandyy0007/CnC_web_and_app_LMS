@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
+from uuid import UUID
 
-from bson import ObjectId
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from app.authz.audit import write_audit, write_security_event
@@ -35,7 +35,9 @@ from app.core.security import (
     password_strength,
     verify_password,
 )
-from app.db.mongo import get_db, serialize
+from app.db.mongo import serialize
+from app.db.postgres import get_pg_connection
+from app.repositories.user_repo import UserRepository
 from app.schemas.requests import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
@@ -107,75 +109,71 @@ def _public_user(user: dict[str, Any]) -> dict[str, Any]:
         "availableRoles": available_roles,
         "roleLabel": ROLE_LABEL.get(role, str(role)),
         "collegeId": str(user.get("collegeId") or user.get("institution_id") or "") or None,
-        "collegeName": user.get("collegeName") or user.get("institution_name"),
+        "collegeName": user.get("collegeName") or user.get("institution_name") or user.get("college_name"),
         "departmentId": str(user.get("departmentId") or user.get("department_id") or "") or None,
-        "departmentName": user.get("departmentName"),
-        "emailVerified": bool(user.get("emailVerified") if user.get("emailVerified") is not None else True),
+        "departmentName": user.get("departmentName") or user.get("department_name"),
+        "emailVerified": bool(user.get("emailVerified") if user.get("emailVerified") is not None else user.get("email_verified", True)),
         "status": str(user.get("status", "active")).lower(),
-        "avatarColor": user.get("avatarColor") or "#6366f1",
-        "mustChangePassword": bool(user.get("mustChangePassword")),
+        "avatarColor": user.get("avatarColor") or user.get("avatar_color") or "#6366f1",
+        "mustChangePassword": bool(user.get("mustChangePassword") if user.get("mustChangePassword") is not None else user.get("must_change_password", False)),
         "home": ROLE_HOME.get(role, "/"),
         "preferences": user.get("preferences") or {},
     }
 
 
-from app.repositories.user_repo import UserRepository
-
-
 async def _find_user_by_identifier(identifier: str) -> dict[str, Any] | None:
     value = identifier.strip()
-    if settings.USE_POSTGRES:
-        try:
-            pg_user = await UserRepository.get_by_identifier(value)
-            if pg_user:
-                has_tp = False
-                tp_college = None
-                tp_dept = None
-                try:
-                    from app.db.postgres import get_pg_connection
-                    async with get_pg_connection() as conn:
-                        tp_row = await conn.fetchrow(
-                            "SELECT institution_id, department_id FROM trainer_profiles WHERE user_id = $1::uuid",
-                            pg_user["id"],
-                        )
-                        if tp_row:
-                            has_tp = True
-                            tp_college = str(tp_row["institution_id"]) if tp_row["institution_id"] else None
-                            tp_dept = str(tp_row["department_id"]) if tp_row["department_id"] else None
-                except Exception:
-                    pass
+    pg_user = await UserRepository.get_by_identifier(value)
+    if not pg_user:
+        return None
 
-                roles = [str(pg_user["role"])]
-                if has_tp and "TRAINER" not in roles:
-                    roles.append("TRAINER")
+    has_tp = False
+    tp_college = None
+    tp_dept = None
+    try:
+        async with get_pg_connection() as conn:
+            tp_row = await conn.fetchrow(
+                "SELECT institution_id, department_id FROM trainer_profiles WHERE user_id = $1::uuid",
+                pg_user["id"],
+            )
+            if tp_row:
+                has_tp = True
+                tp_college = str(tp_row["institution_id"]) if tp_row["institution_id"] else None
+                tp_dept = str(tp_row["department_id"]) if tp_row["department_id"] else None
+    except Exception:
+        pass
 
-                return {
-                    "_id": str(pg_user["id"]),
-                    "id": str(pg_user["id"]),
-                    "email": pg_user["email"],
-                    "passwordHash": pg_user["password_hash"],
-                    "name": pg_user["name"],
-                    "role": pg_user["role"],
-                    "availableRoles": roles,
-                    "trainerCollegeId": tp_college,
-                    "trainerDeptId": tp_dept,
-                    "collegeId": str(pg_user["institution_id"]) if pg_user.get("institution_id") else None,
-                    "departmentId": str(pg_user["department_id"]) if pg_user.get("department_id") else None,
-                    "institutionId": str(pg_user["institution_id"]) if pg_user.get("institution_id") else None,
-                    "status": str(pg_user["status"]).lower(),
-                    "emailVerified": True,
-                }
-        except Exception:
-            pass
-    return await get_db().users.find_one(
-        {"$or": [{"email": value.lower()}, {"institutionId": value.upper()}]}
-    )
+    roles = [str(pg_user["role"])]
+    if has_tp and "TRAINER" not in roles:
+        roles.append("TRAINER")
+
+    return {
+        "_id": str(pg_user["id"]),
+        "id": str(pg_user["id"]),
+        "email": pg_user["email"],
+        "passwordHash": pg_user["password_hash"],
+        "name": pg_user["name"],
+        "role": pg_user["role"],
+        "availableRoles": roles,
+        "trainerCollegeId": tp_college,
+        "trainerDeptId": tp_dept,
+        "collegeId": str(pg_user["institution_id"]) if pg_user.get("institution_id") else None,
+        "collegeName": pg_user.get("college_name"),
+        "departmentId": str(pg_user["department_id"]) if pg_user.get("department_id") else None,
+        "departmentName": pg_user.get("department_name"),
+        "institutionId": str(pg_user["institution_id"]) if pg_user.get("institution_id") else None,
+        "status": str(pg_user["status"]).lower(),
+        "emailVerified": bool(pg_user.get("email_verified", True)),
+        "avatarColor": pg_user.get("avatar_color") or "#6366f1",
+        "mustChangePassword": bool(pg_user.get("must_change_password", False)),
+        "preferences": pg_user.get("preferences") or {},
+    }
 
 
 # --------------------------------------------------------------------------- signup
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def signup(payload: SignupRequest, request: Request) -> dict[str, Any]:
-    """Create an account. Uniqueness is enforced by unique indexes, not just by this check."""
+    """Create an account in PostgreSQL."""
     if not settings.PUBLIC_SIGNUP_ENABLED:
         raise RoleForbidden("Public registration is disabled for this institution")
 
@@ -189,19 +187,14 @@ async def signup(payload: SignupRequest, request: Request) -> dict[str, Any]:
     await rate_limit.enforce_rate_limit("signup", _client_ip(request) or "anon", "10/hour")
     assert_password_policy(payload.password)
 
-    db = get_db()
-    email = payload.email.lower()
-    if await db.users.find_one({"email": email}):
+    email = payload.email.lower().strip()
+    existing = await UserRepository.get_by_email(email)
+    if existing:
         raise Conflict("An account with this email already exists. Try signing in instead.")
-    if payload.institutionId:
-        if await db.users.find_one({"institutionId": payload.institutionId.upper()}):
-            raise Conflict("This institution ID is already registered")
 
     college = None
     if payload.collegeCode:
-        college = await db.colleges.find_one(
-            {"code": payload.collegeCode.upper(), "deletedAt": None}
-        )
+        college = await UserRepository.get_institution_by_code(payload.collegeCode)
         if not college:
             raise ValidationError("We couldn't find an institution with that code")
     if role in COLLEGE_BOUND and role is not Role.STUDENT and not college:
@@ -209,90 +202,47 @@ async def signup(payload: SignupRequest, request: Request) -> dict[str, Any]:
 
     department = None
     if payload.departmentCode and college:
-        department = await db.departments.find_one(
-            {
-                "collegeId": college["_id"],
-                "code": payload.departmentCode.upper(),
-                "deletedAt": None,
-            }
-        )
+        department = await UserRepository.get_department_by_code(college["id"], payload.departmentCode)
         if not department:
             raise ValidationError("We couldn't find that department in the selected institution")
     if role in DEPARTMENT_BOUND and role is not Role.STUDENT and not department:
         raise ValidationError("Please select your department to continue")
 
-    document = {
-        "name": payload.name,
-        "email": email,
-        # Omitted rather than null: `institutionId` has a sparse unique index, and a sparse
-        # index skips absent fields but still indexes explicit nulls.
-        **({"institutionId": payload.institutionId.upper()} if payload.institutionId else {}),
-        "passwordHash": hash_password(payload.password),
-        "role": str(role),
-        "collegeId": college["_id"] if college else None,
-        "collegeName": college.get("name") if college else "Winners Creek Online Platform",
-        "departmentId": department["_id"] if department else None,
-        "departmentName": department.get("name") if department else None,
-        "phone": payload.phone,
-        # The account stays unverified until the code or link is used.
-        "emailVerified": False,
-        "status": "active",
-        "avatarColor": f"#{abs(hash(email)) % 0xFFFFFF:06X}",
-        "acceptedTermsAt": _now() if payload.acceptedTerms else None,
-        "preferences": {
-            "emailNotifications": True,
-            "pushNotifications": True,
-            "smsNotifications": False,
-        },
-        "createdAt": _now(),
-        "updatedAt": _now(),
-        "deletedAt": None,
-        "version": 1,
-    }
+    avatar_color = f"#{abs(hash(email)) % 0xFFFFFF:06X}"
+    pwd_hash = hash_password(payload.password)
+
     try:
-        result = await db.users.insert_one(document)
+        user_record = await UserRepository.create_user_with_profile(
+            email=email,
+            password_hash=pwd_hash,
+            name=payload.name,
+            role=str(role),
+            institution_id=college["id"] if college else None,
+            department_id=department["id"] if department else None,
+            phone=payload.phone,
+            avatar_color=avatar_color,
+            roll_number=payload.institutionId,
+            accepted_terms=bool(payload.acceptedTerms),
+        )
     except Exception as exc:
-        # The unique index is the real guard against a race between two concurrent signups.
         raise Conflict("An account with these details already exists") from exc
 
-    if role is Role.STUDENT:
-        await db.student_profiles.insert_one(
-            {
-                "userId": result.inserted_id,
-                "name": payload.name,
-                "email": email,
-                "rollNumber": (payload.institutionId or f"{'COL' if college else 'ONL'}{str(result.inserted_id)[-6:]}").upper(),
-                "collegeId": college["_id"] if college else None,
-                "collegeName": college.get("name") if college else "Winners Creek Online Platform",
-                "departmentId": department["_id"] if department else None,
-                "departmentName": department.get("name") if department else None,
-                "isOnlineDirect": college is None,
-                "batchId": None,
-                "batchName": None,
-                "profileCompleteness": 35,
-                "status": "active",
-                "createdAt": _now(),
-                "updatedAt": _now(),
-                "deletedAt": None,
-                "version": 1,
-            }
-        )
-
+    user_id_str = str(user_record["id"])
     otp = await rate_limit.issue_otp(VERIFY, email)
     link_token = create_purpose_token(
-        user_id=str(result.inserted_id), purpose="verify", ttl_minutes=60 * 24
+        user_id=user_id_str, purpose="verify", ttl_minutes=60 * 24
     )
     await send_verification_email(to=email, name=payload.name, otp=otp, link_token=link_token)
     await write_audit(
         None,
         action="create",
         entity_type="users",
-        entity_id=result.inserted_id,
+        entity_id=user_record["id"],
         after={"email": email, "role": str(role)},
         detail="self-service signup",
         actor_label=f"{payload.name} (signup)",
-        college_id=college["_id"] if college else None,
-        department_id=department["_id"] if department else None,
+        college_id=college["id"] if college else None,
+        department_id=department["id"] if department else None,
     )
     log.info("signup", extra={"email": email, "role": str(role)})
 
@@ -300,7 +250,7 @@ async def signup(payload: SignupRequest, request: Request) -> dict[str, Any]:
         "success": True,
         "message": "Account created. Check your email for the verification code.",
         "data": {
-            "userId": str(result.inserted_id),
+            "userId": user_id_str,
             "email": email,
             "verificationRequired": True,
             "otpExpiresInMinutes": settings.OTP_TTL_MINUTES,
@@ -313,48 +263,43 @@ async def signup(payload: SignupRequest, request: Request) -> dict[str, Any]:
 @router.post("/verify-email")
 async def verify_email(payload: VerifyEmailRequest, request: Request) -> dict[str, Any]:
     """Accepts either the emailed OTP or the one-click link token."""
-    db = get_db()
-
     if payload.token:
         claims = decode_token(payload.token, expected_type="verify")
-        user = await db.users.find_one({"_id": ObjectId(str(claims["sub"]))})
+        user = await UserRepository.get_by_id(claims["sub"])
         if not user:
             raise NotFound("Account not found")
     else:
         if not payload.email or not payload.otp:
             raise ValidationError("Enter the 6-digit code we emailed you")
         await rate_limit.enforce_rate_limit("verify", payload.email.lower(), "15/hour")
-        user = await db.users.find_one({"email": payload.email.lower()})
+        user = await UserRepository.get_by_email(payload.email.lower())
         if not user:
             raise NotFound("Account not found")
         if not await rate_limit.verify_otp(VERIFY, payload.email.lower(), payload.otp):
             await write_security_event(
                 kind="otp_invalid",
-                user_id=user["_id"],
+                user_id=user["id"],
                 detail="invalid or expired email-verification code",
                 ip=_client_ip(request),
-                college_id=user.get("collegeId"),
-                department_id=user.get("departmentId"),
+                college_id=user.get("institution_id"),
+                department_id=user.get("department_id"),
             )
             raise ValidationError("That code is invalid or has expired. Request a new one.")
 
-    if user.get("emailVerified"):
+    if user.get("email_verified"):
         return {"success": True, "message": "This email is already verified.", "data": {"alreadyVerified": True}}
 
-    await db.users.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"emailVerified": True, "emailVerifiedAt": _now(), "updatedAt": _now()}},
-    )
+    await UserRepository.verify_email(user["id"])
     await write_audit(
         None,
         action="update",
         entity_type="users",
-        entity_id=user["_id"],
+        entity_id=user["id"],
         after={"emailVerified": True},
         detail="email verified",
         actor_label=f"{user.get('name')} (self)",
-        college_id=user.get("collegeId"),
-        department_id=user.get("departmentId"),
+        college_id=user.get("institution_id"),
+        department_id=user.get("department_id"),
     )
     return {
         "success": True,
@@ -365,10 +310,8 @@ async def verify_email(payload: VerifyEmailRequest, request: Request) -> dict[st
 
 @router.post("/resend-otp")
 async def resend_otp(payload: ResendOtpRequest) -> dict[str, Any]:
-    db = get_db()
-    email = payload.email.lower()
-    user = await db.users.find_one({"email": email})
-    # Always answer the same way so the endpoint cannot enumerate accounts.
+    email = payload.email.lower().strip()
+    user = await UserRepository.get_by_email(email)
     generic = {
         "success": True,
         "message": "If that account exists, a new code is on its way.",
@@ -376,13 +319,13 @@ async def resend_otp(payload: ResendOtpRequest) -> dict[str, Any]:
     }
     if not user:
         return generic
-    if payload.purpose == VERIFY and user.get("emailVerified"):
+    if payload.purpose == VERIFY and user.get("email_verified"):
         return generic
 
     purpose = VERIFY if payload.purpose == VERIFY else RESET
     otp = await rate_limit.issue_otp(purpose, email)
     link_token = create_purpose_token(
-        user_id=str(user["_id"]),
+        user_id=str(user["id"]),
         purpose="verify" if purpose == VERIFY else "reset",
         ttl_minutes=60 if purpose == RESET else 60 * 24,
     )
@@ -397,17 +340,11 @@ async def resend_otp(payload: ResendOtpRequest) -> dict[str, Any]:
     return generic
 
 
-# --------------------------------------------------------------------------- account activation (Super Admin provisioned accounts)
+# --------------------------------------------------------------------------- account activation
 @router.get("/verify-activation-token")
 async def verify_activation_token(token: str = Query(...)) -> dict[str, Any]:
-    """Verify single-use activation token for provisioned users (ADMIN, HOD, TRAINER)."""
-    db = get_db()
-    now = _now()
-    user = await db.users.find_one({
-        "activationToken": token.strip(),
-        "activationTokenExpiresAt": {"$gt": now},
-        "deletedAt": None,
-    })
+    """Verify single-use activation token for provisioned users."""
+    user = await UserRepository.get_by_activation_token(token)
     if not user:
         raise ValidationError("Invalid or expired activation link. Please contact your administrator.")
 
@@ -419,8 +356,8 @@ async def verify_activation_token(token: str = Query(...)) -> dict[str, Any]:
             "email": user.get("email"),
             "role": str(role),
             "roleLabel": ROLE_LABEL.get(role, str(role)),
-            "collegeName": user.get("collegeName", "Platform"),
-            "departmentName": user.get("departmentName"),
+            "collegeName": user.get("college_name", "Platform"),
+            "departmentName": user.get("department_name"),
         }
     }
 
@@ -434,41 +371,17 @@ async def activate_account(payload: dict[str, Any], request: Request) -> dict[st
         raise ValidationError("Activation token and a new password are required.")
 
     assert_password_policy(new_password)
-    db = get_db()
-    now = _now()
-    user = await db.users.find_one({
-        "activationToken": token,
-        "activationTokenExpiresAt": {"$gt": now},
-        "deletedAt": None,
-    })
+    user = await UserRepository.activate_user(token, hash_password(new_password))
     if not user:
         raise ValidationError("Invalid or expired activation link. Please contact your administrator.")
 
-    await db.users.update_one(
-        {"_id": user["_id"]},
-        {
-            "$set": {
-                "passwordHash": hash_password(new_password),
-                "status": "active",
-                "accountStatus": "active",
-                "emailVerified": True,
-                "emailVerifiedAt": now,
-                "mustChangePassword": False,
-                "activationToken": None,
-                "activatedAt": now,
-                "passwordChangedAt": now,
-                "updatedAt": now,
-            }
-        },
-    )
-
     await write_security_event(
         kind="account_activated",
-        user_id=user["_id"],
+        user_id=user["id"],
         detail="provisioned account activated and password initialized",
         ip=_client_ip(request),
-        college_id=user.get("collegeId"),
-        department_id=user.get("departmentId"),
+        college_id=user.get("institution_id"),
+        department_id=user.get("department_id"),
     )
 
     role = parse_role(user["role"])
@@ -495,7 +408,6 @@ async def login(payload: LoginRequest, request: Request, response: Response) -> 
 
     user = await _find_user_by_identifier(payload.identifier)
 
-    # One generic message for wrong identifier and wrong password alike.
     if not user or not verify_password(payload.password, user.get("passwordHash", "")):
         attempts = await rate_limit.record_failed_login(identifier)
         await write_security_event(
@@ -504,8 +416,6 @@ async def login(payload: LoginRequest, request: Request, response: Response) -> 
             detail=f"failed sign-in attempt {attempts}/{settings.MAX_FAILED_LOGINS}",
             ip=ip,
             metadata={"identifier": identifier},
-            # Unknown identifier: the attempt belongs to no institution, so it stays untenanted
-            # and only SUPER_ADMIN sees it.
             college_id=user.get("collegeId") if user else None,
             department_id=user.get("departmentId") if user else None,
         )
@@ -551,14 +461,9 @@ async def login(payload: LoginRequest, request: Request, response: Response) -> 
     )
     _set_refresh_cookie(response, tokens["refreshToken"], remember=payload.rememberMe)
 
-    db = get_db()
-    await db.users.update_one(
-        {"_id": user["_id"]}, {"$set": {"lastActiveAt": _now(), "lastLoginIp": ip}}
-    )
-    if needs_rehash(user.get("passwordHash", "")):
-        await db.users.update_one(
-            {"_id": user["_id"]}, {"$set": {"passwordHash": hash_password(payload.password)}}
-        )
+    rehash = hash_password(payload.password) if needs_rehash(user.get("passwordHash", "")) else None
+    await UserRepository.update_login_activity(user["_id"], ip=ip, rehash_password=rehash)
+
     await write_audit(
         None,
         action="login",
@@ -611,7 +516,7 @@ async def logout(request: Request, response: Response) -> dict[str, Any]:
                 None,
                 action="logout",
                 entity_type="users",
-                entity_id=ObjectId(str(claims["sub"])),
+                entity_id=claims["sub"],
                 detail="signed out",
                 actor_label="self",
             )
@@ -694,14 +599,13 @@ async def switch_role(
 # --------------------------------------------------------------------------- password reset
 @router.post("/forgot-password")
 async def forgot_password(payload: ForgotPasswordRequest, request: Request) -> dict[str, Any]:
-    email = payload.email.lower()
+    email = payload.email.lower().strip()
     await rate_limit.enforce_rate_limit("forgot", _client_ip(request) or "anon", "10/hour")
-    user = await get_db().users.find_one({"email": email})
-    # Identical response whether or not the account exists.
-    if user and user.get("status") == "active":
+    user = await UserRepository.get_by_email(email)
+    if user and str(user.get("status", "")).upper() == "ACTIVE":
         otp = await rate_limit.issue_otp(RESET, email)
         link_token = create_purpose_token(
-            user_id=str(user["_id"]), purpose="reset", ttl_minutes=60
+            user_id=str(user["id"]), purpose="reset", ttl_minutes=60
         )
         await send_password_reset_email(
             to=email, name=user.get("name", ""), otp=otp, link_token=link_token
@@ -718,65 +622,53 @@ async def reset_password(
     payload: ResetPasswordRequest, request: Request, response: Response
 ) -> dict[str, Any]:
     assert_password_policy(payload.password)
-    db = get_db()
 
     if payload.token:
         claims = decode_token(payload.token, expected_type="reset")
-        user = await db.users.find_one({"_id": ObjectId(str(claims["sub"]))})
+        user = await UserRepository.get_by_id(claims["sub"])
     else:
         if not payload.email or not payload.otp:
             raise ValidationError("Enter the code we emailed you")
         await rate_limit.enforce_rate_limit("reset", payload.email.lower(), "15/hour")
-        user = await db.users.find_one({"email": payload.email.lower()})
+        user = await UserRepository.get_by_email(payload.email.lower())
         if user and not await rate_limit.verify_otp(RESET, payload.email.lower(), payload.otp):
             await write_security_event(
                 kind="reset_otp_invalid",
-                user_id=user["_id"],
+                user_id=user["id"],
                 detail="invalid or expired password-reset code",
                 ip=_client_ip(request),
-                college_id=user.get("collegeId"),
-                department_id=user.get("departmentId"),
+                college_id=user.get("institution_id"),
+                department_id=user.get("department_id"),
             )
             raise ValidationError("That code is invalid or has expired. Request a new one.")
     if not user:
         raise ValidationError("That code is invalid or has expired. Request a new one.")
 
-    if verify_password(payload.password, user.get("passwordHash", "")):
+    if verify_password(payload.password, user.get("password_hash", "")):
         raise ValidationError("Choose a password you haven't used before")
 
-    await db.users.update_one(
-        {"_id": user["_id"]},
-        {
-            "$set": {
-                "passwordHash": hash_password(payload.password),
-                "passwordChangedAt": _now(),
-                "mustChangePassword": False,
-                "updatedAt": _now(),
-            }
-        },
-    )
-    # Every existing session is invalidated after a reset.
-    revoked = await session_service.revoke_all_sessions(str(user["_id"]), reason="password_reset")
+    await UserRepository.update_password(user["id"], hash_password(payload.password))
+    revoked = await session_service.revoke_all_sessions(str(user["id"]), reason="password_reset")
     await rate_limit.clear_failed_logins(str(user.get("email", "")))
     _clear_refresh_cookie(response)
     await write_security_event(
         kind="password_reset",
-        user_id=user["_id"],
+        user_id=user["id"],
         detail=f"password reset; {revoked} session(s) invalidated",
         ip=_client_ip(request),
-        college_id=user.get("collegeId"),
-        department_id=user.get("departmentId"),
+        college_id=user.get("institution_id"),
+        department_id=user.get("department_id"),
     )
     await write_audit(
         None,
         action="update",
         entity_type="users",
-        entity_id=user["_id"],
+        entity_id=user["id"],
         after={"passwordChanged": True},
         detail="password reset",
         actor_label=f"{user.get('name')} (self)",
-        college_id=user.get("collegeId"),
-        department_id=user.get("departmentId"),
+        college_id=user.get("institution_id"),
+        department_id=user.get("department_id"),
     )
     return {
         "success": True,
@@ -789,25 +681,14 @@ async def reset_password(
 async def change_password(
     payload: ChangePasswordRequest, ctx: ScopeContext = Depends(get_scope_context)
 ) -> dict[str, Any]:
-    db = get_db()
-    user = await db.users.find_one({"_id": ctx.user_id})
-    if not user or not verify_password(payload.currentPassword, user.get("passwordHash", "")):
+    user = await UserRepository.get_by_id(ctx.user_id)
+    if not user or not verify_password(payload.currentPassword, user.get("password_hash", "")):
         raise ValidationError("Your current password is incorrect")
     assert_password_policy(payload.password)
-    if verify_password(payload.password, user.get("passwordHash", "")):
+    if verify_password(payload.password, user.get("password_hash", "")):
         raise ValidationError("Choose a password you haven't used before")
 
-    await db.users.update_one(
-        {"_id": ctx.user_id},
-        {
-            "$set": {
-                "passwordHash": hash_password(payload.password),
-                "passwordChangedAt": _now(),
-                "mustChangePassword": False,
-                "updatedAt": _now(),
-            }
-        },
-    )
+    await UserRepository.update_password(ctx.user_id, hash_password(payload.password))
     await write_audit(
         ctx, action="update", entity_type="users", entity_id=ctx.user_id, detail="password changed"
     )
@@ -817,44 +698,38 @@ async def change_password(
 # --------------------------------------------------------------------------- session info
 @router.get("/me")
 async def me(ctx: CurrentUser) -> dict[str, Any]:
-    user = None
-    if settings.USE_POSTGRES:
-        try:
-            from app.db.postgres import get_pg_connection
-            from uuid import UUID
-            async with get_pg_connection() as conn:
-                u_row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", UUID(str(ctx.user_id)))
-                if u_row:
-                    user = dict(u_row)
-                    user["id"] = str(user["id"])
-                    user["_id"] = str(user["id"])
-                    user["collegeId"] = user.get("institution_id")
-                    user["departmentId"] = user.get("department_id")
-        except Exception:
-            user = None
-    if not user:
-        user = await get_db().users.find_one({"_id": ctx.user_id})
+    user = await UserRepository.get_by_id(ctx.user_id)
     if not user:
         raise Unauthenticated("Account not found")
-    data = _public_user(user)
+
+    user_dict = {
+        "id": str(user["id"]),
+        "_id": str(user["id"]),
+        "name": user["name"],
+        "email": user["email"],
+        "role": user["role"],
+        "collegeId": str(user["institution_id"]) if user.get("institution_id") else None,
+        "collegeName": user.get("college_name"),
+        "departmentId": str(user["department_id"]) if user.get("department_id") else None,
+        "departmentName": user.get("department_name"),
+        "institutionId": str(user["institution_id"]) if user.get("institution_id") else None,
+        "status": str(user["status"]).lower(),
+        "emailVerified": bool(user.get("email_verified", True)),
+        "avatarColor": user.get("avatar_color") or "#6366f1",
+        "mustChangePassword": bool(user.get("must_change_password", False)),
+        "preferences": user.get("preferences") or {},
+    }
+
+    data = _public_user(user_dict)
     if ctx.role is Role.TRAINER:
         data["assignedBatchIds"] = [str(b) for b in ctx.batch_ids]
         data["assignedDepartmentIds"] = [str(d) for d in ctx.department_ids]
     if ctx.role is Role.PARENT:
         data["linkedStudentIds"] = [str(s) for s in ctx.linked_student_ids]
     if ctx.role is Role.STUDENT:
-        if settings.USE_POSTGRES:
-            try:
-                from app.db.postgres import get_pg_connection
-                from uuid import UUID
-                async with get_pg_connection() as conn:
-                    sp_row = await conn.fetchrow("SELECT * FROM student_profiles WHERE user_id = $1", UUID(str(ctx.user_id)))
-                    data["profile"] = dict(sp_row) if sp_row else None
-            except Exception:
-                data["profile"] = None
-        else:
-            profile = await get_db().student_profiles.find_one({"userId": ctx.user_id})
-            data["profile"] = serialize(profile) if profile else None
+        sp_profile = await UserRepository.get_student_profile(ctx.user_id)
+        data["profile"] = serialize(sp_profile) if sp_profile else None
+
     return {"success": True, "data": data}
 
 
@@ -870,9 +745,12 @@ async def sessions(ctx: CurrentUser) -> dict[str, Any]:
 
 @router.delete("/sessions/{session_id}")
 async def revoke_session(session_id: str, ctx: CurrentUser) -> dict[str, Any]:
-    record = await get_db().refresh_sessions.find_one(
-        {"sessionId": session_id, "userId": ctx.user_id}
-    )
+    async with get_pg_connection() as conn:
+        record = await conn.fetchrow(
+            "SELECT id FROM refresh_sessions WHERE session_id = $1 AND user_id = $2::uuid",
+            session_id,
+            str(ctx.user_id),
+        )
     if not record:
         raise NotFound("Session not found")
     await session_service.close_session(str(ctx.user_id), session_id)
@@ -880,7 +758,7 @@ async def revoke_session(session_id: str, ctx: CurrentUser) -> dict[str, Any]:
         ctx,
         action="logout",
         entity_type="refresh_sessions",
-        entity_id=record["_id"],
+        entity_id=record["id"],
         detail="device signed out remotely",
     )
     return {"success": True, "message": "That device has been signed out"}

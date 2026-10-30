@@ -139,6 +139,8 @@ class Settings(BaseSettings):
         if not self.is_production:
             return
         problems: list[str] = []
+        if not self.DATABASE_URL or "postgresql" not in self.DATABASE_URL:
+            problems.append("DATABASE_URL must be a valid PostgreSQL connection string in production")
         if self.USE_INMEMORY_DB:
             problems.append("USE_INMEMORY_DB must be false in production")
         if self.USE_FAKE_REDIS:
