@@ -147,6 +147,13 @@ class Settings(BaseSettings):
             problems.append("USE_FAKE_REDIS must be false in production")
         if self.STORAGE_DRIVER != "s3":
             problems.append("STORAGE_DRIVER must be 's3' in production")
+        else:
+            if not self.S3_BUCKET or self.S3_BUCKET == "eedi-lms-private":
+                problems.append("S3_BUCKET must be set to your active S3 bucket name in production")
+            if not self.AWS_ACCESS_KEY_ID:
+                problems.append("AWS_ACCESS_KEY_ID must be set in production when STORAGE_DRIVER is 's3'")
+            if not self.AWS_SECRET_ACCESS_KEY:
+                problems.append("AWS_SECRET_ACCESS_KEY must be set in production when STORAGE_DRIVER is 's3'")
         if self.ALLOW_DEV_ENDPOINTS:
             problems.append("ALLOW_DEV_ENDPOINTS must be false in production")
         if not self.COOKIE_SECURE:

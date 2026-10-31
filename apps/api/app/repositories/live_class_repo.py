@@ -185,7 +185,7 @@ class LiveClassRepository:
                     LIMIT 200
                     """,
                     t_uuid,
-                    json.dumps([str(t_uuid)]),
+                    [str(t_uuid)],
                     b_uuids,
                 )
             else:
@@ -198,7 +198,7 @@ class LiveClassRepository:
                     LIMIT 200
                     """,
                     t_uuid,
-                    json.dumps([str(t_uuid)]),
+                    [str(t_uuid)],
                 )
             return [dict(r) for r in rows]
 
@@ -244,7 +244,7 @@ class LiveClassRepository:
             course_id = UUID(str(data["courseId"])) if data.get("courseId") else None
             created_by = UUID(str(data["createdBy"])) if data.get("createdBy") else None
 
-            allowed_trainers = json.dumps([str(t) for t in data.get("allowedTrainerIds", [])])
+            allowed_trainers = [str(t) for t in data.get("allowedTrainerIds", [])]
 
             row = await conn.fetchrow(
                 """
@@ -258,7 +258,7 @@ class LiveClassRepository:
                 VALUES (
                     $1, $2, $3, $4, $5,
                     $6, $7, $8, $9, $10, $11,
-                    $12, $13, $14, $15::jsonb,
+                    $12, $13, $14, $15,
                     $16, $17, $18, $19, $20,
                     $21, NOW(), NOW()
                 )
@@ -344,7 +344,7 @@ class LiveClassRepository:
         c_uuid = UUID(str(class_id))
         u_uuid = UUID(str(user_id))
         now = _now()
-        new_segment = json.dumps([{"joinedAt": now.isoformat(), "leftAt": None, "lastHeartbeat": now.isoformat()}])
+        new_segment = [{"joinedAt": now.isoformat(), "leftAt": None, "lastHeartbeat": now.isoformat()}]
 
         async with get_pg_connection() as conn:
             await conn.execute(
@@ -353,7 +353,7 @@ class LiveClassRepository:
                     live_class_id, user_id, user_name, user_role, joined_at, last_heartbeat,
                     total_seconds, segments, attendance_percentage, attendance_status, finalized, created_at, updated_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $5, 0, $6::jsonb, 0.0, 'ABSENT', FALSE, $5, $5)
+                VALUES ($1, $2, $3, $4, $5, $5, 0, $6, 0.0, 'ABSENT', FALSE, $5, $5)
                 ON CONFLICT (live_class_id, user_id)
                 DO UPDATE SET last_heartbeat = $5, updated_at = $5
                 """,
