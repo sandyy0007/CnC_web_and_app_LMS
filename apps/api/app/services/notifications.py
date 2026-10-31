@@ -272,3 +272,39 @@ async def notify_department_hod(
             )
     except Exception as exc:
         log.warning("notify_department_hod_failed", extra={"error": str(exc)})
+
+
+async def notify_college_admins(
+    *, college_id: Any, kind: str, title: str, body: str, href: str | None = None
+) -> int:
+    """Send an alert to all active ADMIN users belonging to a college/institution."""
+    c_uuid = _to_uuid(college_id)
+    if not c_uuid:
+        return 0
+    try:
+        async with get_pg_connection() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id FROM users
+                WHERE institution_id = $1
+                  AND role = 'ADMIN'
+                  AND status = 'ACTIVE'
+                  AND deleted_at IS NULL
+                LIMIT 50
+                """,
+                c_uuid,
+            )
+            admin_ids = [r["id"] for r in rows]
+        if not admin_ids:
+            return 0
+        return await notify_many(
+            admin_ids,
+            kind=kind,
+            title=title,
+            body=body,
+            href=href,
+            college_id=c_uuid,
+        )
+    except Exception as exc:
+        log.warning("notify_college_admins_failed", extra={"error": str(exc), "college_id": str(college_id)})
+        return 0
