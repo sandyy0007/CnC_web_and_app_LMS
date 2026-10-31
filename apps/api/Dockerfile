@@ -19,7 +19,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy backend application source
+# Copy migrations and backend application source
+COPY migrations/ ./migrations/
 COPY app/ ./app/
 
 # Create non-root user for security

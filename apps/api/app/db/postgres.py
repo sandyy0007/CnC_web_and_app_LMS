@@ -137,6 +137,12 @@ async def pg_transaction() -> AsyncGenerator[asyncpg.Connection, None]:
 
 
 ADVISORY_LOCK_ID = 847291048  # Arbitrary 64-bit integer lock for migrations
+_migrations_ready: bool = False
+
+
+def are_migrations_ready() -> bool:
+    """Return whether database migrations have been verified and applied."""
+    return _migrations_ready
 
 
 async def run_migrations() -> list[str]:
@@ -148,19 +154,64 @@ async def run_migrations() -> list[str]:
     from pathlib import Path
 
     possible_paths = [
-        Path("apps/api/migrations"),
+        # Relative to current working directory (e.g. /app or /opt/render/project/src/apps/api)
         Path("migrations"),
+        Path("apps/api/migrations"),
+        # Relative to this file (apps/api/app/db/postgres.py -> apps/api/migrations)
         Path(__file__).resolve().parent.parent.parent / "migrations",
+        # Fallback if migrations are placed under app/
+        Path(__file__).resolve().parent.parent / "migrations",
+        # Absolute paths for containerized environments
+        Path("/app/migrations"),
+        Path("/app/apps/api/migrations"),
     ]
+
     migrations_dir: Path | None = None
+    searched_candidates: list[str] = []
+    seen: set[str] = set()
+
     for p in possible_paths:
-        if p.is_dir():
-            migrations_dir = p
-            break
+        try:
+            resolved = p.resolve()
+        except Exception:
+            resolved = p
+        path_str = str(resolved)
+        if path_str in seen:
+            continue
+        seen.add(path_str)
+        searched_candidates.append(path_str)
+
+        if resolved.is_dir():
+            sql_count = len(list(resolved.glob("*.sql")))
+            if sql_count > 0:
+                migrations_dir = resolved
+                break
 
     if not migrations_dir:
-        log.warning("migrations_dir_not_found")
+        log.error(
+            "migrations_dir_not_found",
+            extra={
+                "cwd": str(Path.cwd()),
+                "searched_paths": searched_candidates,
+            },
+        )
+        if settings.is_production:
+            raise RuntimeError(
+                f"PostgreSQL migration directory could not be located. Searched: {searched_candidates}"
+            )
         return []
+
+    log.info("migrations_dir_detected", extra={"path": str(migrations_dir)})
+
+    # Discover all .sql files sorted by filename
+    sql_files = sorted(migrations_dir.glob("*.sql"))
+    log.info(
+        "migrations_discovered",
+        extra={
+            "count": len(sql_files),
+            "files": [f.name for f in sql_files],
+        },
+    )
 
     applied_migrations: list[str] = []
     pool = await get_or_create_pg_pool()
@@ -183,12 +234,10 @@ async def run_migrations() -> list[str]:
             rows = await conn.fetch("SELECT version FROM schema_migrations")
             already_applied = {r["version"] for r in rows}
 
-            # Discover all .sql files sorted by filename
-            sql_files = sorted(migrations_dir.glob("*.sql"))
-
             for sql_file in sql_files:
                 version_name = sql_file.name
                 if version_name in already_applied:
+                    log.info("migration_already_applied", extra={"version": version_name})
                     continue
 
                 log.info("applying_migration", extra={"version": version_name})
@@ -204,7 +253,17 @@ async def run_migrations() -> list[str]:
                 applied_migrations.append(version_name)
                 log.info("migration_applied", extra={"version": version_name})
 
+            log.info(
+                "migrations_run_complete",
+                extra={
+                    "total_discovered": len(sql_files),
+                    "applied_count": len(applied_migrations),
+                    "already_applied_count": len(already_applied),
+                },
+            )
         finally:
             await conn.execute("SELECT pg_advisory_unlock($1)", ADVISORY_LOCK_ID)
 
+    global _migrations_ready
+    _migrations_ready = True
     return applied_migrations
