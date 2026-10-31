@@ -400,6 +400,30 @@ async def trainers(
 @router.get("/ebooks")
 async def home_ebooks(limit: int = Query(8, ge=1, le=20)) -> dict[str, Any]:
     """Published eBooks for the Homepage showcase section."""
+    if settings.USE_POSTGRES:
+        from app.repositories.ebook_repo import EbookRepository
+        books, _ = await EbookRepository.list_public_ebooks(limit=limit)
+        items = []
+        for b in books:
+            cover_url = f"/api/v1/ebooks/{str(b['id'])}/cover" if b.get("cover_key") else None
+            items.append({
+                "id": str(b["id"]),
+                "slug": b.get("slug"),
+                "title": b.get("title"),
+                "author": b.get("author"),
+                "description": b.get("description"),
+                "shortDescription": b.get("short_description") or ((b.get("description") or "")[:120] + "..."),
+                "category": b.get("category", "General"),
+                "tags": b.get("tags") or [],
+                "pageCount": b.get("page_count") or 1,
+                "coverUrl": cover_url,
+                "isFeatured": b.get("is_featured", False),
+                "isPinned": b.get("is_pinned", False),
+                "readsCount": b.get("reads_count", 0),
+                "averageRating": float(b.get("average_rating") or 5.0),
+            })
+        return {"success": True, "data": items}
+
     db = get_db()
     query: dict[str, Any] = {
         "status": "PUBLISHED",
@@ -437,6 +461,34 @@ async def home_ebooks(limit: int = Query(8, ge=1, le=20)) -> dict[str, Any]:
 async def announcements(
     limit: int = Query(8, ge=1, le=30), kind: str | None = Query(None, max_length=40)
 ) -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.db.postgres import get_pg_connection
+        async with get_pg_connection() as conn:
+            query = "SELECT id, institution_id, title, body, kind, published_at, created_at FROM announcements WHERE deleted_at IS NULL"
+            params: list[Any] = []
+            if kind and kind != "all":
+                params.append(kind)
+                query += f" AND kind = ${len(params)}"
+            params.append(limit)
+            query += f" ORDER BY published_at DESC NULLS LAST, created_at DESC LIMIT ${len(params)}"
+            rows = await conn.fetch(query, *params)
+            data = [
+                {
+                    "id": str(r["id"]),
+                    "_id": str(r["id"]),
+                    "title": r["title"],
+                    "body": r["body"],
+                    "content": r["body"],
+                    "kind": r.get("kind"),
+                    "institutionId": str(r["institution_id"]) if r.get("institution_id") else None,
+                    "createdAt": r["created_at"].isoformat() if r.get("created_at") else None,
+                    "publishedAt": r["published_at"].isoformat() if r.get("published_at") else None,
+                }
+                for r in rows
+            ]
+            kinds = sorted({r.get("kind") for r in rows if r.get("kind")})
+            return {"success": True, "data": data, "meta": {"kinds": kinds}}
+
     db = get_db()
     query: dict[str, Any] = {"deletedAt": None, "public": True}
     if kind and kind != "all":
@@ -451,6 +503,9 @@ async def announcements(
 
 @router.get("/faqs")
 async def faqs() -> dict[str, Any]:
+    if settings.USE_POSTGRES:
+        from app.seed.catalogues import FAQS
+        return {"success": True, "data": FAQS}
     rows = await get_db().faqs.find({"deletedAt": None}).sort("order", 1).to_list(length=50)
     return {"success": True, "data": serialize(rows)}
 
@@ -458,6 +513,15 @@ async def faqs() -> dict[str, Any]:
 @router.get("/testimonials")
 async def testimonials(limit: int = Query(6, ge=1, le=20)) -> dict[str, Any]:
     """Seeded/demo success stories until real, consented data exists (§6)."""
+    if settings.USE_POSTGRES:
+        from app.seed.catalogues import TESTIMONIALS
+        return {
+            "success": True,
+            "data": TESTIMONIALS[:limit],
+            "meta": {
+                "notice": "Demo content — replaced by real, consented success stories once available."
+            },
+        }
     rows = await get_db().testimonials.find({"deletedAt": None}).sort("order", 1).to_list(
         length=limit
     )

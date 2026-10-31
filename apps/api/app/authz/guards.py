@@ -95,6 +95,8 @@ async def get_scope_context(request: Request) -> ScopeContext:
             pass
 
     if not user:
+        if settings.USE_POSTGRES:
+            raise Unauthenticated("Account not found")
         db = get_db()
         user = await db.users.find_one(
             {"_id": user_id},
@@ -257,6 +259,36 @@ async def _reject_client_scope_claims(request: Request, ctx: ScopeContext) -> No
             elif ctx.college_id is not None:
                 # A named batch must belong to the caller's own scope. Resolving it costs one
                 # indexed lookup and only happens when a batch id was actually supplied.
+                if settings.USE_POSTGRES:
+                    try:
+                        b_uuid = UUID(str(value))
+                        async with get_pg_connection() as conn:
+                            batch_row = await conn.fetchrow(
+                                "SELECT institution_id, department_id FROM batches WHERE id = $1 AND deleted_at IS NULL",
+                                b_uuid
+                            )
+                            if batch_row is None:
+                                continue
+                            if batch_row.get("institution_id") and str(batch_row["institution_id"]) != str(ctx.college_id):
+                                await _deny_scope(
+                                    ctx, f"request named batch {raw} in another institution",
+                                    path=str(request.url.path),
+                                )
+                            if (
+                                ctx.role in (Role.HOD, Role.STUDENT)
+                                and ctx.department_id is not None
+                                and batch_row.get("department_id")
+                                and str(batch_row["department_id"]) != str(ctx.department_id)
+                            ):
+                                await _deny_scope(
+                                    ctx, f"request named batch {raw} in another department",
+                                    path=str(request.url.path),
+                                )
+                    except ScopeForbidden:
+                        raise
+                    except Exception:
+                        pass
+                    continue
                 batch = await get_db().batches.find_one(
                     {"_id": value}, {"collegeId": 1, "departmentId": 1}
                 )
@@ -728,7 +760,6 @@ async def require_course_access(ctx: ScopeContext, course_id: Any) -> dict[str, 
     from app.services.domain_rules import can_access_course, is_access_active
     from uuid import UUID
 
-    db = get_db()
     course = None
     course_oid = None
     cid_uuid = None
@@ -749,9 +780,10 @@ async def require_course_access(ctx: ScopeContext, course_id: Any) -> dict[str, 
                 course["availableModes"] = ["ONLINE", "OFFLINE"] if row["delivery_mode"] == "HYBRID" else [raw_mode]
                 course["collegeId"] = None
 
-    if not course:
+    if not course and not settings.USE_POSTGRES:
         try:
             course_oid = ObjectId(str(course_id))
+            db = get_db()
             course = await db.courses.find_one({"_id": course_oid, "deletedAt": None})
         except Exception:
             pass
@@ -775,7 +807,8 @@ async def require_course_access(ctx: ScopeContext, course_id: Any) -> dict[str, 
                         return course
                 except Exception:
                     pass
-        elif course_oid:
+        elif course_oid and not settings.USE_POSTGRES:
+            db = get_db()
             enrollment = await db.enrollments.find_one({
                 "studentUserId": ctx.user_id,
                 "courseId": course_oid,

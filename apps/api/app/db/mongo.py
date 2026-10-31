@@ -58,6 +58,11 @@ async def connect_to_mongo() -> Any:
 
 
 def _make_inmemory() -> Any:
+    if settings.is_production:
+        raise RuntimeError(
+            "In-process MongoDB store cannot be initialized in production. "
+            "PostgreSQL is the active primary database."
+        )
     from mongomock_motor import AsyncMongoMockClient
 
     log.warning("using in-process MongoDB-compatible store (development/test only)")
@@ -67,6 +72,11 @@ def _make_inmemory() -> Any:
 def get_db() -> Any:
     global _db, _client, _is_inmemory
     if _db is None:
+        if settings.is_production:
+            raise RuntimeError(
+                "MongoDB get_db() called in production without active connection. "
+                "PostgreSQL is the primary database."
+            )
         _client, _is_inmemory = _make_inmemory(), True
         _db = _client[settings.MONGODB_DB]
     return _db
